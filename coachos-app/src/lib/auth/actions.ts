@@ -1,0 +1,74 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+
+import { createClient } from "@/lib/supabase/server";
+
+function getAuthData(formData: FormData) {
+  return {
+    email: String(formData.get("email") ?? ""),
+    password: String(formData.get("password") ?? ""),
+  };
+}
+
+function getNextPath(formData: FormData) {
+  const next = formData.get("next");
+
+  if (typeof next === "string" && next.startsWith("/") && !next.startsWith("//")) {
+    return next;
+  }
+
+  return "/dashboard";
+}
+
+export async function login(formData: FormData) {
+  const supabase = await createClient();
+  const authData = getAuthData(formData);
+
+  const { error } = await supabase.auth.signInWithPassword(authData);
+
+  if (error) {
+    redirect(`/login?error=${encodeURIComponent(error.message)}`);
+  }
+
+  revalidatePath("/", "layout");
+  redirect(getNextPath(formData));
+}
+
+export async function signup(formData: FormData) {
+  const supabase = await createClient();
+  const origin = (await headers()).get("origin") ?? "http://localhost:3000";
+  const authData = getAuthData(formData);
+
+  const { data, error } = await supabase.auth.signUp({
+    ...authData,
+    options: {
+      emailRedirectTo: `${origin}/auth/confirm`,
+    },
+  });
+
+  if (error) {
+    redirect(`/signup?error=${encodeURIComponent(error.message)}`);
+  }
+
+  revalidatePath("/", "layout");
+
+  if (data.session) {
+    redirect("/dashboard");
+  }
+
+  redirect(
+    "/login?message=Check%20your%20email%20to%20confirm%20your%20account%2C%20then%20sign%20in.",
+  );
+}
+
+export async function logout() {
+  const supabase = await createClient();
+
+  await supabase.auth.signOut();
+
+  revalidatePath("/", "layout");
+  redirect("/login");
+}

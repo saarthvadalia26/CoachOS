@@ -1,0 +1,82 @@
+import Link from "next/link";
+import { redirect } from "next/navigation";
+
+import { Button } from "@/components/ui/button";
+import { signup } from "@/lib/auth/actions";
+import { createClient } from "@/lib/supabase/server";
+
+type SignupPageProps = {
+  searchParams: Promise<{
+    error?: string;
+  }>;
+};
+
+export default async function SignupPage({ searchParams }: SignupPageProps) {
+  const supabase = await createClient();
+  const { data } = await supabase.auth.getClaims();
+  const claims = data?.claims;
+
+  if (claims) {
+    redirect("/dashboard");
+  }
+
+  const params = await searchParams;
+
+  return (
+    <main className="flex min-h-full items-center justify-center bg-background px-6 py-16 text-foreground">
+      <section className="w-full max-w-md rounded-lg border border-border bg-card p-6 shadow-sm">
+        <div>
+          <p className="text-sm font-medium text-muted-foreground">CoachOS</p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight">
+            Create your institute account
+          </h1>
+          <p className="mt-3 text-sm leading-6 text-muted-foreground">
+            Start with email and password authentication. Student management
+            comes later.
+          </p>
+        </div>
+
+        {params.error ? (
+          <p className="mt-5 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {params.error}
+          </p>
+        ) : null}
+
+        <form action={signup} className="mt-6 grid gap-4">
+          <label className="grid gap-2 text-sm font-medium">
+            Email
+            <input
+              required
+              name="email"
+              type="email"
+              autoComplete="email"
+              className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
+              placeholder="owner@institute.com"
+            />
+          </label>
+          <label className="grid gap-2 text-sm font-medium">
+            Password
+            <input
+              required
+              name="password"
+              type="password"
+              autoComplete="new-password"
+              className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
+              placeholder="Create a password"
+            />
+          </label>
+          <Button type="submit" className="mt-2">
+            Sign up
+          </Button>
+        </form>
+
+        <p className="mt-6 text-center text-sm text-muted-foreground">
+          Already have an account?{" "}
+          <Link href="/login" className="font-medium text-foreground underline">
+            Log in
+          </Link>
+        </p>
+      </section>
+    </main>
+  );
+}
