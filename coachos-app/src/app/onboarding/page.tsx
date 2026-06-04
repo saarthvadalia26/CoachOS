@@ -1,8 +1,11 @@
 import { redirect } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import {
+  getCurrentUserContext,
+  getStaffLinkStatusMessage,
+} from "@/lib/auth/permissions";
 import { createInstituteAndProfile } from "@/lib/onboarding/actions";
-import { createClient } from "@/lib/supabase/server";
 
 type OnboardingPageProps = {
   searchParams: Promise<{
@@ -13,25 +16,18 @@ type OnboardingPageProps = {
 export default async function OnboardingPage({
   searchParams,
 }: OnboardingPageProps) {
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.getClaims();
-  const userId = data?.claims?.sub;
+  const { profile, staffLinkStatus } = await getCurrentUserContext();
+  const params = await searchParams;
+  const staffLinkMessage = getStaffLinkStatusMessage(staffLinkStatus);
 
-  if (error || !userId) {
-    redirect("/login");
-  }
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("institute_id")
-    .eq("id", userId)
-    .maybeSingle();
-
+  // If this account matches a staff_members record, getCurrentUserContext()
+  // has already created the staff profile. Staff users should enter the
+  // dashboard for their existing institute, not create a new institute here.
   if (profile?.institute_id) {
     redirect("/dashboard");
   }
 
-  const params = await searchParams;
+  const blockingMessage = staffLinkMessage || params.error;
 
   return (
     <main className="flex min-h-full items-center justify-center bg-background px-6 py-16 text-foreground">
@@ -47,39 +43,41 @@ export default async function OnboardingPage({
           </p>
         </div>
 
-        {params.error ? (
+        {blockingMessage ? (
           <p className="mt-5 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-            {params.error}
+            {blockingMessage}
           </p>
         ) : null}
 
-        <form action={createInstituteAndProfile} className="mt-6 grid gap-4">
-          <label className="grid gap-2 text-sm font-medium">
-            Your full name
-            <input
-              required
-              name="fullName"
-              type="text"
-              autoComplete="name"
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
-              placeholder="Aarav Sharma"
-            />
-          </label>
-          <label className="grid gap-2 text-sm font-medium">
-            Institute name
-            <input
-              required
-              name="instituteName"
-              type="text"
-              autoComplete="organization"
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
-              placeholder="Bright Future Classes"
-            />
-          </label>
-          <Button type="submit" className="mt-2">
-            Create institute
-          </Button>
-        </form>
+        {staffLinkMessage ? null : (
+          <form action={createInstituteAndProfile} className="mt-6 grid gap-4">
+            <label className="grid gap-2 text-sm font-medium">
+              Your full name
+              <input
+                required
+                name="fullName"
+                type="text"
+                autoComplete="name"
+                className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
+                placeholder="Aarav Sharma"
+              />
+            </label>
+            <label className="grid gap-2 text-sm font-medium">
+              Institute name
+              <input
+                required
+                name="instituteName"
+                type="text"
+                autoComplete="organization"
+                className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
+                placeholder="Bright Future Classes"
+              />
+            </label>
+            <Button type="submit" className="mt-2">
+              Create institute
+            </Button>
+          </form>
+        )}
       </section>
     </main>
   );

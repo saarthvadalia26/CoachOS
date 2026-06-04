@@ -30,7 +30,10 @@ export async function login(formData: FormData) {
   const { error } = await supabase.auth.signInWithPassword(authData);
 
   if (error) {
-    redirect(`/login?error=${encodeURIComponent(error.message)}`);
+    console.error("login failed", error);
+    redirect(
+      `/login?error=${encodeURIComponent("Invalid email or password.")}`,
+    );
   }
 
   revalidatePath("/", "layout");
@@ -50,7 +53,10 @@ export async function signup(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/signup?error=${encodeURIComponent(error.message)}`);
+    console.error("signup failed", error);
+    redirect(
+      `/signup?error=${encodeURIComponent("Could not create your account. Please try again.")}`,
+    );
   }
 
   revalidatePath("/", "layout");

@@ -3,6 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import {
+  claimStaffProfileForCurrentUser,
+  getStaffLinkStatusMessage,
+} from "@/lib/auth/permissions";
 import { createClient } from "@/lib/supabase/server";
 
 function getRequiredText(formData: FormData, key: string) {
@@ -26,6 +30,31 @@ export async function createInstituteAndProfile(formData: FormData) {
     redirect("/login");
   }
 
+  // Staff linking guard:
+  // A teacher/staff account that matches staff_members must be linked to that
+  // institute instead of creating a new institute through owner onboarding.
+  const linkedStaff = await claimStaffProfileForCurrentUser();
+
+  if (linkedStaff.profile?.institute_id) {
+    redirect("/dashboard");
+  }
+
+  const staffLinkMessage = getStaffLinkStatusMessage(linkedStaff.status);
+
+  if (staffLinkMessage) {
+    redirect(`/onboarding?error=${encodeURIComponent(staffLinkMessage)}`);
+  }
+
+  const { data: existingProfile } = await supabase
+    .from("profiles")
+    .select("institute_id")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (existingProfile?.institute_id) {
+    redirect("/dashboard");
+  }
+
   const instituteName = getRequiredText(formData, "instituteName");
   const fullName = getRequiredText(formData, "fullName");
 
@@ -39,8 +68,9 @@ export async function createInstituteAndProfile(formData: FormData) {
     .single();
 
   if (instituteError || !institute) {
+    console.error("createInstituteAndProfile institute insert failed", instituteError);
     redirect(
-      `/onboarding?error=${encodeURIComponent(instituteError?.message ?? "Could not create institute.")}`,
+      `/onboarding?error=${encodeURIComponent("Could not create the institute. Please try again.")}`,
     );
   }
 
@@ -57,7 +87,10 @@ export async function createInstituteAndProfile(formData: FormData) {
   );
 
   if (profileError) {
-    redirect(`/onboarding?error=${encodeURIComponent(profileError.message)}`);
+    console.error("createInstituteAndProfile profile upsert failed", profileError);
+    redirect(
+      `/onboarding?error=${encodeURIComponent("Could not finish setup. Please try again.")}`,
+    );
   }
 
   revalidatePath("/", "layout");

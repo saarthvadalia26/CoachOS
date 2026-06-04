@@ -1,77 +1,9 @@
-import { redirect } from "next/navigation";
-
-import { Button } from "@/components/ui/button";
-import { logout } from "@/lib/auth/actions";
-import { createClient } from "@/lib/supabase/server";
-
-const navItems = [
-  "Overview",
-  "Students",
-  "Batches",
-  "Attendance",
-  "Fees",
-  "Settings",
-];
-
-const metrics = [
-  {
-    label: "Total Students",
-    value: "0",
-    helper: "Student management coming soon",
-  },
-  {
-    label: "Active Batches",
-    value: "0",
-    helper: "Batch setup coming soon",
-  },
-  {
-    label: "Pending Fees",
-    value: "Rs 0",
-    helper: "Fee tracking coming soon",
-  },
-  {
-    label: "Attendance Today",
-    value: "0%",
-    helper: "Attendance tools coming soon",
-  },
-];
-
-function Sidebar() {
-  return (
-    <aside className="border-b border-border bg-card px-4 py-4 md:min-h-screen md:w-64 md:border-b-0 md:border-r md:px-5">
-      <div className="mb-5">
-        <p className="text-lg font-semibold tracking-tight">CoachOS</p>
-        <p className="mt-1 text-xs text-muted-foreground">Institute workspace</p>
-      </div>
-      <nav className="flex gap-2 overflow-x-auto md:grid md:overflow-visible">
-        {navItems.map((item) => {
-          const isActive = item === "Overview";
-
-          return (
-            isActive ? (
-              <a
-                key={item}
-                href="/dashboard"
-                aria-current="page"
-                className="shrink-0 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground"
-              >
-                {item}
-              </a>
-            ) : (
-              <span
-                key={item}
-                aria-disabled="true"
-                className="shrink-0 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground"
-              >
-                {item}
-              </span>
-            )
-          );
-        })}
-      </nav>
-    </aside>
-  );
-}
+import { BranchFilter } from "@/components/dashboard/BranchFilter";
+import { DashboardShell } from "@/components/dashboard/DashboardShell";
+import { hasPermission } from "@/lib/auth/permissions";
+import { getTodayDateValue } from "@/lib/attendance/date";
+import { getBranchScope } from "@/lib/dashboard/branch-scope";
+import { getDashboardContext } from "@/lib/dashboard/context";
 
 function MetricCard({
   label,
@@ -91,82 +23,161 @@ function MetricCard({
   );
 }
 
-export default async function DashboardPage() {
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.getClaims();
-  const claims = data?.claims;
+type DashboardPageProps = {
+  searchParams: Promise<{
+    branchId?: string;
+  }>;
+};
 
-  if (error || !claims) {
-    redirect("/login");
+export default async function DashboardPage({
+  searchParams,
+}: DashboardPageProps) {
+  const context = await getDashboardContext();
+  const { accessibleBranches, claims, institute, role, supabase } = context;
+  const params = await searchParams;
+  const branchScope = getBranchScope(context, params.branchId);
+  const todayDate = getTodayDateValue();
+  const canViewAttendance = hasPermission(role, "attendance.view");
+  const canViewFees = hasPermission(role, "fees.view");
+
+  let studentsQuery = supabase
+    .from("students")
+    .select("id", { count: "exact", head: true })
+    .eq("institute_id", institute.id);
+  let batchesQuery = supabase
+    .from("batches")
+    .select("id", { count: "exact", head: true })
+    .eq("institute_id", institute.id);
+  let pendingFeesQuery = supabase
+    .from("fee_records")
+    .select("id", { count: "exact", head: true })
+    .eq("institute_id", institute.id)
+    .eq("status", "pending");
+  let attendanceSessionsQuery = supabase
+    .from("attendance_sessions")
+    .select("id", { count: "exact", head: true })
+    .eq("institute_id", institute.id)
+    .eq("session_date", todayDate);
+
+  if (branchScope.selectedBranchId) {
+    studentsQuery = studentsQuery.eq("branch_id", branchScope.selectedBranchId);
+    batchesQuery = batchesQuery.eq("branch_id", branchScope.selectedBranchId);
+    pendingFeesQuery = pendingFeesQuery.eq(
+      "branch_id",
+      branchScope.selectedBranchId,
+    );
+    attendanceSessionsQuery = attendanceSessionsQuery.eq(
+      "branch_id",
+      branchScope.selectedBranchId,
+    );
+  } else if (branchScope.visibleBranchIds.length) {
+    studentsQuery = studentsQuery.in("branch_id", branchScope.visibleBranchIds);
+    batchesQuery = batchesQuery.in("branch_id", branchScope.visibleBranchIds);
+    pendingFeesQuery = pendingFeesQuery.in(
+      "branch_id",
+      branchScope.visibleBranchIds,
+    );
+    attendanceSessionsQuery = attendanceSessionsQuery.in(
+      "branch_id",
+      branchScope.visibleBranchIds,
+    );
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("full_name, institute_id")
-    .eq("id", claims.sub)
-    .maybeSingle();
+  const [
+    studentsResponse,
+    batchesResponse,
+    pendingFeesResponse,
+    attendanceSessionsResponse,
+  ] = await Promise.all([
+    studentsQuery,
+    batchesQuery,
+    canViewFees ? pendingFeesQuery : Promise.resolve({ count: null, error: null }),
+    canViewAttendance
+      ? attendanceSessionsQuery
+      : Promise.resolve({ count: null, error: null }),
+  ]);
 
-  if (!profile?.institute_id) {
-    redirect("/onboarding");
-  }
+  const metrics = [
+    {
+      label: "Total Students",
+      value: String(studentsResponse.count ?? 0),
+      helper: `Students in ${branchScope.selectedBranchName}`,
+    },
+    {
+      label: "Active Batches",
+      value: String(batchesResponse.count ?? 0),
+      helper: `Batches in ${branchScope.selectedBranchName}`,
+    },
+    canViewFees
+      ? {
+          label: "Pending Fee Records",
+          value: String(pendingFeesResponse.count ?? 0),
+          helper: `Pending records in ${branchScope.selectedBranchName}`,
+        }
+      : null,
+    canViewAttendance
+      ? {
+          label: "Attendance Sessions Today",
+          value: String(attendanceSessionsResponse.count ?? 0),
+          helper: `${branchScope.selectedBranchName} | ${todayDate}`,
+        }
+      : null,
+  ].filter(
+    (metric): metric is { helper: string; label: string; value: string } =>
+      Boolean(metric),
+  );
 
-  const { data: institute } = await supabase
-    .from("institutes")
-    .select("name")
-    .eq("id", profile.institute_id)
-    .maybeSingle();
+  const queryError = Boolean(
+    studentsResponse.error ??
+      batchesResponse.error ??
+      pendingFeesResponse.error ??
+      attendanceSessionsResponse.error,
+  );
 
   return (
-    <main className="min-h-full bg-background text-foreground">
-      <div className="flex min-h-full flex-col md:flex-row">
-        <Sidebar />
-
-        <section className="flex-1 px-6 py-8 md:px-8 lg:px-10">
-          <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
-            <header className="flex flex-col gap-4 border-b border-border pb-6 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  {institute?.name ?? "Your institute"}
-                </p>
-                <h1 className="mt-2 text-3xl font-semibold tracking-tight">
-                  Overview
-                </h1>
-                <p className="mt-2 text-muted-foreground">
-                  Signed in as {claims.email ?? "your account"}.
-                </p>
-              </div>
-              <form action={logout}>
-                <Button type="submit" variant="outline">
-                  Log out
-                </Button>
-              </form>
-            </header>
-
-            <section>
-              <div className="flex flex-col gap-2">
-                <h2 className="text-xl font-semibold tracking-tight">
-                  Dashboard snapshot
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  Static placeholders for the first dashboard shell. Live
-                  student, batch, attendance, and fee data will be added later.
-                </p>
-              </div>
-
-              <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                {metrics.map((metric) => (
-                  <MetricCard
-                    key={metric.label}
-                    label={metric.label}
-                    value={metric.value}
-                    helper={metric.helper}
-                  />
-                ))}
-              </div>
-            </section>
+    <DashboardShell
+      activePage="overview"
+      instituteName={institute.name}
+      role={role}
+      title="Overview"
+      userEmail={claims.email}
+    >
+      <section>
+        {branchScope.showOwnerBranchFilter ? (
+          <div className="mb-6">
+            <BranchFilter
+              branches={accessibleBranches}
+              selectedBranchId={branchScope.selectedBranchId}
+            />
           </div>
-        </section>
-      </div>
-    </main>
+        ) : null}
+
+        <div className="flex flex-col gap-2">
+          <h2 className="text-xl font-semibold tracking-tight">
+            Dashboard snapshot
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Live counts from your institute workspace.
+          </p>
+        </div>
+
+        {queryError ? (
+          <p className="mt-5 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            Could not load dashboard metrics.
+          </p>
+        ) : null}
+
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {metrics.map((metric) => (
+            <MetricCard
+              key={metric.label}
+              label={metric.label}
+              value={metric.value}
+              helper={metric.helper}
+            />
+          ))}
+        </div>
+      </section>
+    </DashboardShell>
   );
 }
