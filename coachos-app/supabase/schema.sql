@@ -35,6 +35,19 @@ create table if not exists public.branches (
 comment on table public.branches is
   'Physical or operational centers under one institute.';
 
+create table if not exists public.academic_years (
+  id uuid primary key default gen_random_uuid(),
+  institute_id uuid not null references public.institutes(id) on delete cascade,
+  name text not null,
+  start_date date not null,
+  end_date date not null,
+  is_active boolean default false,
+  created_at timestamptz default now()
+);
+
+comment on table public.academic_years is
+  'Institute-level academic sessions used to group attendance and future reporting.';
+
 create table if not exists public.memberships (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -93,6 +106,7 @@ create table if not exists public.attendance_sessions (
   institute_id uuid not null references public.institutes(id) on delete cascade,
   branch_id uuid,
   batch_id uuid not null references public.batches(id) on delete cascade,
+  academic_year_id uuid references public.academic_years(id) on delete set null,
   session_date date not null,
   notes text,
   created_at timestamptz default now()
@@ -143,6 +157,7 @@ comment on column public.staff_members.role is
 alter table public.students add column if not exists branch_id uuid;
 alter table public.batches add column if not exists branch_id uuid;
 alter table public.attendance_sessions add column if not exists branch_id uuid;
+alter table public.attendance_sessions add column if not exists academic_year_id uuid;
 alter table public.fee_records add column if not exists branch_id uuid;
 alter table public.staff_members add column if not exists branch_id uuid;
 
@@ -340,6 +355,50 @@ begin
 
   if exists (
     select 1
+    from public.academic_years
+    where institute_id is null
+  ) then
+    raise exception 'Preflight failed: academic_years has rows with null institute_id.';
+  end if;
+
+  if exists (
+    select 1
+    from public.academic_years
+    where start_date >= end_date
+  ) then
+    raise exception 'Preflight failed: academic_years has rows where start_date is not before end_date.';
+  end if;
+
+  if exists (
+    select 1
+    from (
+      select institute_id
+      from public.academic_years
+      where is_active
+      group by institute_id
+      having count(*) > 1
+    ) duplicate_active_academic_years
+  ) then
+    raise exception 'Preflight failed: more than one active academic year exists for an institute.';
+  end if;
+
+  if exists (
+    select 1
+    from public.attendance_sessions
+    where academic_year_id is not null
+      and not exists (
+        select 1
+        from public.academic_years
+        where academic_years.id = attendance_sessions.academic_year_id
+          and academic_years.institute_id = attendance_sessions.institute_id
+          and attendance_sessions.session_date between academic_years.start_date and academic_years.end_date
+      )
+  ) then
+    raise exception 'Preflight failed: attendance_sessions has academic_year_id values outside the session institute or date range.';
+  end if;
+
+  if exists (
+    select 1
     from (
       select institute_id, lower(name) as normalized_name
       from public.branches
@@ -480,6 +539,11 @@ alter table public.students
   add constraint students_status_check
   check (status in ('active', 'inactive'));
 
+alter table public.academic_years drop constraint if exists academic_years_date_range_check;
+alter table public.academic_years
+  add constraint academic_years_date_range_check
+  check (start_date < end_date);
+
 alter table public.attendance_records drop constraint if exists attendance_records_status_check;
 alter table public.attendance_records
   add constraint attendance_records_status_check
@@ -536,6 +600,16 @@ create index if not exists branches_institute_id_idx
 create unique index if not exists branches_institute_id_lower_name_idx
   on public.branches (institute_id, lower(name));
 
+create index if not exists academic_years_institute_id_idx
+  on public.academic_years (institute_id);
+
+create index if not exists academic_years_institute_id_dates_idx
+  on public.academic_years (institute_id, start_date, end_date);
+
+create unique index if not exists academic_years_one_active_per_institute_idx
+  on public.academic_years (institute_id)
+  where is_active;
+
 create index if not exists memberships_user_id_idx
   on public.memberships (user_id);
 
@@ -591,6 +665,9 @@ create index if not exists attendance_sessions_branch_id_idx
 
 create index if not exists attendance_sessions_batch_id_idx
   on public.attendance_sessions (batch_id);
+
+create index if not exists attendance_sessions_academic_year_id_idx
+  on public.attendance_sessions (academic_year_id);
 
 create unique index if not exists attendance_sessions_batch_id_session_date_idx
   on public.attendance_sessions (batch_id, session_date);
@@ -956,6 +1033,16 @@ begin
 
   if not exists (
     select 1 from pg_constraint
+    where conname = 'attendance_sessions_academic_year_id_fk'
+      and conrelid = 'public.attendance_sessions'::regclass
+  ) then
+    alter table public.attendance_sessions
+      add constraint attendance_sessions_academic_year_id_fk
+      foreign key (academic_year_id) references public.academic_years(id) on delete set null;
+  end if;
+
+  if not exists (
+    select 1 from pg_constraint
     where conname = 'fee_records_branch_id_fk'
       and conrelid = 'public.fee_records'::regclass
   ) then
@@ -1148,6 +1235,106 @@ create trigger set_attendance_session_branch_id_trigger
   before insert or update on public.attendance_sessions
   for each row
   execute function public.set_attendance_session_branch_id();
+
+-- Academic year integrity is institute-scoped. New attendance sessions are
+-- automatically linked to the active academic year when the session date falls
+-- inside its date range. If an explicit academic_year_id is supplied, it must
+-- belong to the same institute and contain the session date.
+create or replace function public.set_attendance_session_academic_year_id()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  active_academic_year_id uuid;
+begin
+  if new.academic_year_id is null then
+    select academic_years.id
+    into active_academic_year_id
+    from public.academic_years
+    where academic_years.institute_id = new.institute_id
+      and academic_years.is_active
+      and new.session_date between academic_years.start_date and academic_years.end_date
+    limit 1;
+
+    new.academic_year_id := active_academic_year_id;
+  elsif not exists (
+    select 1
+    from public.academic_years
+    where academic_years.id = new.academic_year_id
+      and academic_years.institute_id = new.institute_id
+      and new.session_date between academic_years.start_date and academic_years.end_date
+  ) then
+    raise exception 'Attendance session academic year must belong to the same institute and contain the session date.';
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists set_attendance_session_academic_year_id_trigger on public.attendance_sessions;
+
+create trigger set_attendance_session_academic_year_id_trigger
+  before insert or update on public.attendance_sessions
+  for each row
+  execute function public.set_attendance_session_academic_year_id();
+
+create or replace function public.validate_academic_year_attendance_links()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if exists (
+    select 1
+    from public.attendance_sessions
+    where attendance_sessions.academic_year_id = new.id
+      and (
+        attendance_sessions.institute_id <> new.institute_id
+        or attendance_sessions.session_date not between new.start_date and new.end_date
+      )
+  ) then
+    raise exception 'Academic year dates must contain all linked attendance sessions.';
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists validate_academic_year_attendance_links_trigger on public.academic_years;
+
+create trigger validate_academic_year_attendance_links_trigger
+  before update on public.academic_years
+  for each row
+  execute function public.validate_academic_year_attendance_links();
+
+create or replace function public.prevent_academic_year_delete_with_attendance()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if exists (
+    select 1
+    from public.attendance_sessions
+    where attendance_sessions.academic_year_id = old.id
+  ) then
+    raise exception 'This academic year has attendance records and cannot be deleted.';
+  end if;
+
+  return old;
+end;
+$$;
+
+drop trigger if exists prevent_academic_year_delete_with_attendance_trigger on public.academic_years;
+
+create trigger prevent_academic_year_delete_with_attendance_trigger
+  before delete on public.academic_years
+  for each row
+  execute function public.prevent_academic_year_delete_with_attendance();
 
 -- Branch integrity matters for attendance because a session represents one
 -- branch-scoped batch. This trigger prevents recording attendance for a student
@@ -1682,6 +1869,7 @@ as $$
     when member_role = 'branch_manager' then required_permission in (
       'dashboard.access',
       'branches.view',
+      'academic_years.view',
       'students.view',
       'students.create',
       'students.update',
@@ -1811,6 +1999,79 @@ $$;
 comment on function public.has_branch_permission(uuid, text) is
   'Membership-aware branch permission helper. Accepts text string literals and returns false for anonymous users.';
 
+create or replace function public.current_user_can_view_academic_year(
+  target_academic_year_id uuid
+)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select auth.uid() is not null
+    and target_academic_year_id is not null
+    and exists (
+      select 1
+      from public.academic_years
+      join public.memberships
+        on memberships.institute_id = academic_years.institute_id
+       and memberships.user_id = auth.uid()
+      where academic_years.id = target_academic_year_id
+        and (
+          public.role_has_permission(memberships.role, 'academic_years.view'::text)
+          or (
+            academic_years.is_active
+            and public.role_has_permission(memberships.role, 'dashboard.access'::text)
+          )
+        )
+    )
+$$;
+
+comment on function public.current_user_can_view_academic_year(uuid) is
+  'Academic year visibility helper. Owners and branch managers can view all institute years; other dashboard members can view the active year.';
+
+create or replace function public.set_active_academic_year(
+  target_academic_year_id uuid
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  target_institute_id uuid;
+begin
+  if auth.uid() is null then
+    raise exception 'Authentication is required to set an active academic year.';
+  end if;
+
+  select academic_years.institute_id
+  into target_institute_id
+  from public.academic_years
+  where academic_years.id = target_academic_year_id;
+
+  if target_institute_id is null then
+    raise exception 'Academic year does not exist.';
+  end if;
+
+  if not public.has_institute_permission(target_institute_id, 'academic_years.update'::text) then
+    raise exception 'Only institute owners can set the active academic year.';
+  end if;
+
+  update public.academic_years
+  set is_active = false
+  where institute_id = target_institute_id
+    and is_active;
+
+  update public.academic_years
+  set is_active = true
+  where id = target_academic_year_id;
+end;
+$$;
+
+comment on function public.set_active_academic_year(uuid) is
+  'Owner-only helper that atomically marks one academic year active for an institute.';
+
 create or replace function public.current_user_can_access_batch(
   target_batch_id uuid,
   required_permission text
@@ -1921,6 +2182,7 @@ $$;
 alter table public.institutes enable row level security;
 alter table public.profiles enable row level security;
 alter table public.branches enable row level security;
+alter table public.academic_years enable row level security;
 alter table public.memberships enable row level security;
 alter table public.students enable row level security;
 alter table public.batches enable row level security;
@@ -1943,6 +2205,10 @@ drop policy if exists branches_select_members on public.branches;
 drop policy if exists branches_insert_owner on public.branches;
 drop policy if exists branches_update_owner on public.branches;
 drop policy if exists branches_delete_owner on public.branches;
+drop policy if exists academic_years_select_members on public.academic_years;
+drop policy if exists academic_years_insert_owner on public.academic_years;
+drop policy if exists academic_years_update_owner on public.academic_years;
+drop policy if exists academic_years_delete_owner on public.academic_years;
 drop policy if exists memberships_select_owner_or_self on public.memberships;
 drop policy if exists memberships_insert_owner on public.memberships;
 drop policy if exists memberships_update_owner on public.memberships;
@@ -2087,6 +2353,31 @@ create policy branches_delete_owner
   for delete
   to authenticated
   using (public.has_institute_permission(branches.institute_id, 'branches.manage'::text));
+
+create policy academic_years_select_members
+  on public.academic_years
+  for select
+  to authenticated
+  using (public.current_user_can_view_academic_year(academic_years.id));
+
+create policy academic_years_insert_owner
+  on public.academic_years
+  for insert
+  to authenticated
+  with check (public.has_institute_permission(academic_years.institute_id, 'academic_years.create'::text));
+
+create policy academic_years_update_owner
+  on public.academic_years
+  for update
+  to authenticated
+  using (public.has_institute_permission(academic_years.institute_id, 'academic_years.update'::text))
+  with check (public.has_institute_permission(academic_years.institute_id, 'academic_years.update'::text));
+
+create policy academic_years_delete_owner
+  on public.academic_years
+  for delete
+  to authenticated
+  using (public.has_institute_permission(academic_years.institute_id, 'academic_years.delete'::text));
 
 create policy memberships_select_owner_or_self
   on public.memberships

@@ -19,6 +19,7 @@ const attendanceStatuses = ["present", "absent", "late"] as const;
 type AttendanceStatus = (typeof attendanceStatuses)[number];
 
 type AttendanceActionLogDetails = {
+  academicYearId?: string | null;
   batchId?: string | null;
   branchId?: string | null;
   instituteId?: string;
@@ -79,6 +80,7 @@ function logAttendanceActionError(
     instituteId: details.instituteId ?? null,
     branchId: details.branchId ?? null,
     batchId: details.batchId ?? null,
+    academicYearId: details.academicYearId ?? null,
     sessionDate: details.sessionDate ?? null,
     sessionId: details.sessionId ?? null,
     studentId: details.studentId ?? null,
@@ -221,7 +223,7 @@ async function getExistingAttendanceSession(
 ) {
   const { data: existingSession, error } = await context.supabase
     .from("attendance_sessions")
-    .select("id")
+    .select("id, academic_year_id")
     .eq("institute_id", context.institute.id)
     .eq("branch_id", values.branchId)
     .eq("batch_id", values.batchId)
@@ -237,10 +239,40 @@ async function getExistingAttendanceSession(
     redirectWithError("Could not save the attendance session.", values.batchId);
   }
 
-  return existingSession as { id: string } | null;
+  return existingSession as { academic_year_id: string | null; id: string } | null;
+}
+
+async function getActiveAcademicYearId(
+  context: DashboardContext,
+  values: {
+    batchId: string;
+    branchId: string;
+    sessionDate: string;
+  },
+) {
+  const { data: academicYear, error } = await context.supabase
+    .from("academic_years")
+    .select("id")
+    .eq("institute_id", context.institute.id)
+    .eq("is_active", true)
+    .lte("start_date", values.sessionDate)
+    .gte("end_date", values.sessionDate)
+    .maybeSingle();
+
+  if (error) {
+    logAttendanceActionError(
+      "active_academic_year_lookup",
+      error,
+      getAttendanceLogDetails(context, values),
+    );
+    redirectWithError("Could not save the attendance session.", values.batchId);
+  }
+
+  return academicYear?.id ?? null;
 }
 
 async function createAttendanceSession(values: {
+  academicYearId: string | null;
   batchId: string;
   branchId: string;
   context: DashboardContext;
@@ -254,6 +286,7 @@ async function createAttendanceSession(values: {
       id: sessionId,
       branch_id: values.branchId,
       batch_id: values.batchId,
+      academic_year_id: values.academicYearId,
       institute_id: values.context.institute.id,
       notes: values.notes,
       session_date: values.sessionDate,
@@ -266,6 +299,7 @@ async function createAttendanceSession(values: {
       getAttendanceLogDetails(values.context, {
         batchId: values.batchId,
         branchId: values.branchId,
+        academicYearId: values.academicYearId,
         operation: "create",
         sessionDate: values.sessionDate,
         sessionId,
@@ -296,18 +330,29 @@ async function createAttendanceSession(values: {
 }
 
 async function updateAttendanceSession(values: {
+  academicYearId: string | null;
   batchId: string;
   branchId: string;
   context: DashboardContext;
+  existingAcademicYearId: string | null;
   notes: string | null;
   sessionDate: string;
   sessionId: string;
 }) {
+  const updateValues: {
+    academic_year_id?: string;
+    notes: string | null;
+  } = {
+    notes: values.notes,
+  };
+
+  if (!values.existingAcademicYearId && values.academicYearId) {
+    updateValues.academic_year_id = values.academicYearId;
+  }
+
   const { error } = await values.context.supabase
     .from("attendance_sessions")
-    .update({
-      notes: values.notes,
-    })
+    .update(updateValues)
     .eq("id", values.sessionId)
     .eq("institute_id", values.context.institute.id)
     .eq("branch_id", values.branchId)
@@ -320,6 +365,7 @@ async function updateAttendanceSession(values: {
       getAttendanceLogDetails(values.context, {
         batchId: values.batchId,
         branchId: values.branchId,
+        academicYearId: values.academicYearId,
         operation: "update",
         sessionDate: values.sessionDate,
         sessionId: values.sessionId,
@@ -592,16 +638,25 @@ export async function saveTodayAttendance(formData: FormData) {
     sessionDate,
   );
 
+  const activeAcademicYearId = await getActiveAcademicYearId(context, {
+    batchId,
+    branchId,
+    sessionDate,
+  });
+
   const sessionId = existingSession
     ? await updateAttendanceSession({
+        academicYearId: activeAcademicYearId,
         batchId,
         branchId,
         context,
+        existingAcademicYearId: existingSession.academic_year_id,
         notes,
         sessionDate,
         sessionId: existingSession.id,
       })
     : await createAttendanceSession({
+        academicYearId: activeAcademicYearId,
         batchId,
         branchId,
         context,

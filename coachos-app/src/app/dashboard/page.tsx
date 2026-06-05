@@ -39,6 +39,12 @@ export default async function DashboardPage({
   const todayDate = getTodayDateValue();
   const canViewAttendance = hasPermission(role, "attendance.view");
   const canViewFees = hasPermission(role, "fees.view");
+  const activeAcademicYearQuery = supabase
+    .from("academic_years")
+    .select("id, name, start_date, end_date")
+    .eq("institute_id", institute.id)
+    .eq("is_active", true)
+    .maybeSingle();
 
   let studentsQuery = supabase
     .from("students")
@@ -88,6 +94,7 @@ export default async function DashboardPage({
     batchesResponse,
     pendingFeesResponse,
     attendanceSessionsResponse,
+    activeAcademicYearResponse,
   ] = await Promise.all([
     studentsQuery,
     batchesQuery,
@@ -95,9 +102,23 @@ export default async function DashboardPage({
     canViewAttendance
       ? attendanceSessionsQuery
       : Promise.resolve({ count: null, error: null }),
+    activeAcademicYearQuery,
   ]);
 
+  const activeAcademicYear = activeAcademicYearResponse.data as {
+    end_date: string;
+    id: string;
+    name: string;
+    start_date: string;
+  } | null;
   const metrics = [
+    {
+      label: "Academic Year",
+      value: activeAcademicYear?.name ?? "Not set",
+      helper: activeAcademicYear
+        ? `${activeAcademicYear.start_date} to ${activeAcademicYear.end_date}`
+        : "No active academic year",
+    },
     {
       label: "Total Students",
       value: String(studentsResponse.count ?? 0),
@@ -131,7 +152,8 @@ export default async function DashboardPage({
     studentsResponse.error ??
       batchesResponse.error ??
       pendingFeesResponse.error ??
-      attendanceSessionsResponse.error,
+      attendanceSessionsResponse.error ??
+      activeAcademicYearResponse.error,
   );
 
   return (

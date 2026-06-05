@@ -16,10 +16,11 @@ type DashboardPageKey =
   | "batches"
   | "attendance"
   | "fees"
-  | "staff";
+  | "staff"
+  | "settings";
 
 type NavItem = {
-  activeKey: DashboardPageKey | "settings";
+  activeKey: DashboardPageKey;
   enabled: boolean;
   href: string;
   label: string;
@@ -95,9 +96,9 @@ const navItems: NavItem[] = [
   },
   {
     label: "Settings",
-    href: "#",
+    href: "/dashboard/settings/academic-years",
     activeKey: "settings",
-    enabled: false,
+    enabled: true,
     permission: "settings.manage",
     roles: ["owner"],
   },
