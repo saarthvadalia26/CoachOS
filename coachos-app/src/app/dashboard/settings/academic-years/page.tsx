@@ -136,14 +136,23 @@ export default async function AcademicYearsPage({
                     type="text"
                     placeholder="2026-27"
                   />
+                  <span className="text-xs font-normal text-muted-foreground">
+                    Example name: 2026-27
+                  </span>
                 </Label>
                 <Label>
                   Start date
                   <Input required name="startDate" type="date" />
+                  <span className="text-xs font-normal text-muted-foreground">
+                    Example start date: 2026-06-01
+                  </span>
                 </Label>
                 <Label>
                   End date
                   <Input required name="endDate" type="date" />
+                  <span className="text-xs font-normal text-muted-foreground">
+                    Example end date: 2027-05-31
+                  </span>
                 </Label>
                 <label className="flex items-center gap-2 text-sm font-medium">
                   <input
@@ -234,6 +243,9 @@ export default async function AcademicYearsPage({
                                 type="text"
                                 defaultValue={academicYear.name}
                               />
+                              <span className="text-xs font-normal text-muted-foreground">
+                                Example name: 2026-27
+                              </span>
                             </Label>
                             <Label>
                               Start date
@@ -243,6 +255,9 @@ export default async function AcademicYearsPage({
                                 type="date"
                                 defaultValue={academicYear.start_date}
                               />
+                              <span className="text-xs font-normal text-muted-foreground">
+                                Example start date: 2026-06-01
+                              </span>
                             </Label>
                             <Label>
                               End date
@@ -252,6 +267,9 @@ export default async function AcademicYearsPage({
                                 type="date"
                                 defaultValue={academicYear.end_date}
                               />
+                              <span className="text-xs font-normal text-muted-foreground">
+                                Example end date: 2027-05-31
+                              </span>
                             </Label>
                             <Button
                               type="submit"

@@ -30,6 +30,10 @@ function redirectWithLinkedAttendanceError(): never {
   );
 }
 
+function redirectWithDuplicateNameError(): never {
+  redirectWithError("An academic year with this name already exists.");
+}
+
 function getSupabaseErrorDetails(error: unknown) {
   if (!error || typeof error !== "object") {
     return {
@@ -59,6 +63,16 @@ function isLinkedAttendanceDeleteError(error: unknown) {
   return (
     getSupabaseErrorDetails(error).message ===
     "This academic year has attendance records and cannot be deleted."
+  );
+}
+
+function isDuplicateAcademicYearNameError(error: unknown) {
+  const details = getSupabaseErrorDetails(error);
+
+  return (
+    details.code === "23505" &&
+    (details.message?.includes("academic_years_institute_id_lower_name_idx") ||
+      details.details?.includes("academic_years_institute_id_lower_name_idx"))
   );
 }
 
@@ -117,6 +131,33 @@ async function requireAcademicYearOwnerPermission(permission: Permission) {
   return context;
 }
 
+async function ensureAcademicYearNameIsUnique(
+  context: DashboardContext,
+  name: string,
+  currentAcademicYearId?: string,
+) {
+  const normalizedName = name.trim().toLowerCase();
+  const { data: academicYears, error } = await context.supabase
+    .from("academic_years")
+    .select("id, name")
+    .eq("institute_id", context.institute.id);
+
+  if (error) {
+    logAcademicYearError("check duplicate academic year name", context, error);
+    redirectWithSaveError();
+  }
+
+  const duplicateAcademicYear = (academicYears ?? []).find(
+    (academicYear) =>
+      academicYear.id !== currentAcademicYearId &&
+      String(academicYear.name ?? "").trim().toLowerCase() === normalizedName,
+  );
+
+  if (duplicateAcademicYear) {
+    redirectWithDuplicateNameError();
+  }
+}
+
 export async function createAcademicYear(formData: FormData) {
   const context = await requireAcademicYearOwnerPermission(
     "academic_years.create",
@@ -128,6 +169,7 @@ export async function createAcademicYear(formData: FormData) {
   const shouldSetActive = formData.get("isActive") === "on";
 
   validateDateRange(startDate, endDate);
+  await ensureAcademicYearNameIsUnique(context, name);
 
   const { data: academicYear, error } = await supabase
     .from("academic_years")
@@ -143,6 +185,11 @@ export async function createAcademicYear(formData: FormData) {
 
   if (error || !academicYear) {
     logAcademicYearError("create academic year", context, error);
+
+    if (isDuplicateAcademicYearNameError(error)) {
+      redirectWithDuplicateNameError();
+    }
+
     redirectWithSaveError();
   }
 
@@ -184,6 +231,7 @@ export async function updateAcademicYear(formData: FormData) {
   const endDate = getRequiredDate(formData, "endDate", "End date");
 
   validateDateRange(startDate, endDate);
+  await ensureAcademicYearNameIsUnique(context, name, academicYearId);
 
   const { data: academicYear, error } = await supabase
     .from("academic_years")
@@ -199,6 +247,11 @@ export async function updateAcademicYear(formData: FormData) {
 
   if (error) {
     logAcademicYearError("update academic year", context, error);
+
+    if (isDuplicateAcademicYearNameError(error)) {
+      redirectWithDuplicateNameError();
+    }
+
     redirectWithSaveError();
   }
 

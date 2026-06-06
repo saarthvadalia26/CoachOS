@@ -1,4 +1,4 @@
-import { CheckCircle2, IndianRupee, Plus } from "lucide-react";
+import { CheckCircle2, FileText, IndianRupee, Plus } from "lucide-react";
 import Link from "next/link";
 
 import { BranchFilter } from "@/components/dashboard/BranchFilter";
@@ -103,6 +103,13 @@ export default async function FeesPage({ searchParams }: FeesPageProps) {
     "fees.record_payment",
     "fees.update",
   ]);
+  const canViewFeeReports =
+    role === "owner" || role === "branch_manager" || role === "accountant";
+  const feeReportsHref = branchScope.selectedBranchId
+    ? `/dashboard/fees/reports?branchId=${encodeURIComponent(
+        branchScope.selectedBranchId,
+      )}`
+    : "/dashboard/fees/reports";
 
   let studentsQuery = supabase
     .from("students")
@@ -199,6 +206,17 @@ export default async function FeesPage({ searchParams }: FeesPageProps) {
             branches={accessibleBranches}
             selectedBranchId={branchScope.selectedBranchId}
           />
+        ) : null}
+
+        {canViewFeeReports ? (
+          <div className="flex justify-end">
+            <Button asChild variant="outline">
+              <Link href={feeReportsHref}>
+                <FileText aria-hidden="true" data-icon="inline-start" />
+                Fee reports
+              </Link>
+            </Button>
+          </div>
         ) : null}
 
         <div

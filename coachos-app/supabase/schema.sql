@@ -372,6 +372,18 @@ begin
   if exists (
     select 1
     from (
+      select institute_id, lower(name)
+      from public.academic_years
+      group by institute_id, lower(name)
+      having count(*) > 1
+    ) duplicate_academic_year_names
+  ) then
+    raise exception 'Preflight failed: duplicate academic_years names exist within an institute. Rename duplicates before creating the unique index.';
+  end if;
+
+  if exists (
+    select 1
+    from (
       select institute_id
       from public.academic_years
       where is_active
@@ -605,6 +617,9 @@ create index if not exists academic_years_institute_id_idx
 
 create index if not exists academic_years_institute_id_dates_idx
   on public.academic_years (institute_id, start_date, end_date);
+
+create unique index if not exists academic_years_institute_id_lower_name_idx
+  on public.academic_years (institute_id, lower(name));
 
 create unique index if not exists academic_years_one_active_per_institute_idx
   on public.academic_years (institute_id)
