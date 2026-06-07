@@ -128,7 +128,7 @@ export default async function FeeReportsPage({
         activePage="fees"
         instituteName={institute.name}
         role={role}
-        title="Fee Reports"
+        title="Financial Summary"
         userEmail={claims.email}
       >
         <Card>
@@ -268,14 +268,14 @@ export default async function FeeReportsPage({
       activePage="fees"
       instituteName={institute.name}
       role={role}
-      title="Fee Reports"
+      title="Financial Summary"
       userEmail={claims.email}
     >
       <section className="grid gap-6">
         <Card>
           <CardHeader className="gap-3 sm:grid-cols-[1fr_auto] sm:items-start">
             <div>
-              <CardTitle className="text-xl">Fee reporting</CardTitle>
+              <CardTitle className="text-xl">Financial summary</CardTitle>
               <CardDescription>
                 Summarize due, collected, and pending amounts for allowed fee
                 records.
@@ -288,7 +288,7 @@ export default async function FeeReportsPage({
           <CardContent>
             {queryError ? (
               <p className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                Could not load fee reports.
+                Fee report data is unavailable right now. Please try again.
               </p>
             ) : null}
 
@@ -441,11 +441,12 @@ export default async function FeeReportsPage({
             <div>
               <CardTitle className="text-lg">Filtered fee records</CardTitle>
               <CardDescription>
-                {feeRecords.length} {feeRecords.length === 1 ? "record" : "records"} |{" "}
+                {feeRecords.length}{" "}
+                {feeRecords.length === 1 ? "record" : "records"} |{" "}
                 {branchScope.selectedBranchName}
               </CardDescription>
             </div>
-            <Badge variant="outline">Reports foundation</Badge>
+            <Badge variant="outline">Payment status</Badge>
           </CardHeader>
           <CardContent>
             {feeRecords.length ? (
@@ -460,7 +461,7 @@ export default async function FeeReportsPage({
                     >
                       <div>
                         <h3 className="text-sm font-medium">
-                          {student?.full_name ?? "Unknown student"}
+                          {student?.full_name ?? "Student not available"}
                         </h3>
                         <p className="mt-1 text-xs text-muted-foreground">
                           {branchesById.get(record.branch_id)?.name ??
@@ -486,7 +487,7 @@ export default async function FeeReportsPage({
               </div>
             ) : (
               <p className="rounded-md border border-dashed border-border px-3 py-3 text-sm text-muted-foreground">
-                No fee records match these filters.
+                No fee records match the selected filters.
               </p>
             )}
           </CardContent>

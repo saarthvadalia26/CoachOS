@@ -1,4 +1,11 @@
-import { CalendarCheck, Download, Eye, Save, Search } from "lucide-react";
+import {
+  CalendarCheck,
+  Download,
+  Eye,
+  Save,
+  Search,
+  Unlock,
+} from "lucide-react";
 import Link from "next/link";
 
 import { BranchFilter } from "@/components/dashboard/BranchFilter";
@@ -15,7 +22,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { canAccessPermission, requirePermission } from "@/lib/auth/permissions";
-import { saveTodayAttendance } from "@/lib/attendance/actions";
+import {
+  reopenAttendanceSession,
+  saveTodayAttendance,
+} from "@/lib/attendance/actions";
 import { getTodayDateValue } from "@/lib/attendance/date";
 import { getBranchScope } from "@/lib/dashboard/branch-scope";
 
@@ -26,8 +36,10 @@ type AttendancePageProps = {
     batchId?: string;
     endDate?: string;
     error?: string;
+    audit?: string;
     historyBatchId?: string;
     sessionId?: string;
+    sessionDate?: string;
     startDate?: string;
     studentId?: string;
   }>;
@@ -48,8 +60,17 @@ type Student = {
 };
 
 type AttendanceSession = {
+  batch_id: string;
+  branch_id: string;
   id: string;
+  locked_at: string | null;
+  locked_by: string | null;
   notes: string | null;
+  reopen_count: number;
+  reopened_at: string | null;
+  reopened_by: string | null;
+  reopen_reason: string | null;
+  session_date: string;
 };
 
 type AttendanceRecord = {
@@ -72,12 +93,43 @@ type HistorySession = {
   batch_id: string;
   branch_id: string;
   id: string;
+  locked_at: string | null;
   notes: string | null;
+  reopen_count: number;
+  reopened_at: string | null;
+  reopen_reason: string | null;
   session_date: string;
+};
+
+type AttendanceAuditLog = {
+  action: string;
+  changed_by: string | null;
+  created_at: string;
+  id: string;
+  new_status: string | null;
+  old_status: string | null;
+  reason: string | null;
+  student_id: string | null;
 };
 
 type StudentLookup = Student & {
   branch_id?: string | null;
+};
+
+type AttendancePageQueryLogContext = {
+  batchId?: string | null;
+  branchId?: string | null;
+  instituteId: string;
+  queryName: string;
+  role: string | null;
+  userId: string;
+};
+
+type SupabaseErrorLike = {
+  code?: string;
+  details?: string;
+  hint?: string;
+  message?: string;
 };
 
 const statusOptions = [
@@ -200,6 +252,120 @@ function getStatusPillClass(isSelected: boolean) {
     : "flex h-9 items-center justify-center rounded-md border border-border bg-muted/30 px-2 text-xs font-medium text-muted-foreground";
 }
 
+function getSessionStatusLabel(
+  session: Pick<
+    AttendanceSession | HistorySession,
+    "locked_at" | "reopened_at"
+  > | null,
+) {
+  if (!session) {
+    return "Ready for attendance";
+  }
+
+  if (session.locked_at) {
+    return "Locked";
+  }
+
+  if (session.reopened_at) {
+    return "Reopened";
+  }
+
+  return "Editable";
+}
+
+function getSessionStatusVariant(
+  session: Pick<
+    AttendanceSession | HistorySession,
+    "locked_at" | "reopened_at"
+  > | null,
+): "outline" | "secondary" {
+  if (!session) {
+    return "outline";
+  }
+
+  return session.locked_at ? "secondary" : "outline";
+}
+
+function getAuditActionLabel(action: string) {
+  if (action === "session_created") {
+    return "Attendance submitted";
+  }
+
+  if (action === "session_locked") {
+    return "Attendance locked";
+  }
+
+  if (action === "session_reopened") {
+    return "Attendance reopened";
+  }
+
+  if (action === "status_changed") {
+    return "Status updated";
+  }
+
+  if (action === "notes_changed") {
+    return "Session note updated";
+  }
+
+  return action;
+}
+
+function getActorLabel(changedBy: string | null, currentUserId: string) {
+  if (!changedBy) {
+    return "System";
+  }
+
+  if (changedBy === currentUserId) {
+    return "You";
+  }
+
+  return "Team member";
+}
+
+function getStatusLabel(status: string | null) {
+  if (status === "present") {
+    return "Present";
+  }
+
+  if (status === "absent") {
+    return "Absent";
+  }
+
+  if (status === "late") {
+    return "Late";
+  }
+
+  return "Not recorded";
+}
+
+function getSupabaseErrorDetails(error: unknown) {
+  const supabaseError = error as SupabaseErrorLike | null;
+
+  return {
+    code: supabaseError?.code ?? null,
+    details: supabaseError?.details ?? null,
+    hint: supabaseError?.hint ?? null,
+    message:
+      supabaseError?.message ??
+      (error instanceof Error ? error.message : "Unknown Supabase error"),
+  };
+}
+
+function logAttendancePageQueryError(
+  error: unknown,
+  context: AttendancePageQueryLogContext,
+) {
+  console.error("Attendance page data load failed", {
+    batchId: context.batchId ?? null,
+    branchId: context.branchId ?? null,
+    instituteId: context.instituteId,
+    queryName: context.queryName,
+    role: context.role,
+    supabaseError: getSupabaseErrorDetails(error),
+    userId: context.userId,
+  });
+}
+
 export default async function AttendancePage({
   searchParams,
 }: AttendancePageProps) {
@@ -208,6 +374,9 @@ export default async function AttendancePage({
   const params = await searchParams;
   const branchScope = getBranchScope(context, params.branchId);
   const todayDate = getTodayDateValue();
+  const activeSessionDate = isDateValue(params.sessionDate)
+    ? params.sessionDate!
+    : todayDate;
 
   let batchesQuery = supabase
     .from("batches")
@@ -252,7 +421,39 @@ export default async function AttendancePage({
   let students: Student[] = [];
   let attendanceSession: AttendanceSession | null = null;
   let attendanceRecords: AttendanceRecord[] = [];
-  let queryError = Boolean(batchesError || academicYearsError);
+  let queryError = false;
+  const logQueryError = (
+    queryName: string,
+    error: unknown,
+    values?: {
+      batchId?: string | null;
+      branchId?: string | null;
+    },
+  ) => {
+    if (!error) {
+      return false;
+    }
+
+    logAttendancePageQueryError(error, {
+      batchId: values?.batchId ?? selectedBatchId ?? params.batchId ?? null,
+      branchId:
+        values?.branchId ??
+        selectedBatch?.branch_id ??
+        branchScope.selectedBranchId ??
+        context.branchId ??
+        null,
+      instituteId: institute.id,
+      queryName,
+      role,
+      userId: claims.sub,
+    });
+
+    return true;
+  };
+
+  queryError = logQueryError("batches", batchesError) || queryError;
+  queryError =
+    logQueryError("academic_years", academicYearsError) || queryError;
 
   if (selectedBatchId) {
     const { data: studentBatchRows, error: studentBatchesError } =
@@ -261,7 +462,11 @@ export default async function AttendancePage({
         .select("student_id")
         .eq("batch_id", selectedBatchId);
 
-    queryError = queryError || Boolean(studentBatchesError);
+    queryError =
+      logQueryError("student_batches_current_batch", studentBatchesError, {
+        batchId: selectedBatchId,
+        branchId: selectedBatch.branch_id,
+      }) || queryError;
 
     const studentIds = (studentBatchRows ?? [])
       .map((studentBatch) => studentBatch.student_id)
@@ -277,20 +482,30 @@ export default async function AttendancePage({
         .order("full_name", { ascending: true });
 
       students = (studentRows ?? []) as Student[];
-      queryError = queryError || Boolean(studentsError);
+      queryError =
+        logQueryError("students_current_batch", studentsError, {
+          batchId: selectedBatchId,
+          branchId: selectedBatch.branch_id,
+        }) || queryError;
     }
 
     const { data: sessionRow, error: sessionError } = await supabase
       .from("attendance_sessions")
-      .select("id, notes")
+      .select(
+        "id, branch_id, batch_id, session_date, notes, locked_at, locked_by, reopen_count, reopened_at, reopened_by, reopen_reason",
+      )
       .eq("institute_id", institute.id)
       .eq("branch_id", selectedBatch.branch_id)
       .eq("batch_id", selectedBatchId)
-      .eq("session_date", todayDate)
+      .eq("session_date", activeSessionDate)
       .maybeSingle();
 
     attendanceSession = sessionRow as AttendanceSession | null;
-    queryError = queryError || Boolean(sessionError);
+    queryError =
+      logQueryError("attendance_session_current_record", sessionError, {
+        batchId: selectedBatchId,
+        branchId: selectedBatch.branch_id,
+      }) || queryError;
 
     if (attendanceSession) {
       const { data: recordRows, error: recordsError } = await supabase
@@ -299,7 +514,11 @@ export default async function AttendancePage({
         .eq("session_id", attendanceSession.id);
 
       attendanceRecords = (recordRows ?? []) as AttendanceRecord[];
-      queryError = queryError || Boolean(recordsError);
+      queryError =
+        logQueryError("attendance_records_current_record", recordsError, {
+          batchId: selectedBatchId,
+          branchId: selectedBatch.branch_id,
+        }) || queryError;
     }
   }
 
@@ -315,7 +534,15 @@ export default async function AttendancePage({
         .select("student_id")
         .in("batch_id", historyBatchIds);
 
-    queryError = queryError || Boolean(historyStudentBatchesError);
+    queryError =
+      logQueryError(
+        "student_batches_history",
+        historyStudentBatchesError,
+        {
+          batchId: selectedHistoryBatchId || selectedBatchId,
+          branchId: selectedHistoryBatch?.branch_id ?? selectedBatch?.branch_id,
+        },
+      ) || queryError;
 
     const historyStudentIds = Array.from(
       new Set(
@@ -335,7 +562,11 @@ export default async function AttendancePage({
           .order("full_name", { ascending: true });
 
       historyStudents = (historyStudentRows ?? []) as StudentLookup[];
-      queryError = queryError || Boolean(historyStudentsError);
+      queryError =
+        logQueryError("students_history", historyStudentsError, {
+          batchId: selectedHistoryBatchId || selectedBatchId,
+          branchId: selectedHistoryBatch?.branch_id ?? selectedBatch?.branch_id,
+        }) || queryError;
     }
   }
 
@@ -347,7 +578,9 @@ export default async function AttendancePage({
   if (historyBatchIds.length) {
     let historySessionsQuery = supabase
       .from("attendance_sessions")
-      .select("id, institute_id, branch_id, batch_id, academic_year_id, session_date, notes")
+      .select(
+        "id, institute_id, branch_id, batch_id, academic_year_id, session_date, notes, locked_at, reopen_count, reopened_at, reopen_reason",
+      )
       .eq("institute_id", institute.id)
       .gte("session_date", historyStartDate)
       .lte("session_date", historyEndDate)
@@ -378,7 +611,11 @@ export default async function AttendancePage({
         .limit(100);
 
     historySessions = (historySessionRows ?? []) as HistorySession[];
-    queryError = queryError || Boolean(historySessionsError);
+    queryError =
+      logQueryError("attendance_sessions_history", historySessionsError, {
+        batchId: selectedHistoryBatchId || selectedBatchId,
+        branchId: selectedHistoryBatch?.branch_id ?? selectedBatch?.branch_id,
+      }) || queryError;
   }
 
   const historySessionIds = historySessions.map((session) => session.id);
@@ -392,7 +629,11 @@ export default async function AttendancePage({
         .in("session_id", historySessionIds);
 
     historyRecords = (historyRecordRows ?? []) as AttendanceRecord[];
-    queryError = queryError || Boolean(historyRecordsError);
+    queryError =
+      logQueryError("attendance_records_history", historyRecordsError, {
+        batchId: selectedHistoryBatchId || selectedBatchId,
+        branchId: selectedHistoryBatch?.branch_id ?? selectedBatch?.branch_id,
+      }) || queryError;
   }
 
   const historyRecordsBySessionId = new Map<string, AttendanceRecord[]>();
@@ -440,6 +681,13 @@ export default async function AttendancePage({
   const historyStudentsById = new Map(
     historyStudents.map((student) => [student.id, student]),
   );
+  const currentStudentsById = new Map(
+    students.map((student) => [student.id, student]),
+  );
+  const auditStudentsById = new Map([
+    ...historyStudentsById,
+    ...currentStudentsById,
+  ]);
 
   const recordsByStudentId = new Map(
     attendanceRecords.map((record) => [record.student_id, record.status]),
@@ -454,9 +702,37 @@ export default async function AttendancePage({
   const canUpdateAttendance = selectedBatchScope
     ? canAccessPermission(context, "attendance.update", selectedBatchScope)
     : false;
-  const canMutateAttendance = attendanceSession
-    ? canUpdateAttendance
+  const isAttendanceLocked = Boolean(attendanceSession?.locked_at);
+  const canEditAttendance = attendanceSession
+    ? canUpdateAttendance && !isAttendanceLocked
     : canCreateAttendance;
+  const canOwnerReopenAttendance = Boolean(
+    attendanceSession?.locked_at &&
+      selectedBatchScope &&
+      canUpdateAttendance &&
+      context.memberships.some((membership) => {
+        return membership.role === "owner";
+      }),
+  );
+  const canBranchManagerReopenAttendance = Boolean(
+    attendanceSession?.locked_at &&
+      selectedBatchScope &&
+      canUpdateAttendance &&
+      context.memberships.some((membership) => {
+        return (
+          membership.role === "branch_manager" &&
+          membership.branch_id === selectedBatchScope.branchId
+        );
+      }),
+  );
+  const attendanceReopenCount = attendanceSession?.reopen_count ?? 0;
+  const isReopenLimitReached =
+    canBranchManagerReopenAttendance &&
+    !canOwnerReopenAttendance &&
+    attendanceReopenCount >= 2;
+  const canReopenAttendance =
+    canOwnerReopenAttendance ||
+    (canBranchManagerReopenAttendance && attendanceReopenCount < 2);
   const academicYearsById = new Map(
     academicYears.map((academicYear) => [academicYear.id, academicYear]),
   );
@@ -468,6 +744,48 @@ export default async function AttendancePage({
     branchId: branchScope.selectedBranchId,
     endDate: historyEndDate,
     historyBatchId: selectedHistoryBatchId,
+    startDate: historyStartDate,
+    studentId: selectedStudentId,
+  });
+  const selectedAuditSession = selectedHistorySession ?? attendanceSession;
+  const isAuditExpanded = params.audit === "full";
+  const canViewAuditHistory = Boolean(
+    selectedAuditSession &&
+      selectedAuditSession.branch_id &&
+      ["owner", "branch_manager", "operations_staff"].includes(role) &&
+      canAccessPermission(context, "attendance.view", {
+        branchId: selectedAuditSession.branch_id,
+      }),
+  );
+  let auditLogs: AttendanceAuditLog[] = [];
+
+  if (selectedAuditSession && canViewAuditHistory) {
+    const { data: auditLogRows, error: auditLogsError } = await supabase
+      .from("attendance_audit_logs")
+      .select(
+        "id, action, student_id, changed_by, old_status, new_status, reason, created_at",
+      )
+      .eq("session_id", selectedAuditSession.id)
+      .order("created_at", { ascending: false })
+      .limit(50);
+
+    auditLogs = (auditLogRows ?? []) as AttendanceAuditLog[];
+    queryError =
+      logQueryError("attendance_audit_logs", auditLogsError, {
+        batchId: selectedAuditSession.batch_id,
+        branchId: selectedAuditSession.branch_id,
+      }) || queryError;
+  }
+  const visibleAuditLogs = isAuditExpanded ? auditLogs : auditLogs.slice(0, 2);
+  const auditToggleHref = getAttendanceHref({
+    academicYearId: selectedAcademicYearId,
+    audit: isAuditExpanded ? null : "full",
+    batchId: selectedBatchId,
+    branchId: branchScope.selectedBranchId,
+    endDate: historyEndDate,
+    historyBatchId: selectedHistoryBatchId,
+    sessionDate: activeSessionDate,
+    sessionId: selectedHistorySession?.id,
     startDate: historyStartDate,
     studentId: selectedStudentId,
   });
@@ -491,24 +809,29 @@ export default async function AttendancePage({
         <Card>
           <CardHeader className="gap-3 sm:grid-cols-[1fr_auto] sm:items-start">
             <div>
-              <CardTitle className="text-xl">Today&apos;s attendance</CardTitle>
+              <CardTitle className="text-xl">
+                {activeSessionDate === todayDate
+                  ? "Today's attendance"
+                  : "Attendance record"}
+              </CardTitle>
               <CardDescription>
-                {todayDate}
+                {activeSessionDate}
                 {selectedBatch ? ` | ${selectedBatch.name}` : ""}
               </CardDescription>
             </div>
-            <Badge variant={attendanceSession ? "secondary" : "outline"}>
+            <Badge variant={getSessionStatusVariant(attendanceSession)}>
               {attendanceSession
-                ? "Session saved"
-                : canMutateAttendance
-                  ? "New session"
-                  : "No session"}
+                ? getSessionStatusLabel(attendanceSession)
+                : canEditAttendance
+                  ? "Ready to submit"
+                  : "No attendance record"}
             </Badge>
           </CardHeader>
           <CardContent>
             {params.error || queryError ? (
               <p className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                {params.error ?? "Could not load attendance data."}
+                {params.error ??
+                  "Attendance records are unavailable right now. Please try again."}
               </p>
             ) : null}
 
@@ -518,6 +841,13 @@ export default async function AttendancePage({
                   name="branchId"
                   type="hidden"
                   value={branchScope.selectedBranchId}
+                />
+              ) : null}
+              {activeSessionDate !== todayDate ? (
+                <input
+                  name="sessionDate"
+                  type="hidden"
+                  value={activeSessionDate}
                 />
               ) : null}
               <Label>
@@ -556,10 +886,11 @@ export default async function AttendancePage({
           <Card>
             <CardContent className="flex flex-col gap-4 pt-5 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm text-muted-foreground">
-                No batches available for attendance.
+                No batches match your current branch access. Create or select a
+                batch to begin recording attendance.
               </p>
               <Button asChild variant="outline">
-                <Link href="/dashboard/batches">Open batches</Link>
+                <Link href="/dashboard/batches">View batches</Link>
               </Button>
             </CardContent>
           </Card>
@@ -570,15 +901,15 @@ export default async function AttendancePage({
             <CardHeader>
               <CardTitle className="text-lg">{selectedBatch.name}</CardTitle>
               <CardDescription>
-                {canMutateAttendance
+                {canEditAttendance
                   ? "Add students to this batch before saving attendance."
-                  : "No students are assigned to this batch."}
+                  : "No students are assigned to this batch yet."}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Button asChild variant="outline">
                 <Link href="/dashboard/batches">
-                  {canMutateAttendance ? "Manage batch students" : "Open batches"}
+                  {canEditAttendance ? "Manage batch students" : "View batches"}
                 </Link>
               </Button>
             </CardContent>
@@ -586,128 +917,202 @@ export default async function AttendancePage({
         ) : null}
 
         {selectedBatch && students.length ? (
-          <form action={canMutateAttendance ? saveTodayAttendance : undefined}>
-            {canMutateAttendance ? (
-              <>
-                <input type="hidden" name="batchId" value={selectedBatch.id} />
-                <input type="hidden" name="sessionDate" value={todayDate} />
-              </>
-            ) : null}
-            <Card>
-              <CardHeader className="gap-3 sm:grid-cols-[1fr_auto] sm:items-start">
-                <div>
-                  <CardTitle className="text-lg">{selectedBatch.name}</CardTitle>
-                  <CardDescription>
-                    {selectedBatch.subject ?? "No subject added"}
-                    {selectedBatch.schedule ? ` | ${selectedBatch.schedule}` : ""}
-                  </CardDescription>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Badge variant="secondary">
-                    Present {statusCounts.present}
-                  </Badge>
-                  <Badge variant="outline">Absent {statusCounts.absent}</Badge>
-                  <Badge variant="outline">Late {statusCounts.late}</Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="grid gap-5">
-                {canMutateAttendance ? (
+          <Card>
+            <CardHeader className="gap-3 sm:grid-cols-[1fr_auto] sm:items-start">
+              <div>
+                <CardTitle className="text-lg">{selectedBatch.name}</CardTitle>
+                <CardDescription>
+                  {selectedBatch.subject ?? "Subject not specified"}
+                  {selectedBatch.schedule ? ` | ${selectedBatch.schedule}` : ""}
+                </CardDescription>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Badge variant={getSessionStatusVariant(attendanceSession)}>
+                  {getSessionStatusLabel(attendanceSession)}
+                </Badge>
+                <Badge variant="secondary">Present {statusCounts.present}</Badge>
+                <Badge variant="outline">Absent {statusCounts.absent}</Badge>
+                <Badge variant="outline">Late {statusCounts.late}</Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {canEditAttendance ? (
+                <form action={saveTodayAttendance} className="grid gap-5">
+                  <input type="hidden" name="batchId" value={selectedBatch.id} />
+                  <input
+                    type="hidden"
+                    name="sessionDate"
+                    value={activeSessionDate}
+                  />
                   <Label>
-                    Session notes
+                    Attendance note
                     <Input
                       name="notes"
                       type="text"
                       defaultValue={attendanceSession?.notes ?? ""}
-                      placeholder="Optional"
+                      placeholder="Optional attendance note"
                     />
                   </Label>
-                ) : (
+                  <div className="divide-y divide-border rounded-md border border-border">
+                    {students.map((student) => {
+                      const currentStatus = getStatusForStudent(
+                        recordsByStudentId,
+                        student.id,
+                      );
+
+                      return (
+                        <article
+                          key={student.id}
+                          className="grid gap-4 p-4 lg:grid-cols-[1fr_auto] lg:items-center"
+                        >
+                          <div>
+                            <h3 className="text-sm font-medium">
+                              {student.full_name}
+                            </h3>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {student.phone ?? "Phone not added"}
+                            </p>
+                          </div>
+                          <fieldset>
+                            <legend className="sr-only">
+                              Attendance status for {student.full_name}
+                            </legend>
+                            <div className="grid grid-cols-3 gap-2 sm:w-[300px]">
+                              {statusOptions.map((option) => {
+                                const inputId = `${student.id}-${option.value}`;
+                                const isSelected =
+                                  currentStatus === option.value;
+
+                                return (
+                                  <label
+                                    key={option.value}
+                                    htmlFor={inputId}
+                                    className="cursor-pointer"
+                                  >
+                                    <input
+                                      id={inputId}
+                                      className="peer sr-only"
+                                      type="radio"
+                                      name={`status-${student.id}`}
+                                      value={option.value}
+                                      defaultChecked={isSelected}
+                                    />
+                                    <span className="flex h-9 items-center justify-center rounded-md border border-border px-2 text-xs font-medium text-muted-foreground transition-colors peer-checked:border-primary peer-checked:bg-primary peer-checked:text-primary-foreground">
+                                      {option.label}
+                                    </span>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          </fieldset>
+                        </article>
+                      );
+                    })}
+                  </div>
+                  <Button type="submit" className="justify-self-start">
+                    <Save aria-hidden="true" data-icon="inline-start" />
+                    Submit attendance
+                  </Button>
+                </form>
+              ) : (
+                <div className="grid gap-5">
                   <div className="rounded-md border border-border bg-muted/20 px-3 py-3">
-                    <p className="text-sm font-medium">Session notes</p>
+                    <p className="text-sm font-medium">Attendance note</p>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      {attendanceSession?.notes ?? "No notes added"}
+                      {attendanceSession?.notes ?? "No attendance note added"}
                     </p>
                   </div>
-                )}
+                  <div className="divide-y divide-border rounded-md border border-border">
+                    {students.map((student) => {
+                      const currentStatus = getStatusForStudent(
+                        recordsByStudentId,
+                        student.id,
+                      );
 
-                <div className="divide-y divide-border rounded-md border border-border">
-                  {students.map((student) => {
-                    const currentStatus = getStatusForStudent(
-                      recordsByStudentId,
-                      student.id,
-                    );
-
-                    return (
-                      <article
-                        key={student.id}
-                        className="grid gap-4 p-4 lg:grid-cols-[1fr_auto] lg:items-center"
-                      >
-                        <div>
-                          <h3 className="text-sm font-medium">
-                            {student.full_name}
-                          </h3>
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            {student.phone ?? "Phone not added"}
-                          </p>
-                        </div>
-                        <fieldset disabled={!canMutateAttendance}>
-                          <legend className="sr-only">
-                            Attendance status for {student.full_name}
-                          </legend>
+                      return (
+                        <article
+                          key={student.id}
+                          className="grid gap-4 p-4 lg:grid-cols-[1fr_auto] lg:items-center"
+                        >
+                          <div>
+                            <h3 className="text-sm font-medium">
+                              {student.full_name}
+                            </h3>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {student.phone ?? "Phone not added"}
+                            </p>
+                          </div>
                           <div className="grid grid-cols-3 gap-2 sm:w-[300px]">
                             {statusOptions.map((option) => {
-                              const inputId = `${student.id}-${option.value}`;
                               const isSelected =
                                 currentStatus === option.value;
 
-                              if (!canMutateAttendance) {
-                                return (
-                                  <span
-                                    key={option.value}
-                                    aria-current={isSelected ? "true" : undefined}
-                                    className={getStatusPillClass(isSelected)}
-                                  >
-                                    {option.label}
-                                  </span>
-                                );
-                              }
-
                               return (
-                                <label
+                                <span
                                   key={option.value}
-                                  htmlFor={inputId}
-                                  className="cursor-pointer"
+                                  aria-current={isSelected ? "true" : undefined}
+                                  className={getStatusPillClass(isSelected)}
                                 >
-                                  <input
-                                    id={inputId}
-                                    className="peer sr-only"
-                                    type="radio"
-                                    name={`status-${student.id}`}
-                                    value={option.value}
-                                    defaultChecked={isSelected}
-                                  />
-                                  <span className="flex h-9 items-center justify-center rounded-md border border-border px-2 text-xs font-medium text-muted-foreground transition-colors peer-checked:border-primary peer-checked:bg-primary peer-checked:text-primary-foreground">
-                                    {option.label}
-                                  </span>
-                                </label>
+                                  {option.label}
+                                </span>
                               );
                             })}
                           </div>
-                        </fieldset>
-                      </article>
-                    );
-                  })}
+                        </article>
+                      );
+                    })}
+                  </div>
+                  {canReopenAttendance && attendanceSession ? (
+                    <form
+                      action={reopenAttendanceSession}
+                      className="grid gap-3 rounded-md border border-border bg-muted/20 p-3 sm:grid-cols-[1fr_auto] sm:items-end"
+                    >
+                      <input
+                        type="hidden"
+                        name="sessionId"
+                        value={attendanceSession.id}
+                      />
+                      <input
+                        type="hidden"
+                        name="batchId"
+                        value={selectedBatch.id}
+                      />
+                      <Label>
+                        Reopen Reason
+                        <Input
+                          name="reopenReason"
+                          placeholder="Describe why this attendance record needs correction"
+                          required
+                        />
+                      </Label>
+                      <Button type="submit" variant="outline">
+                        <Unlock aria-hidden="true" data-icon="inline-start" />
+                        Reopen attendance
+                      </Button>
+                    </form>
+                  ) : null}
+                  {isReopenLimitReached ? (
+                    <p className="rounded-md border border-border bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
+                      This attendance record has reached the reopen limit.
+                      Please contact the institute owner for further changes.
+                    </p>
+                  ) : null}
+                  {attendanceSession?.locked_at &&
+                  (canBranchManagerReopenAttendance ||
+                    (canOwnerReopenAttendance && attendanceReopenCount > 0)) ? (
+                    <p className="text-xs text-muted-foreground">
+                      {canOwnerReopenAttendance &&
+                      !canBranchManagerReopenAttendance
+                        ? `Reopened ${attendanceReopenCount} ${
+                            attendanceReopenCount === 1 ? "time" : "times"
+                          }.`
+                        : `Reopened ${Math.min(attendanceReopenCount, 2)} of 2 times.`}
+                    </p>
+                  ) : null}
                 </div>
-
-                {canMutateAttendance ? (
-                  <Button type="submit" className="justify-self-start">
-                    <Save aria-hidden="true" data-icon="inline-start" />
-                    Save attendance
-                  </Button>
-                ) : null}
-              </CardContent>
-            </Card>
-          </form>
+              )}
+            </CardContent>
+          </Card>
         ) : null}
 
         <Card>
@@ -826,12 +1231,12 @@ export default async function AttendancePage({
               <Card>
                 <CardHeader className="gap-3 sm:grid-cols-[1fr_auto] sm:items-start">
                   <div>
-                    <CardTitle className="text-lg">Sessions</CardTitle>
+                    <CardTitle className="text-lg">Attendance records</CardTitle>
                     <CardDescription>
-                      {filteredHistorySessions.length} saved{" "}
+                      {filteredHistorySessions.length} matching{" "}
                       {filteredHistorySessions.length === 1
-                        ? "session"
-                        : "sessions"}
+                        ? "record"
+                        : "records"}
                     </CardDescription>
                   </div>
                   <Badge variant="outline">
@@ -851,11 +1256,12 @@ export default async function AttendancePage({
                         const counts = getRecordStatusCounts(sessionRecords);
                         const sessionHref = getAttendanceHref({
                           academicYearId: selectedAcademicYearId,
-                          batchId: selectedBatchId,
+                          batchId: session.batch_id,
                           branchId: branchScope.selectedBranchId,
                           endDate: historyEndDate,
                           historyBatchId: selectedHistoryBatchId,
                           sessionId: session.id,
+                          sessionDate: session.session_date,
                           startDate: historyStartDate,
                           studentId: selectedStudentId,
                         });
@@ -868,14 +1274,17 @@ export default async function AttendancePage({
                             <div>
                               <h3 className="text-sm font-medium">
                                 {session.session_date} |{" "}
-                                {batch?.name ?? "Unknown batch"}
+                                {batch?.name ?? "Batch not available"}
                               </h3>
                               <p className="mt-1 text-xs text-muted-foreground">
-                                {academicYear?.name ?? "No academic year"}
+                                {academicYear?.name ?? "Academic year not set"}
                                 {session.notes ? ` | ${session.notes}` : ""}
                               </p>
                             </div>
                             <div className="flex flex-wrap items-center gap-2">
+                              <Badge variant={getSessionStatusVariant(session)}>
+                                {getSessionStatusLabel(session)}
+                              </Badge>
                               <Badge variant="secondary">
                                 Present {counts.present}
                               </Badge>
@@ -889,7 +1298,7 @@ export default async function AttendancePage({
                                     aria-hidden="true"
                                     data-icon="inline-start"
                                   />
-                                  Open
+                                  View record
                                 </Link>
                               </Button>
                             </div>
@@ -899,7 +1308,7 @@ export default async function AttendancePage({
                     </div>
                   ) : (
                     <p className="text-sm text-muted-foreground">
-                      No attendance sessions match these filters.
+                      No attendance records match the selected filters.
                     </p>
                   )}
                 </CardContent>
@@ -921,7 +1330,7 @@ export default async function AttendancePage({
                     <div className="grid gap-3">
                       <div className="rounded-md border border-border p-3">
                         <p className="text-xs text-muted-foreground">
-                          Total sessions
+                          Total attendance records
                         </p>
                         <p className="mt-1 text-2xl font-semibold">
                           {selectedStudentTotalSessions}
@@ -962,11 +1371,11 @@ export default async function AttendancePage({
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">
-                Session records | {selectedHistorySession.session_date}
+                Attendance record | {selectedHistorySession.session_date}
               </CardTitle>
               <CardDescription>
                 {batchesById.get(selectedHistorySession.batch_id)?.name ??
-                  "Unknown batch"}
+                  "Batch not available"}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -983,7 +1392,7 @@ export default async function AttendancePage({
                       >
                         <div>
                           <h3 className="text-sm font-medium">
-                            {student?.full_name ?? "Unknown student"}
+                            {student?.full_name ?? "Student not available"}
                           </h3>
                           <p className="mt-1 text-xs text-muted-foreground">
                             {student?.phone ?? "Phone not added"}
@@ -1010,7 +1419,92 @@ export default async function AttendancePage({
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  No student records were saved for this session.
+                  No student attendance entries were recorded for this date.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        ) : null}
+
+        {selectedAuditSession && canViewAuditHistory ? (
+          <Card>
+            <CardHeader className="gap-3 sm:grid-cols-[1fr_auto] sm:items-start">
+              <div>
+                <CardTitle className="text-lg">Audit history</CardTitle>
+                <CardDescription>
+                  {selectedAuditSession.session_date} |{" "}
+                  {batchesById.get(selectedAuditSession.batch_id)?.name ??
+                    selectedBatch?.name ??
+                    "Selected attendance record"}
+                </CardDescription>
+              </div>
+              <Badge variant={getSessionStatusVariant(selectedAuditSession)}>
+                {getSessionStatusLabel(selectedAuditSession)}
+              </Badge>
+            </CardHeader>
+            <CardContent>
+              {auditLogs.length ? (
+                <div className="grid gap-3">
+                  <div className="divide-y divide-border rounded-md border border-border">
+                    {visibleAuditLogs.map((log) => {
+                      const student = log.student_id
+                        ? auditStudentsById.get(log.student_id)
+                        : null;
+
+                      return (
+                        <article
+                          key={log.id}
+                          className="grid gap-3 p-4 lg:grid-cols-[1fr_auto] lg:items-center"
+                        >
+                          <div>
+                            <h3 className="text-sm font-medium">
+                              {getAuditActionLabel(log.action)}
+                              {student ? ` | ${student.full_name}` : ""}
+                            </h3>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {getActorLabel(log.changed_by, claims.sub)} |{" "}
+                              {new Date(log.created_at).toLocaleString()}
+                            </p>
+                            {log.reason ? (
+                              <p className="mt-1 text-xs text-muted-foreground">
+                                Reason: {log.reason}
+                              </p>
+                            ) : null}
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {log.old_status ? (
+                              <Badge variant="outline">
+                                Previous {getStatusLabel(log.old_status)}
+                              </Badge>
+                            ) : null}
+                            {log.new_status ? (
+                              <Badge variant="secondary">
+                                Updated {getStatusLabel(log.new_status)}
+                              </Badge>
+                            ) : null}
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                  {auditLogs.length > 2 ? (
+                    <Button
+                      asChild
+                      variant="outline"
+                      className="justify-self-start"
+                    >
+                      <Link href={auditToggleHref}>
+                        {isAuditExpanded
+                          ? "Show less"
+                          : "View full audit history"}
+                      </Link>
+                    </Button>
+                  ) : null}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No audit entries have been recorded for this attendance
+                  record yet.
                 </p>
               )}
             </CardContent>

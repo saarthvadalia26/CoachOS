@@ -71,7 +71,7 @@ function csvResponse(rows: string[][], filename: string) {
 }
 
 function exportErrorResponse() {
-  return new Response("Could not export attendance.", {
+  return new Response("Attendance export could not be generated.", {
     headers: {
       "Cache-Control": "no-store",
       "Content-Type": "text/plain; charset=utf-8",

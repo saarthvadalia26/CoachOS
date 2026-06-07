@@ -79,7 +79,7 @@ export default async function BranchesPage({
                     name="address"
                     type="text"
                     autoComplete="street-address"
-                    placeholder="Optional"
+                    placeholder="Optional branch address"
                   />
                 </Label>
                 <Button type="submit" className="mt-1">
@@ -110,7 +110,7 @@ export default async function BranchesPage({
               </p>
             </div>
             <Badge variant="outline">
-              {canManageBranches ? "Owner managed" : "Branch scoped"}
+              {canManageBranches ? "Owner managed" : "Assigned branch"}
             </Badge>
           </div>
 
@@ -128,7 +128,7 @@ export default async function BranchesPage({
                         {branch.name}
                       </CardTitle>
                       <CardDescription className="mt-1">
-                        {branch.address ?? "No address added"}
+                        {branch.address ?? "Address not added"}
                       </CardDescription>
                     </div>
                     <Badge variant="secondary">
@@ -188,7 +188,9 @@ export default async function BranchesPage({
             <Card>
               <CardContent className="pt-5">
                 <p className="text-sm text-muted-foreground">
-                  No branches are available for this account.
+                  {canManageBranches
+                    ? "No branches have been created yet. Create a branch to organize students and staff."
+                    : "No branches are available for this account. Ask the institute owner to assign a branch if you need access."}
                 </p>
               </CardContent>
             </Card>

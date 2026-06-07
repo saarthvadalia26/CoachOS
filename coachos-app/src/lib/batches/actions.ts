@@ -20,7 +20,9 @@ function redirectWithError(message: string): never {
 }
 
 function redirectWithSaveError(): never {
-  redirectWithError("Could not save the batch. Please try again.");
+  redirectWithError(
+    "This batch record could not be saved. Please review the details and try again.",
+  );
 }
 
 function getRequiredText(formData: FormData, key: string, label: string) {
@@ -61,7 +63,7 @@ function requireBranchPermission(
   branchId: string | null,
 ) {
   if (!branchId || !canAccessPermission(context, permission, { branchId })) {
-    redirectWithError("You do not have permission for that branch.");
+    redirectWithError("You do not have permission to perform this action.");
   }
 }
 
@@ -122,7 +124,7 @@ export async function assignStudentToBatch(formData: FormData) {
       batchError,
       studentError,
     });
-    redirectWithError("Could not verify the batch assignment.");
+    redirectWithError("This batch assignment could not be verified.");
   }
 
   if (!student || !batch) {
@@ -148,7 +150,7 @@ export async function assignStudentToBatch(formData: FormData) {
 
   if (error) {
     console.error("assignStudentToBatch failed", error);
-    redirectWithError("Could not assign the student to this batch.");
+    redirectWithError("The student could not be assigned to this batch.");
   }
 
   revalidatePath(BATCHES_PATH);
@@ -185,7 +187,7 @@ export async function assignTeacherToBatch(formData: FormData) {
       batchError,
       membershipError,
     });
-    redirectWithError("Could not verify the teacher assignment.");
+    redirectWithError("This teacher assignment could not be verified.");
   }
 
   if (!batch || !teacherMembership) {
@@ -215,7 +217,7 @@ export async function assignTeacherToBatch(formData: FormData) {
 
   if (error) {
     console.error("assignTeacherToBatch failed", error);
-    redirectWithError("Could not assign the teacher to this batch.");
+    redirectWithError("The teacher could not be assigned to this batch.");
   }
 
   revalidatePath(BATCHES_PATH);
@@ -240,7 +242,7 @@ export async function removeTeacherFromBatch(formData: FormData) {
 
   if (batchTeacherError) {
     console.error("removeTeacherFromBatch lookup failed", batchTeacherError);
-    redirectWithError("Could not verify the teacher assignment.");
+    redirectWithError("This teacher assignment could not be verified.");
   }
 
   if (!batchTeacher) {
@@ -256,7 +258,7 @@ export async function removeTeacherFromBatch(formData: FormData) {
 
   if (batchError) {
     console.error("removeTeacherFromBatch batch lookup failed", batchError);
-    redirectWithError("Could not verify the batch.");
+    redirectWithError("This batch record could not be verified.");
   }
 
   if (!batch) {
@@ -272,7 +274,7 @@ export async function removeTeacherFromBatch(formData: FormData) {
 
   if (error) {
     console.error("removeTeacherFromBatch failed", error);
-    redirectWithError("Could not remove the teacher from this batch.");
+    redirectWithError("The teacher could not be removed from this batch.");
   }
 
   revalidatePath(BATCHES_PATH);
@@ -348,7 +350,7 @@ export async function deleteBatch(formData: FormData) {
 
   if (existingBatchError) {
     console.error("deleteBatch lookup failed", existingBatchError);
-    redirectWithError("Could not delete the batch. Please try again.");
+    redirectWithError("This batch record could not be deleted. Please try again.");
   }
 
   if (!existingBatch) {
@@ -367,7 +369,7 @@ export async function deleteBatch(formData: FormData) {
 
   if (error) {
     console.error("deleteBatch failed", error);
-    redirectWithError("Could not delete the batch. Please try again.");
+    redirectWithError("This batch record could not be deleted. Please try again.");
   }
 
   if (!deletedBatch) {

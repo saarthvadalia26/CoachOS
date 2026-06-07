@@ -3,7 +3,17 @@ import { Save, Trash2 } from "lucide-react";
 import { BranchFilter } from "@/components/dashboard/BranchFilter";
 import { ConfirmSubmitButton } from "@/components/dashboard/ConfirmSubmitButton";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   hasAnyPermission,
   hasPermission,
@@ -31,6 +41,10 @@ type Student = {
   parent_phone: string | null;
   status: string | null;
 };
+
+function getStatusLabel(status: string | null) {
+  return status === "inactive" ? "Inactive" : "Active";
+}
 
 export default async function StudentsPage({ searchParams }: StudentsPageProps) {
   const context = await requirePermission("students.view");
@@ -86,215 +100,221 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
               : "grid gap-6"
           }
         >
-        {canCreateStudents ? (
-          <div className="rounded-lg border border-border bg-card p-5 shadow-sm">
-            <div>
-              <h2 className="text-xl font-semibold tracking-tight">
-                Add student
-              </h2>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Create a basic student record for this institute.
-              </p>
-            </div>
+          {canCreateStudents ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-xl">Add student</CardTitle>
+                <CardDescription>
+                  Add a student profile for batches, attendance, and fee
+                  records.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {params.error ? (
+                  <p className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                    {params.error}
+                  </p>
+                ) : null}
 
-            {params.error ? (
-              <p className="mt-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                {params.error}
-              </p>
-            ) : null}
-
-            <form action={createStudent} className="mt-5 grid gap-4">
-              {context.branchScope === "all" &&
-              accessibleBranches.length > 1 ? (
-                <label className="grid gap-2 text-sm font-medium">
-                  Branch
-                  <select
-                    required
-                    name="branchId"
-                    defaultValue={branchScope.selectedBranchId ?? ""}
-                    className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
-                  >
-                    <option value="">Select branch</option>
-                    {accessibleBranches.map((branch) => (
-                      <option key={branch.id} value={branch.id}>
-                        {branch.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              ) : branchScope.selectedBranchId ? (
-                <input
-                  name="branchId"
-                  type="hidden"
-                  value={branchScope.selectedBranchId}
-                />
-              ) : null}
-              <label className="grid gap-2 text-sm font-medium">
-                Full name
-                <input
-                  required
-                  name="fullName"
-                  type="text"
-                  autoComplete="name"
-                  className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
-                  placeholder="Student name"
-                />
-              </label>
-              <label className="grid gap-2 text-sm font-medium">
-                Student phone
-                <input
-                  name="phone"
-                  type="tel"
-                  autoComplete="tel"
-                  className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
-                  placeholder="Optional"
-                />
-              </label>
-              <label className="grid gap-2 text-sm font-medium">
-                Parent phone
-                <input
-                  name="parentPhone"
-                  type="tel"
-                  autoComplete="tel"
-                  className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
-                  placeholder="Optional"
-                />
-              </label>
-              <Button type="submit" className="mt-1">
-                Create student
-              </Button>
-            </form>
-          </div>
-        ) : null}
-
-        <div className="rounded-lg border border-border bg-card shadow-sm">
-          <div className="border-b border-border p-5">
-            <h2 className="text-xl font-semibold tracking-tight">
-              Students list
-            </h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Manage student records for this institute.
-            </p>
-          </div>
-
-          {students?.length ? (
-            <div className="divide-y divide-border">
-              {(students as Student[]).map((student) => (
-                <article
-                  key={student.id}
-                  className="grid gap-4 p-5"
-                >
-                  <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
-                    <div>
-                      <h3 className="font-medium">{student.full_name}</h3>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        Student: {student.phone ?? "Not added"} | Parent:{" "}
-                        {student.parent_phone ?? "Not added"}
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-                      <span className="h-fit rounded-md border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground">
-                        {student.status ?? "active"}
-                      </span>
-                      <span className="h-fit rounded-md border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground">
-                        {branchesById.get(student.branch_id)?.name ??
-                          "Branch"}
-                      </span>
-                      {canDeleteStudents ? (
-                        <form action={deleteStudent}>
-                          <input
-                            name="studentId"
-                            type="hidden"
-                            value={student.id}
-                          />
-                          <ConfirmSubmitButton
-                            type="submit"
-                            variant="destructive"
-                            size="sm"
-                            confirmMessage={`Delete ${student.full_name}? This also removes batch relationships, attendance records, and fee records for this student.`}
-                          >
-                            <Trash2 aria-hidden="true" data-icon="inline-start" />
-                            Delete
-                          </ConfirmSubmitButton>
-                        </form>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  {canUpdateStudents ? (
-                    <details className="rounded-md border border-border bg-muted/30 p-3">
-                      <summary className="cursor-pointer text-sm font-medium">
-                        Edit student
-                      </summary>
-                      <form
-                        action={updateStudent}
-                        className="mt-4 grid gap-3 sm:grid-cols-2"
+                <form action={createStudent} className="grid gap-4">
+                  {context.branchScope === "all" &&
+                  accessibleBranches.length > 1 ? (
+                    <Label>
+                      Branch
+                      <select
+                        required
+                        name="branchId"
+                        defaultValue={branchScope.selectedBranchId ?? ""}
+                        className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
                       >
-                        <input
-                          name="studentId"
-                          type="hidden"
-                          value={student.id}
-                        />
-                        <label className="grid gap-2 text-sm font-medium">
-                          Full name
-                          <input
-                            required
-                            name="fullName"
-                            type="text"
-                            defaultValue={student.full_name}
-                            autoComplete="name"
-                            className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
-                          />
-                        </label>
-                        <label className="grid gap-2 text-sm font-medium">
-                          Student phone
-                          <input
-                            name="phone"
-                            type="tel"
-                            defaultValue={student.phone ?? ""}
-                            autoComplete="tel"
-                            className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
-                          />
-                        </label>
-                        <label className="grid gap-2 text-sm font-medium">
-                          Parent phone
-                          <input
-                            name="parentPhone"
-                            type="tel"
-                            defaultValue={student.parent_phone ?? ""}
-                            autoComplete="tel"
-                            className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
-                          />
-                        </label>
-                        <label className="grid gap-2 text-sm font-medium">
-                          Status
-                          <select
-                            name="status"
-                            defaultValue={student.status ?? "active"}
-                            className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
-                          >
-                            <option value="active">Active</option>
-                            <option value="inactive">Inactive</option>
-                          </select>
-                        </label>
-                        <Button type="submit" className="sm:col-span-2 sm:w-fit">
-                          <Save aria-hidden="true" data-icon="inline-start" />
-                          Save changes
-                        </Button>
-                      </form>
-                    </details>
+                        <option value="">Select branch</option>
+                        {accessibleBranches.map((branch) => (
+                          <option key={branch.id} value={branch.id}>
+                            {branch.name}
+                          </option>
+                        ))}
+                      </select>
+                    </Label>
+                  ) : branchScope.selectedBranchId ? (
+                    <input
+                      name="branchId"
+                      type="hidden"
+                      value={branchScope.selectedBranchId}
+                    />
                   ) : null}
-                </article>
-              ))}
-            </div>
-          ) : (
-            <div className="p-5">
-              <p className="text-sm text-muted-foreground">
-                No students yet. Add the first student using the form.
-              </p>
-            </div>
-          )}
-        </div>
+                  <Label>
+                    Full name
+                    <Input
+                      required
+                      name="fullName"
+                      type="text"
+                      autoComplete="name"
+                      placeholder="Full student name"
+                    />
+                  </Label>
+                  <Label>
+                    Student phone
+                    <Input
+                      name="phone"
+                      type="tel"
+                      autoComplete="tel"
+                      placeholder="Optional phone number"
+                    />
+                  </Label>
+                  <Label>
+                    Parent phone
+                    <Input
+                      name="parentPhone"
+                      type="tel"
+                      autoComplete="tel"
+                      placeholder="Optional parent phone"
+                    />
+                  </Label>
+                  <Button type="submit" className="mt-1">
+                    Create student
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          ) : null}
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-xl">Student records</CardTitle>
+              <CardDescription>
+                {students?.length ?? 0}{" "}
+                {(students?.length ?? 0) === 1 ? "student" : "students"} in{" "}
+                {branchScope.selectedBranchName}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {students?.length ? (
+                <div className="divide-y divide-border rounded-md border border-border">
+                  {(students as Student[]).map((student) => (
+                    <article key={student.id} className="grid gap-4 p-4">
+                      <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+                        <div>
+                          <h3 className="font-medium">{student.full_name}</h3>
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            Student: {student.phone ?? "Not added"} | Parent:{" "}
+                            {student.parent_phone ?? "Not added"}
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                          <Badge
+                            variant={
+                              student.status === "inactive"
+                                ? "outline"
+                                : "secondary"
+                            }
+                          >
+                            {getStatusLabel(student.status)}
+                          </Badge>
+                          <Badge variant="outline">
+                            {branchesById.get(student.branch_id)?.name ??
+                              "Branch"}
+                          </Badge>
+                          {canDeleteStudents ? (
+                            <form action={deleteStudent}>
+                              <input
+                                name="studentId"
+                                type="hidden"
+                                value={student.id}
+                              />
+                              <ConfirmSubmitButton
+                                type="submit"
+                                variant="destructive"
+                                size="sm"
+                                confirmMessage={`Delete ${student.full_name}? This also removes batch relationships, attendance records, and fee records for this student.`}
+                              >
+                                <Trash2
+                                  aria-hidden="true"
+                                  data-icon="inline-start"
+                                />
+                                Delete
+                              </ConfirmSubmitButton>
+                            </form>
+                          ) : null}
+                        </div>
+                      </div>
+
+                      {canUpdateStudents ? (
+                        <details className="rounded-md border border-border bg-muted/30 p-3">
+                          <summary className="cursor-pointer text-sm font-medium">
+                            Edit student
+                          </summary>
+                          <form
+                            action={updateStudent}
+                            className="mt-4 grid gap-3 sm:grid-cols-2"
+                          >
+                            <input
+                              name="studentId"
+                              type="hidden"
+                              value={student.id}
+                            />
+                            <Label>
+                              Full name
+                              <Input
+                                required
+                                name="fullName"
+                                type="text"
+                                defaultValue={student.full_name}
+                                autoComplete="name"
+                              />
+                            </Label>
+                            <Label>
+                              Student phone
+                              <Input
+                                name="phone"
+                                type="tel"
+                                defaultValue={student.phone ?? ""}
+                                autoComplete="tel"
+                              />
+                            </Label>
+                            <Label>
+                              Parent phone
+                              <Input
+                                name="parentPhone"
+                                type="tel"
+                                defaultValue={student.parent_phone ?? ""}
+                                autoComplete="tel"
+                              />
+                            </Label>
+                            <Label>
+                              Status
+                              <select
+                                name="status"
+                                defaultValue={student.status ?? "active"}
+                                className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
+                              >
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                              </select>
+                            </Label>
+                            <Button
+                              type="submit"
+                              className="sm:col-span-2 sm:w-fit"
+                            >
+                              <Save
+                                aria-hidden="true"
+                                data-icon="inline-start"
+                              />
+                              Save changes
+                            </Button>
+                          </form>
+                        </details>
+                      ) : null}
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <p className="rounded-md border border-dashed border-border px-3 py-3 text-sm text-muted-foreground">
+                  No students have been added yet. Add your first student to
+                  begin.
+                </p>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </section>
     </DashboardShell>

@@ -17,11 +17,13 @@ function redirectWithError(message: string): never {
 }
 
 function redirectWithSaveError(): never {
-  redirectWithError("Could not save the academic year. Please try again.");
+  redirectWithError(
+    "This academic year could not be saved. Please review the dates and try again.",
+  );
 }
 
 function redirectWithDeleteError(): never {
-  redirectWithError("Could not delete the academic year. Please try again.");
+  redirectWithError("This academic year could not be deleted. Please try again.");
 }
 
 function redirectWithLinkedAttendanceError(): never {
@@ -207,7 +209,9 @@ export async function createAcademicYear(formData: FormData) {
         context,
         activeError,
       );
-      redirectWithError("Academic year was created but could not be set active.");
+    redirectWithError(
+      "The academic year was created, but it could not be marked active.",
+    );
     }
   }
 
@@ -281,7 +285,7 @@ export async function setActiveAcademicYear(formData: FormData) {
 
   if (error) {
     logAcademicYearError("set active academic year", context, error);
-    redirectWithError("Could not set the active academic year.");
+    redirectWithError("The active academic year could not be updated.");
   }
 
   revalidatePath(ACADEMIC_YEARS_PATH);

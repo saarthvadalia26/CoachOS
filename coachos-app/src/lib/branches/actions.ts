@@ -12,7 +12,9 @@ function redirectWithError(message: string): never {
 }
 
 function redirectWithSaveError(): never {
-  redirectWithError("Could not save the branch. Please try again.");
+  redirectWithError(
+    "This branch record could not be saved. Please review the details and try again.",
+  );
 }
 
 function getRequiredText(formData: FormData, key: string, label: string) {

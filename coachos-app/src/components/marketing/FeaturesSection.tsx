@@ -4,7 +4,7 @@ const features = [
   {
     title: "Batch & Student Management",
     description:
-      "Organize students, batches, schedules, and attendance in one workspace built for busy coaching teams.",
+      "Organize students, batches, schedules, and attendance in one operations dashboard built for busy coaching teams.",
   },
   {
     title: "Fees & Payment Tracking",
@@ -12,9 +12,9 @@ const features = [
       "Track dues, paid fees, reminders, and collections without juggling spreadsheets or handwritten registers.",
   },
   {
-    title: "Follow-ups & Parent Communication",
+    title: "Attendance & Audit History",
     description:
-      "Keep every inquiry, parent update, and student follow-up visible so no admission opportunity slips away.",
+      "Submit daily attendance, reopen records with approval, and review a clear audit history for corrections.",
   },
 ];
 
@@ -26,7 +26,7 @@ export function FeaturesSection() {
           Core features
         </p>
         <h2 className="mt-3 text-3xl font-semibold tracking-tight">
-          Designed around the daily rhythm of tuition classes.
+          Designed around the daily rhythm of coaching institutes.
         </h2>
       </div>
 

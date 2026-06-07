@@ -19,7 +19,9 @@ function redirectWithError(message: string): never {
 }
 
 function redirectWithSaveError(): never {
-  redirectWithError("Could not save the student. Please try again.");
+  redirectWithError(
+    "This student record could not be saved. Please review the details and try again.",
+  );
 }
 
 function getRequiredText(formData: FormData, key: string) {
@@ -70,7 +72,7 @@ function requireBranchPermission(
   branchId: string | null,
 ) {
   if (!branchId || !canAccessPermission(context, permission, { branchId })) {
-    redirectWithError("You do not have permission for that branch.");
+    redirectWithError("You do not have permission to perform this action.");
   }
 }
 
@@ -176,7 +178,7 @@ export async function deleteStudent(formData: FormData) {
 
   if (existingStudentError) {
     console.error("deleteStudent lookup failed", existingStudentError);
-    redirectWithError("Could not delete the student. Please try again.");
+    redirectWithError("This student record could not be deleted. Please try again.");
   }
 
   if (!existingStudent) {
@@ -195,7 +197,7 @@ export async function deleteStudent(formData: FormData) {
 
   if (error) {
     console.error("deleteStudent failed", error);
-    redirectWithError("Could not delete the student. Please try again.");
+    redirectWithError("This student record could not be deleted. Please try again.");
   }
 
   if (!deletedStudent) {

@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.redirect(
     new URL(
-      "/login?error=Could%20not%20confirm%20your%20email.%20Please%20try%20again.",
+      "/login?error=Your%20email%20could%20not%20be%20confirmed.%20Please%20try%20again.",
       request.url,
     ),
   );

@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   getCurrentUserContext,
   getStaffLinkStatusMessage,
@@ -51,28 +53,26 @@ export default async function OnboardingPage({
 
         {staffLinkMessage ? null : (
           <form action={createInstituteAndProfile} className="mt-6 grid gap-4">
-            <label className="grid gap-2 text-sm font-medium">
+            <Label>
               Your full name
-              <input
+              <Input
                 required
                 name="fullName"
                 type="text"
                 autoComplete="name"
-                className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
                 placeholder="Aarav Sharma"
               />
-            </label>
-            <label className="grid gap-2 text-sm font-medium">
+            </Label>
+            <Label>
               Institute name
-              <input
+              <Input
                 required
                 name="instituteName"
                 type="text"
                 autoComplete="organization"
-                className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
                 placeholder="Bright Future Classes"
               />
-            </label>
+            </Label>
             <Button type="submit" className="mt-2">
               Create institute
             </Button>

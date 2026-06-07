@@ -70,7 +70,7 @@ export async function createInstituteAndProfile(formData: FormData) {
   if (instituteError || !institute) {
     console.error("createInstituteAndProfile institute insert failed", instituteError);
     redirect(
-      `/onboarding?error=${encodeURIComponent("Could not create the institute. Please try again.")}`,
+      `/onboarding?error=${encodeURIComponent("Institute setup could not be completed. Please review the details and try again.")}`,
     );
   }
 
@@ -89,7 +89,7 @@ export async function createInstituteAndProfile(formData: FormData) {
   if (profileError) {
     console.error("createInstituteAndProfile profile upsert failed", profileError);
     redirect(
-      `/onboarding?error=${encodeURIComponent("Could not finish setup. Please try again.")}`,
+      `/onboarding?error=${encodeURIComponent("Institute setup could not be completed. Please try again.")}`,
     );
   }
 

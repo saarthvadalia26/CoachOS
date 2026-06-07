@@ -2,6 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { login } from "@/lib/auth/actions";
 import { createClient } from "@/lib/supabase/server";
 
@@ -30,10 +32,10 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         <div>
           <p className="text-sm font-medium text-muted-foreground">CoachOS</p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight">
-            Log in to your workspace
+            Log in to your institute
           </h1>
           <p className="mt-3 text-sm leading-6 text-muted-foreground">
-            Use your institute account to access the CoachOS dashboard.
+            Access your students, batches, attendance, and fees from one secure dashboard.
           </p>
         </div>
 
@@ -51,28 +53,26 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
         <form action={login} className="mt-6 grid gap-4">
           <input type="hidden" name="next" value={params.next ?? "/dashboard"} />
-          <label className="grid gap-2 text-sm font-medium">
+          <Label>
             Email
-            <input
+            <Input
               required
               name="email"
               type="email"
               autoComplete="email"
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
               placeholder="owner@institute.com"
             />
-          </label>
-          <label className="grid gap-2 text-sm font-medium">
+          </Label>
+          <Label>
             Password
-            <input
+            <Input
               required
               name="password"
               type="password"
               autoComplete="current-password"
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
               placeholder="Enter your password"
             />
-          </label>
+          </Label>
           <Button type="submit" className="mt-2">
             Log in
           </Button>

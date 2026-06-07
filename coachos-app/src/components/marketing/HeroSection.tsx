@@ -8,12 +8,11 @@ export function HeroSection() {
           Built for coaching institutes
         </p>
         <h1 className="text-4xl font-semibold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-          Run your tuition class from one clear operating system.
+          Run your coaching institute from one clear operating system.
         </h1>
         <p className="mt-6 max-w-2xl text-lg leading-8 text-muted-foreground">
-          CoachOS helps coaching centers manage students, batches, fees, and
-          follow-ups without scattered registers, spreadsheets, or missed parent
-          conversations.
+          CoachOS helps coaching institutes manage branches, students, batches,
+          attendance, and fee records without scattered registers or spreadsheets.
         </p>
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
           <Button asChild size="lg">
@@ -29,7 +28,9 @@ export function HeroSection() {
         <div className="grid gap-4">
           <div className="rounded-md border border-border bg-background p-4">
             <p className="text-sm text-muted-foreground">Today&apos;s focus</p>
-            <p className="mt-2 text-2xl font-semibold">18 fee follow-ups</p>
+            <p className="mt-2 text-2xl font-semibold">
+              18 pending fee records
+            </p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="rounded-md border border-border bg-background p-4">
@@ -37,8 +38,8 @@ export function HeroSection() {
               <p className="mt-2 text-2xl font-semibold">24</p>
             </div>
             <div className="rounded-md border border-border bg-background p-4">
-              <p className="text-sm text-muted-foreground">Open inquiries</p>
-              <p className="mt-2 text-2xl font-semibold">43</p>
+              <p className="text-sm text-muted-foreground">Attendance today</p>
+              <p className="mt-2 text-2xl font-semibold">16</p>
             </div>
           </div>
           <div className="rounded-md border border-border bg-background p-4">

@@ -10,7 +10,7 @@ export function CTASection() {
           </h2>
           <p className="mt-3 max-w-2xl text-muted-foreground">
             Start with a focused walkthrough of how CoachOS can fit your
-            batches, fee cycles, and admission process.
+            branches, batches, fee cycles, and attendance workflow.
           </p>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row">

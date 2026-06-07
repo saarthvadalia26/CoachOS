@@ -70,7 +70,7 @@ function csvResponse(rows: string[][], filename: string) {
 }
 
 function exportErrorResponse(status = 500) {
-  return new Response("Could not export fee records.", {
+  return new Response("Fee record export could not be generated.", {
     headers: {
       "Cache-Control": "no-store",
       "Content-Type": "text/plain; charset=utf-8",

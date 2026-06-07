@@ -322,7 +322,8 @@ export default async function BatchesPage({ searchParams }: BatchesPageProps) {
               <CardContent>
                 {params.error || queryError ? (
                   <p className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                    {params.error ?? "Could not load batch data."}
+                    {params.error ??
+                      "Batch records are unavailable right now. Please try again."}
                   </p>
                 ) : null}
 
@@ -393,7 +394,7 @@ export default async function BatchesPage({ searchParams }: BatchesPageProps) {
             <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <h2 className="text-xl font-semibold tracking-tight">
-                  Batch list
+                  Batch records
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
                   {batches.length} {batches.length === 1 ? "batch" : "batches"}{" "}
@@ -465,7 +466,7 @@ export default async function BatchesPage({ searchParams }: BatchesPageProps) {
                       <div>
                         <CardTitle className="text-lg">{batch.name}</CardTitle>
                         <CardDescription className="mt-1">
-                          {batch.subject ?? "No subject added"}
+                          {batch.subject ?? "Subject not specified"}
                           {batch.schedule ? ` | ${batch.schedule}` : ""}
                         </CardDescription>
                       </div>
@@ -498,7 +499,7 @@ export default async function BatchesPage({ searchParams }: BatchesPageProps) {
                               type="submit"
                               variant="destructive"
                               size="sm"
-                              confirmMessage={`Delete ${batch.name}? This also removes student assignments and attendance sessions for this batch.`}
+                              confirmMessage={`Delete ${batch.name}? This also removes student assignments and attendance records for this batch.`}
                             >
                               <Trash2
                                 aria-hidden="true"
@@ -530,7 +531,7 @@ export default async function BatchesPage({ searchParams }: BatchesPageProps) {
                           </ul>
                         ) : (
                           <p className="rounded-md border border-dashed border-border px-3 py-3 text-sm text-muted-foreground">
-                            No students in this batch yet.
+                            No students are assigned to this batch yet.
                           </p>
                         )}
                       </div>
@@ -540,7 +541,7 @@ export default async function BatchesPage({ searchParams }: BatchesPageProps) {
                           <div>
                             <p className="text-sm font-medium">Teachers</p>
                             <p className="mt-1 text-xs text-muted-foreground">
-                              Assign linked teacher accounts from this batch
+                              Assign teacher staff members from this batch
                               branch.
                             </p>
                           </div>
@@ -578,7 +579,7 @@ export default async function BatchesPage({ searchParams }: BatchesPageProps) {
                             </ul>
                           ) : (
                             <p className="rounded-md border border-dashed border-border px-3 py-3 text-sm text-muted-foreground">
-                              No teachers assigned yet.
+                              No teachers are assigned to this batch yet.
                             </p>
                           )}
 
@@ -602,7 +603,7 @@ export default async function BatchesPage({ searchParams }: BatchesPageProps) {
                                 <option value="">
                                   {availableTeachers.length
                                     ? "Select teacher"
-                                    : "No linked teachers in this branch"}
+                                    : "No teacher staff members available in this branch"}
                                 </option>
                                 {availableTeachers.map((teacherMembership) => (
                                   <option
@@ -741,8 +742,8 @@ export default async function BatchesPage({ searchParams }: BatchesPageProps) {
               <Card>
                 <CardContent className="pt-5">
                   <p className="text-sm text-muted-foreground">
-                    No batches yet. Create the first batch to start grouping
-                    students.
+                    No batches have been created yet. Create your first batch
+                    to start grouping students.
                   </p>
                 </CardContent>
               </Card>

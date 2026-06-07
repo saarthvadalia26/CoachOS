@@ -192,7 +192,7 @@ export default async function AcademicYearsPage({
 
           {error ? (
             <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              Could not load academic years.
+              Academic years are unavailable right now. Please try again.
             </p>
           ) : null}
 
@@ -315,7 +315,7 @@ export default async function AcademicYearsPage({
                               type="submit"
                               variant="destructive"
                               className="w-full sm:w-auto"
-                              confirmMessage={`Delete ${academicYear.name}? This is only allowed when no attendance sessions are linked.`}
+                              confirmMessage={`Delete ${academicYear.name}? This is only allowed when no attendance records are linked.`}
                             >
                               <Trash2
                                 aria-hidden="true"
@@ -335,7 +335,8 @@ export default async function AcademicYearsPage({
             <Card>
               <CardContent className="pt-5">
                 <p className="text-sm text-muted-foreground">
-                  No academic years have been created yet.
+                  No academic years have been created yet. Create an academic
+                  year to organize attendance and future reports.
                 </p>
               </CardContent>
             </Card>

@@ -2,6 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { signup } from "@/lib/auth/actions";
 import { createClient } from "@/lib/supabase/server";
 
@@ -31,8 +33,7 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
             Create your institute account
           </h1>
           <p className="mt-3 text-sm leading-6 text-muted-foreground">
-            Start with email and password authentication. Student management
-            comes later.
+            Create the owner account for your coaching institute and complete setup in the dashboard.
           </p>
         </div>
 
@@ -43,28 +44,26 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
         ) : null}
 
         <form action={signup} className="mt-6 grid gap-4">
-          <label className="grid gap-2 text-sm font-medium">
+          <Label>
             Email
-            <input
+            <Input
               required
               name="email"
               type="email"
               autoComplete="email"
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
               placeholder="owner@institute.com"
             />
-          </label>
-          <label className="grid gap-2 text-sm font-medium">
+          </Label>
+          <Label>
             Password
-            <input
+            <Input
               required
               name="password"
               type="password"
               autoComplete="new-password"
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
               placeholder="Create a password"
             />
-          </label>
+          </Label>
           <Button type="submit" className="mt-2">
             Sign up
           </Button>

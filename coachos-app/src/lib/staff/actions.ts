@@ -74,7 +74,7 @@ function requireStaffPermission(
       instituteId: context.institute.id,
     })
   ) {
-    redirectWithError("You do not have permission to manage staff.");
+    redirectWithError("You do not have permission to perform this action.");
   }
 }
 
@@ -99,7 +99,9 @@ export async function createStaffMember(formData: FormData) {
 
   if (error) {
     console.error("createStaffMember failed", error);
-    redirectWithError("Could not save the staff member. Please try again.");
+    redirectWithError(
+      "This staff member record could not be saved. Please review the details and try again.",
+    );
   }
 
   revalidatePath(STAFF_PATH);
@@ -126,7 +128,7 @@ export async function updateStaffMember(formData: FormData) {
 
   if (existingStaffMemberError) {
     console.error("updateStaffMember lookup failed", existingStaffMemberError);
-    redirectWithError("Could not update the staff member. Please try again.");
+    redirectWithError("This staff member record could not be updated. Please try again.");
   }
 
   if (!existingStaffMember) {
@@ -151,7 +153,7 @@ export async function updateStaffMember(formData: FormData) {
 
   if (error) {
     console.error("updateStaffMember failed", error);
-    redirectWithError("Could not update the staff member. Please try again.");
+    redirectWithError("This staff member record could not be updated. Please try again.");
   }
 
   if (!updatedStaffMember) {
@@ -180,7 +182,7 @@ export async function deleteStaffMember(formData: FormData) {
 
   if (existingStaffMemberError) {
     console.error("deleteStaffMember lookup failed", existingStaffMemberError);
-    redirectWithError("Could not delete the staff member. Please try again.");
+    redirectWithError("This staff member record could not be deleted. Please try again.");
   }
 
   if (!existingStaffMember) {
@@ -199,7 +201,7 @@ export async function deleteStaffMember(formData: FormData) {
 
   if (error) {
     console.error("deleteStaffMember failed", error);
-    redirectWithError("Could not delete the staff member. Please try again.");
+    redirectWithError("This staff member record could not be deleted. Please try again.");
   }
 
   if (!deletedStaffMember) {

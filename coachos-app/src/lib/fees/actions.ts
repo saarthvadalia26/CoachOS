@@ -65,7 +65,7 @@ function requireBranchPermission(
   branchId: string | null,
 ) {
   if (!branchId || !canAccessPermission(context, permission, { branchId })) {
-    redirectWithError("You do not have permission for that branch.");
+    redirectWithError("You do not have permission to perform this action.");
   }
 }
 
@@ -98,7 +98,7 @@ export async function createFeeRecord(formData: FormData) {
 
   if (studentError) {
     console.error("createFeeRecord student lookup failed", studentError);
-    redirectWithError("Could not verify the selected student.");
+    redirectWithError("The selected student record could not be verified.");
   }
 
   if (!student) {
@@ -131,7 +131,9 @@ export async function createFeeRecord(formData: FormData) {
 
   if (error) {
     console.error("createFeeRecord failed", error);
-    redirectWithError("Could not save the fee record. Please try again.");
+    redirectWithError(
+      "This fee record could not be saved. Please review the details and try again.",
+    );
   }
 
   revalidatePath(FEES_PATH);
@@ -152,7 +154,7 @@ export async function markFeeRecordPaid(formData: FormData) {
 
   if (feeRecordError) {
     console.error("markFeeRecordPaid lookup failed", feeRecordError);
-    redirectWithError("Could not verify the selected fee record.");
+    redirectWithError("The selected fee record could not be verified.");
   }
 
   if (!feeRecord) {
@@ -173,7 +175,9 @@ export async function markFeeRecordPaid(formData: FormData) {
 
   if (error) {
     console.error("markFeeRecordPaid failed", error);
-    redirectWithError("Could not mark the fee record as paid.");
+    redirectWithError(
+      "This fee record could not be marked as paid. Please try again.",
+    );
   }
 
   revalidatePath(FEES_PATH);

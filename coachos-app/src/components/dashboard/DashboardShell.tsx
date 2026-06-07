@@ -128,7 +128,7 @@ export function DashboardShell({
           <div className="mb-5">
             <p className="text-lg font-semibold tracking-tight">CoachOS</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Institute workspace
+              Institute operations
             </p>
           </div>
           <nav className="flex gap-2 overflow-x-auto md:grid md:overflow-visible">

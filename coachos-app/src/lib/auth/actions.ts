@@ -55,7 +55,7 @@ export async function signup(formData: FormData) {
   if (error) {
     console.error("signup failed", error);
     redirect(
-      `/signup?error=${encodeURIComponent("Could not create your account. Please try again.")}`,
+      `/signup?error=${encodeURIComponent("This account could not be created. Please check your email and password and try again.")}`,
     );
   }
 

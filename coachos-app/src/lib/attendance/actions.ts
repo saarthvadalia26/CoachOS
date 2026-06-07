@@ -15,14 +15,17 @@ import { getTodayDateValue } from "@/lib/attendance/date";
 
 const ATTENDANCE_PATH = "/dashboard/attendance";
 const attendanceStatuses = ["present", "absent", "late"] as const;
+const EMPTY_UUID = "00000000-0000-0000-0000-000000000000";
 
 type AttendanceStatus = (typeof attendanceStatuses)[number];
 
 type AttendanceActionLogDetails = {
+  action?: string | null;
   academicYearId?: string | null;
   batchId?: string | null;
   branchId?: string | null;
   instituteId?: string;
+  lockedAt?: string | null;
   membershipId?: string | null;
   operation?: "create" | "update";
   role?: string | null;
@@ -37,6 +40,39 @@ type SupabaseErrorLike = {
   details?: unknown;
   hint?: unknown;
   message?: unknown;
+};
+
+type AttendanceAuditAction =
+  | "session_created"
+  | "session_locked"
+  | "session_reopened"
+  | "status_changed"
+  | "notes_changed";
+
+type AttendanceAuditLogInput = {
+  action: AttendanceAuditAction;
+  newStatus?: AttendanceStatus | null;
+  oldStatus?: AttendanceStatus | null;
+  reason?: string | null;
+  studentId?: string | null;
+};
+
+type AttendanceSessionLookup = {
+  academic_year_id: string | null;
+  id: string;
+  locked_at: string | null;
+  locked_by: string | null;
+  notes: string | null;
+  reopen_count: number;
+  reopened_at: string | null;
+  reopened_by: string | null;
+  reopen_reason: string | null;
+};
+
+type AttendanceReopenAccess = {
+  canReopen: boolean;
+  isBranchManager: boolean;
+  isOwner: boolean;
 };
 
 function getSupabaseErrorFields(error: unknown) {
@@ -84,8 +120,32 @@ function logAttendanceActionError(
     sessionDate: details.sessionDate ?? null,
     sessionId: details.sessionId ?? null,
     studentId: details.studentId ?? null,
+    action: details.action ?? null,
+    lockedAt: details.lockedAt ?? null,
     operation: details.operation ?? null,
     supabaseError: getSupabaseErrorFields(error),
+  });
+}
+
+function logAttendanceSaveStep(
+  step: string,
+  details: AttendanceActionLogDetails = {},
+) {
+  console.info("Attendance save step", {
+    step,
+    userId: details.userId ?? null,
+    role: details.role ?? null,
+    membershipId: details.membershipId ?? null,
+    instituteId: details.instituteId ?? null,
+    branchId: details.branchId ?? null,
+    batchId: details.batchId ?? null,
+    academicYearId: details.academicYearId ?? null,
+    sessionDate: details.sessionDate ?? null,
+    sessionId: details.sessionId ?? null,
+    studentId: details.studentId ?? null,
+    action: details.action ?? null,
+    lockedAt: details.lockedAt ?? null,
+    operation: details.operation ?? null,
   });
 }
 
@@ -99,6 +159,13 @@ function redirectWithError(message: string, batchId?: string): never {
   }
 
   redirect(`${ATTENDANCE_PATH}?${params.toString()}`);
+}
+
+function redirectWithAttendanceSaveError(batchId?: string): never {
+  redirectWithError(
+    "This attendance record could not be saved. Please check the selected batch and try again.",
+    batchId,
+  );
 }
 
 function getRequiredText(formData: FormData, key: string, label: string) {
@@ -156,7 +223,7 @@ function getSubmittedAttendanceStatuses(
         ...logDetails,
         studentId,
       });
-      redirectWithError("Could not verify attendance statuses.", batchId);
+      redirectWithError("Attendance statuses could not be verified.", batchId);
     }
 
     statuses.set(studentId, status as AttendanceStatus);
@@ -223,7 +290,9 @@ async function getExistingAttendanceSession(
 ) {
   const { data: existingSession, error } = await context.supabase
     .from("attendance_sessions")
-    .select("id, academic_year_id")
+    .select(
+      "id, academic_year_id, locked_at, locked_by, notes, reopen_count, reopened_at, reopened_by, reopen_reason",
+    )
     .eq("institute_id", context.institute.id)
     .eq("branch_id", values.branchId)
     .eq("batch_id", values.batchId)
@@ -236,10 +305,50 @@ async function getExistingAttendanceSession(
       error,
       getAttendanceLogDetails(context, values),
     );
-    redirectWithError("Could not save the attendance session.", values.batchId);
+    redirectWithAttendanceSaveError(values.batchId);
   }
 
-  return existingSession as { academic_year_id: string | null; id: string } | null;
+  return existingSession as AttendanceSessionLookup | null;
+}
+
+async function verifyAttendanceLockingSchema(
+  context: DashboardContext,
+  values: {
+    batchId: string;
+    branchId: string;
+    sessionDate: string;
+  },
+) {
+  const { error: sessionColumnsError } = await context.supabase
+    .from("attendance_sessions")
+    .select(
+      "id, locked_at, locked_by, reopened_at, reopened_by, reopen_reason, reopen_count",
+    )
+    .eq("id", EMPTY_UUID)
+    .maybeSingle();
+
+  if (sessionColumnsError) {
+    logAttendanceActionError(
+      "attendance_locking_schema_check",
+      sessionColumnsError,
+      getAttendanceLogDetails(context, values),
+    );
+    redirectWithAttendanceSaveError(values.batchId);
+  }
+
+  const { error: auditTableError } = await context.supabase
+    .from("attendance_audit_logs")
+    .select("id")
+    .limit(0);
+
+  if (auditTableError) {
+    logAttendanceActionError(
+      "attendance_audit_schema_check",
+      auditTableError,
+      getAttendanceLogDetails(context, values),
+    );
+    redirectWithAttendanceSaveError(values.batchId);
+  }
 }
 
 async function getActiveAcademicYearId(
@@ -265,7 +374,7 @@ async function getActiveAcademicYearId(
       error,
       getAttendanceLogDetails(context, values),
     );
-    redirectWithError("Could not save the attendance session.", values.batchId);
+    redirectWithAttendanceSaveError(values.batchId);
   }
 
   return academicYear?.id ?? null;
@@ -308,7 +417,7 @@ async function createAttendanceSession(values: {
 
     if (!isDuplicateKeyError(error)) {
       redirectWithError(
-        "Could not save the attendance session.",
+        "This attendance record could not be saved. Please check the selected batch and try again.",
         values.batchId,
       );
     }
@@ -323,7 +432,7 @@ async function createAttendanceSession(values: {
       return existingSession.id;
     }
 
-    redirectWithError("Could not save the attendance session.", values.batchId);
+    redirectWithAttendanceSaveError(values.batchId);
   }
 
   return sessionId;
@@ -335,6 +444,7 @@ async function updateAttendanceSession(values: {
   branchId: string;
   context: DashboardContext;
   existingAcademicYearId: string | null;
+  existingNotes: string | null;
   notes: string | null;
   sessionDate: string;
   sessionId: string;
@@ -371,10 +481,13 @@ async function updateAttendanceSession(values: {
         sessionId: values.sessionId,
       }),
     );
-    redirectWithError("Could not save the attendance session.", values.batchId);
+    redirectWithAttendanceSaveError(values.batchId);
   }
 
-  return values.sessionId;
+  return {
+    notesChanged: values.existingNotes !== values.notes,
+    sessionId: values.sessionId,
+  };
 }
 
 async function saveAttendanceRecords(values: {
@@ -387,12 +500,12 @@ async function saveAttendanceRecords(values: {
   }>;
   sessionDate: string;
   sessionId: string;
-}) {
+}): Promise<AttendanceAuditLogInput[]> {
   const studentIds = values.records.map((record) => record.student_id);
   const { data: existingRecordRows, error: existingRecordsError } =
     await values.context.supabase
       .from("attendance_records")
-      .select("id, student_id")
+      .select("id, student_id, status")
       .eq("session_id", values.sessionId)
       .in("student_id", studentIds);
 
@@ -407,24 +520,40 @@ async function saveAttendanceRecords(values: {
         sessionId: values.sessionId,
       }),
     );
-    redirectWithError("Could not save the attendance records.", values.batchId);
+    redirectWithAttendanceSaveError(values.batchId);
   }
 
   const existingRecordsByStudentId = new Map(
-    ((existingRecordRows ?? []) as Array<{ id: string; student_id: string }>)
-      .map((record) => [record.student_id, record.id]),
+    ((existingRecordRows ?? []) as Array<{
+      id: string;
+      status: AttendanceStatus | string | null;
+      student_id: string;
+    }>).map((record) => [
+      record.student_id,
+      {
+        id: record.id,
+        status: attendanceStatuses.includes(record.status as AttendanceStatus)
+          ? (record.status as AttendanceStatus)
+          : null,
+      },
+    ]),
   );
+  const auditLogs: AttendanceAuditLogInput[] = [];
 
   for (const record of values.records) {
-    const existingRecordId = existingRecordsByStudentId.get(record.student_id);
+    const existingRecord = existingRecordsByStudentId.get(record.student_id);
 
-    if (existingRecordId) {
+    if (existingRecord) {
+      if (existingRecord.status === record.status) {
+        continue;
+      }
+
       const { error } = await values.context.supabase
         .from("attendance_records")
         .update({
           status: record.status,
         })
-        .eq("id", existingRecordId)
+        .eq("id", existingRecord.id)
         .eq("session_id", values.sessionId)
         .eq("student_id", record.student_id);
 
@@ -442,10 +571,17 @@ async function saveAttendanceRecords(values: {
           }),
         );
         redirectWithError(
-          "Could not save the attendance records.",
+          "This attendance record could not be saved. Please check the selected batch and try again.",
           values.batchId,
         );
       }
+
+      auditLogs.push({
+        action: "status_changed",
+        newStatus: record.status,
+        oldStatus: existingRecord.status,
+        studentId: record.student_id,
+      });
 
       continue;
     }
@@ -472,11 +608,153 @@ async function saveAttendanceRecords(values: {
         }),
       );
       redirectWithError(
-        "Could not save the attendance records.",
+        "This attendance record could not be saved. Please check the selected batch and try again.",
         values.batchId,
       );
     }
+
+    auditLogs.push({
+      action: "status_changed",
+      newStatus: record.status,
+      oldStatus: null,
+      studentId: record.student_id,
+    });
   }
+
+  return auditLogs;
+}
+
+async function writeAttendanceAuditLogs(values: {
+  batchId: string;
+  branchId: string;
+  context: DashboardContext;
+  logs: AttendanceAuditLogInput[];
+  sessionDate: string;
+  sessionId: string;
+}) {
+  if (!values.logs.length) {
+    return;
+  }
+
+  const { error } = await values.context.supabase
+    .from("attendance_audit_logs")
+    .insert(
+      values.logs.map((log) => ({
+        action: log.action,
+        branch_id: values.branchId,
+        changed_by: values.context.claims.sub,
+        institute_id: values.context.institute.id,
+        new_status: log.newStatus ?? null,
+        old_status: log.oldStatus ?? null,
+        reason: log.reason ?? null,
+        session_id: values.sessionId,
+        student_id: log.studentId ?? null,
+      })),
+    );
+
+  if (error) {
+    logAttendanceActionError(
+      "attendance_audit_insert",
+      error,
+      getAttendanceLogDetails(values.context, {
+        action: values.logs.map((log) => log.action).join(","),
+        batchId: values.batchId,
+        branchId: values.branchId,
+        sessionDate: values.sessionDate,
+        sessionId: values.sessionId,
+      }),
+    );
+    redirectWithAttendanceSaveError(values.batchId);
+  }
+}
+
+async function lockAttendanceSession(values: {
+  batchId: string;
+  branchId: string;
+  context: DashboardContext;
+  sessionDate: string;
+  sessionId: string;
+}) {
+  const lockedAt = new Date().toISOString();
+  const { data: lockedSession, error } = await values.context.supabase
+    .from("attendance_sessions")
+    .update({
+      locked_at: lockedAt,
+      locked_by: values.context.claims.sub,
+    })
+    .eq("id", values.sessionId)
+    .eq("institute_id", values.context.institute.id)
+    .eq("branch_id", values.branchId)
+    .eq("batch_id", values.batchId)
+    .select("id, locked_at, locked_by")
+    .maybeSingle();
+
+  if (error) {
+    logAttendanceActionError(
+      "attendance_session_lock",
+      error,
+      getAttendanceLogDetails(values.context, {
+        batchId: values.batchId,
+        branchId: values.branchId,
+        lockedAt,
+        operation: "update",
+        sessionDate: values.sessionDate,
+        sessionId: values.sessionId,
+      }),
+    );
+    redirectWithError(
+      "The attendance record was saved but could not be locked. Please try again.",
+      values.batchId,
+    );
+  }
+
+  if (
+    !lockedSession?.locked_at ||
+    lockedSession.locked_by !== values.context.claims.sub
+  ) {
+    logAttendanceActionError(
+      "attendance_session_lock_verification",
+      null,
+      getAttendanceLogDetails(values.context, {
+        batchId: values.batchId,
+        branchId: values.branchId,
+        lockedAt: lockedSession?.locked_at ?? null,
+        operation: "update",
+        sessionDate: values.sessionDate,
+        sessionId: values.sessionId,
+      }),
+    );
+    redirectWithError(
+      "The attendance record was saved but could not be locked. Please try again.",
+      values.batchId,
+    );
+  }
+}
+
+function getAttendanceReopenAccess(
+  context: DashboardContext,
+  branchId: string,
+): AttendanceReopenAccess {
+  const isOwner = context.memberships.some((membership) => {
+    if (membership.role === "owner") {
+      return canAccessPermission(context, "attendance.update", { branchId });
+    }
+
+    return false;
+  });
+  const isBranchManager = context.memberships.some((membership) => {
+    return (
+      membership.role === "branch_manager" &&
+      membership.branch_id === branchId &&
+      canAccessPermission(context, "attendance.update", { branchId })
+    );
+  });
+
+  return {
+    canReopen: isOwner || isBranchManager,
+    isBranchManager,
+    isOwner,
+  };
 }
 
 export async function saveTodayAttendance(formData: FormData) {
@@ -486,6 +764,14 @@ export async function saveTodayAttendance(formData: FormData) {
   const notes = getOptionalText(formData, "notes");
   const sessionDate = getSessionDate(formData);
 
+  logAttendanceSaveStep(
+    "save_started",
+    getAttendanceLogDetails(context, {
+      batchId,
+      sessionDate: sessionDate ?? undefined,
+    }),
+  );
+
   if (!sessionDate) {
     logAttendanceActionError(
       "validate_session_date",
@@ -494,7 +780,7 @@ export async function saveTodayAttendance(formData: FormData) {
         batchId,
       }),
     );
-    redirectWithError("Could not verify the attendance date.", batchId);
+    redirectWithError("Please select a valid attendance date.", batchId);
   }
 
   const { data: batch, error: batchError } = await supabase
@@ -513,11 +799,11 @@ export async function saveTodayAttendance(formData: FormData) {
         sessionDate,
       }),
     );
-    redirectWithError("Could not verify the selected batch.", batchId);
+    redirectWithError("Please select a valid batch and try again.", batchId);
   }
 
   if (!batch) {
-    redirectWithError("Select a batch from this institute.", batchId);
+    redirectWithError("Please select a batch from this institute.", batchId);
   }
 
   if (!batch.branch_id || batch.institute_id !== institute.id) {
@@ -530,10 +816,17 @@ export async function saveTodayAttendance(formData: FormData) {
         sessionDate,
       }),
     );
-    redirectWithError("Could not verify the selected batch.", batchId);
+    redirectWithError("Please select a valid batch and try again.", batchId);
   }
 
   const branchId = batch.branch_id;
+
+  await verifyAttendanceLockingSchema(context, {
+    batchId,
+    branchId,
+    sessionDate,
+  });
+
   const submittedStatuses = getSubmittedAttendanceStatuses(
     formData,
     getAttendanceLogDetails(context, {
@@ -559,7 +852,10 @@ export async function saveTodayAttendance(formData: FormData) {
         sessionDate,
       }),
     );
-    redirectWithError("Could not load the batch students.", batchId);
+    redirectWithError(
+      "Student records for this batch are unavailable right now. Please try again.",
+      batchId,
+    );
   }
 
   const studentIds = (studentBatches ?? [])
@@ -579,7 +875,10 @@ export async function saveTodayAttendance(formData: FormData) {
         sessionDate,
       }),
     );
-    redirectWithError("Could not verify the submitted students.", batchId);
+    redirectWithError(
+      "Attendance includes students outside this batch.",
+      batchId,
+    );
   }
 
   if (!studentIds.length) {
@@ -606,7 +905,7 @@ export async function saveTodayAttendance(formData: FormData) {
         sessionDate,
       }),
     );
-    redirectWithError("Could not verify the batch students.", batchId);
+    redirectWithError("Students for this batch could not be verified.", batchId);
   }
 
   const sameBranchStudentIds = (students ?? []).map((student) => student.id);
@@ -621,7 +920,7 @@ export async function saveTodayAttendance(formData: FormData) {
         sessionDate,
       }),
     );
-    redirectWithError("Could not verify the batch students.", batchId);
+    redirectWithError("Students for this batch could not be verified.", batchId);
   }
 
   const existingSession = await getExistingAttendanceSession(context, {
@@ -630,12 +929,40 @@ export async function saveTodayAttendance(formData: FormData) {
     sessionDate,
   });
 
+  if (existingSession?.locked_at) {
+    logAttendanceActionError(
+      "validate_attendance_session_unlocked",
+      null,
+      getAttendanceLogDetails(context, {
+        batchId,
+        branchId,
+        lockedAt: existingSession.locked_at,
+        sessionDate,
+        sessionId: existingSession.id,
+      }),
+    );
+    redirectWithError(
+      "This attendance record is locked. Reopen it before making corrections.",
+      batchId,
+    );
+  }
+
   requireBranchPermission(
     context,
     existingSession ? "attendance.update" : "attendance.create",
     branchId,
     batchId,
     sessionDate,
+  );
+  logAttendanceSaveStep(
+    "permission_verified",
+    getAttendanceLogDetails(context, {
+      batchId,
+      branchId,
+      operation: existingSession ? "update" : "create",
+      sessionDate,
+      sessionId: existingSession?.id,
+    }),
   );
 
   const activeAcademicYearId = await getActiveAcademicYearId(context, {
@@ -644,44 +971,326 @@ export async function saveTodayAttendance(formData: FormData) {
     sessionDate,
   });
 
-  const sessionId = existingSession
+  const sessionResult = existingSession
     ? await updateAttendanceSession({
         academicYearId: activeAcademicYearId,
         batchId,
         branchId,
         context,
         existingAcademicYearId: existingSession.academic_year_id,
+        existingNotes: existingSession.notes,
         notes,
         sessionDate,
         sessionId: existingSession.id,
       })
-    : await createAttendanceSession({
-        academicYearId: activeAcademicYearId,
-        batchId,
-        branchId,
-        context,
-        notes,
-        sessionDate,
-      });
+    : {
+        notesChanged: false,
+        sessionId: await createAttendanceSession({
+          academicYearId: activeAcademicYearId,
+          batchId,
+          branchId,
+          context,
+          notes,
+          sessionDate,
+        }),
+      };
+  const sessionId = sessionResult.sessionId;
+  logAttendanceSaveStep(
+    "attendance_session_ready",
+    getAttendanceLogDetails(context, {
+      academicYearId: activeAcademicYearId,
+      batchId,
+      branchId,
+      operation: existingSession ? "update" : "create",
+      sessionDate,
+      sessionId,
+    }),
+  );
 
   const attendanceRecords = sameBranchStudentIds.map((studentId) => ({
     student_id: studentId,
     status: getAttendanceStatus(submittedStatuses, studentId),
   }));
 
-  await saveAttendanceRecords({
+  const auditLogs: AttendanceAuditLogInput[] = existingSession
+    ? []
+    : [{ action: "session_created" }];
+
+  if (existingSession && sessionResult.notesChanged) {
+    auditLogs.push({
+      action: "notes_changed",
+    });
+  }
+
+  auditLogs.push(
+    ...(await saveAttendanceRecords({
+      batchId,
+      branchId,
+      context,
+      records: attendanceRecords,
+      sessionDate,
+      sessionId,
+    })),
+  );
+  logAttendanceSaveStep(
+    "attendance_records_saved",
+    getAttendanceLogDetails(context, {
+      batchId,
+      branchId,
+      sessionDate,
+      sessionId,
+    }),
+  );
+
+  await writeAttendanceAuditLogs({
     batchId,
     branchId,
     context,
-    records: attendanceRecords,
+    logs: auditLogs,
     sessionDate,
     sessionId,
   });
+  logAttendanceSaveStep(
+    "attendance_audit_written",
+    getAttendanceLogDetails(context, {
+      action: auditLogs.map((log) => log.action).join(","),
+      batchId,
+      branchId,
+      sessionDate,
+      sessionId,
+    }),
+  );
+
+  await lockAttendanceSession({
+    batchId,
+    branchId,
+    context,
+    sessionDate,
+    sessionId,
+  });
+  logAttendanceSaveStep(
+    "attendance_session_locked",
+    getAttendanceLogDetails(context, {
+      batchId,
+      branchId,
+      operation: "update",
+      sessionDate,
+      sessionId,
+    }),
+  );
+
+  await writeAttendanceAuditLogs({
+    batchId,
+    branchId,
+    context,
+    logs: [{ action: "session_locked" }],
+    sessionDate,
+    sessionId,
+  });
+  logAttendanceSaveStep(
+    "attendance_lock_audit_written",
+    getAttendanceLogDetails(context, {
+      action: "session_locked",
+      batchId,
+      branchId,
+      sessionDate,
+      sessionId,
+    }),
+  );
 
   revalidatePath(ATTENDANCE_PATH);
   const params = new URLSearchParams({
     batchId,
     branchId,
+    sessionDate,
+  });
+
+  redirect(`${ATTENDANCE_PATH}?${params.toString()}`);
+}
+
+export async function reopenAttendanceSession(formData: FormData) {
+  const context = await requireDashboardAccess();
+  const { supabase, institute } = context;
+  const sessionId = getRequiredText(
+    formData,
+    "sessionId",
+    "Attendance record",
+  );
+  const batchId = String(formData.get("batchId") ?? "").trim() || undefined;
+  const reason = getRequiredText(formData, "reopenReason", "Reopen reason");
+
+  const { data: session, error: sessionError } = await supabase
+    .from("attendance_sessions")
+    .select(
+      "id, institute_id, branch_id, batch_id, session_date, locked_at, reopen_count",
+    )
+    .eq("id", sessionId)
+    .eq("institute_id", institute.id)
+    .maybeSingle();
+
+  if (sessionError) {
+    logAttendanceActionError(
+      "reopen_session_lookup",
+      sessionError,
+      getAttendanceLogDetails(context, {
+        batchId,
+        sessionId,
+      }),
+    );
+    redirectWithError(
+      "Attendance record could not be reopened. Please try again.",
+      batchId,
+    );
+  }
+
+  if (!session?.branch_id || !session.batch_id) {
+    logAttendanceActionError(
+      "validate_reopen_session_scope",
+      null,
+      getAttendanceLogDetails(context, {
+        batchId,
+        branchId: session?.branch_id,
+        sessionId,
+      }),
+    );
+    redirectWithError("Attendance record could not be verified.", batchId);
+  }
+
+  if (!session.locked_at) {
+    redirectWithError("This attendance record is already editable.", batchId);
+  }
+
+  const reopenAccess = getAttendanceReopenAccess(context, session.branch_id);
+
+  if (!reopenAccess.canReopen) {
+    logAttendanceActionError(
+      "reopen_permission_check",
+      null,
+      getAttendanceLogDetails(context, {
+        batchId: session.batch_id,
+        branchId: session.branch_id,
+        lockedAt: session.locked_at,
+        sessionDate: session.session_date,
+        sessionId,
+      }),
+    );
+    redirectWithError(
+      "You do not have permission to perform this action.",
+      batchId,
+    );
+  }
+
+  if (
+    reopenAccess.isBranchManager &&
+    !reopenAccess.isOwner &&
+    session.reopen_count >= 2
+  ) {
+    logAttendanceActionError(
+      "reopen_limit_check",
+      null,
+      getAttendanceLogDetails(context, {
+        batchId: session.batch_id,
+        branchId: session.branch_id,
+        lockedAt: session.locked_at,
+        sessionDate: session.session_date,
+        sessionId,
+      }),
+    );
+    redirectWithError(
+      "This attendance record has reached the reopen limit. Please contact the institute owner for further changes.",
+      batchId,
+    );
+  }
+
+  const reopenedAt = new Date().toISOString();
+  const currentReopenCount = Number(session.reopen_count ?? 0);
+  const nextReopenCount =
+    reopenAccess.isBranchManager && !reopenAccess.isOwner
+      ? currentReopenCount + 1
+      : currentReopenCount;
+  const { data: reopenedSession, error: reopenError } = await supabase
+    .from("attendance_sessions")
+    .update({
+      locked_at: null,
+      locked_by: null,
+      reopen_count: nextReopenCount,
+      reopened_at: reopenedAt,
+      reopened_by: context.claims.sub,
+      reopen_reason: reason,
+    })
+    .eq("id", sessionId)
+    .eq("institute_id", institute.id)
+    .eq("branch_id", session.branch_id)
+    .select(
+      "id, locked_at, locked_by, reopen_count, reopened_at, reopened_by, reopen_reason",
+    )
+    .maybeSingle();
+
+  if (reopenError) {
+    logAttendanceActionError(
+      "attendance_session_reopen",
+      reopenError,
+      getAttendanceLogDetails(context, {
+        batchId: session.batch_id,
+        branchId: session.branch_id,
+        lockedAt: session.locked_at,
+        operation: "update",
+        sessionDate: session.session_date,
+        sessionId,
+      }),
+    );
+    redirectWithError(
+      "Attendance record could not be reopened. Please try again.",
+      batchId,
+    );
+  }
+
+  if (
+    !reopenedSession ||
+    reopenedSession.locked_at ||
+    reopenedSession.locked_by ||
+    reopenedSession.reopen_count !== nextReopenCount ||
+    !reopenedSession.reopened_at ||
+    reopenedSession.reopened_by !== context.claims.sub ||
+    reopenedSession.reopen_reason !== reason
+  ) {
+    logAttendanceActionError(
+      "attendance_session_reopen_verification",
+      null,
+      getAttendanceLogDetails(context, {
+        batchId: session.batch_id,
+        branchId: session.branch_id,
+        lockedAt: reopenedSession?.locked_at ?? null,
+        operation: "update",
+        sessionDate: session.session_date,
+        sessionId,
+      }),
+    );
+    redirectWithError(
+      "Attendance record could not be reopened. Please try again.",
+      batchId,
+    );
+  }
+
+  await writeAttendanceAuditLogs({
+    batchId: session.batch_id,
+    branchId: session.branch_id,
+    context,
+    logs: [
+      {
+        action: "session_reopened",
+        reason,
+      },
+    ],
+    sessionDate: session.session_date,
+    sessionId,
+  });
+
+  revalidatePath(ATTENDANCE_PATH);
+  const params = new URLSearchParams({
+    batchId: session.batch_id,
+    branchId: session.branch_id,
+    sessionDate: session.session_date,
   });
 
   redirect(`${ATTENDANCE_PATH}?${params.toString()}`);

@@ -272,7 +272,7 @@ export function getStaffLinkStatusMessage(status: StaffLinkStatus) {
   }
 
   if (status === "failed") {
-    return "Could not link this staff account. Ask the institute owner to check the staff record.";
+    return "This staff account could not be linked. Ask the institute owner to review the staff record.";
   }
 
   return "";

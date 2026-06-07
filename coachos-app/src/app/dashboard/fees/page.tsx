@@ -76,7 +76,7 @@ function getStatusBadgeVariant(status: FeeStatus) {
 
 function getStudentLabel(student: Student | undefined) {
   if (!student) {
-    return "Unknown student";
+    return "Student not available";
   }
 
   return student.phone
@@ -229,14 +229,14 @@ export default async function FeesPage({ searchParams }: FeesPageProps) {
               <CardHeader>
                 <CardTitle className="text-xl">Create fee record</CardTitle>
                 <CardDescription>
-                  Add a due amount for a student. Payment gateway integration is
-                  not included yet.
+                  Create a fee record for a student and track payment status.
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 {params.error || queryError ? (
                   <p className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                    {params.error ?? "Could not load fee data."}
+                    {params.error ??
+                      "Fee records are unavailable right now. Please try again."}
                   </p>
                 ) : null}
 
@@ -292,7 +292,7 @@ export default async function FeesPage({ searchParams }: FeesPageProps) {
                     </Label>
                     <Button type="submit" className="mt-1">
                       <Plus aria-hidden="true" data-icon="inline-start" />
-                      Create fee
+                      Create fee record
                     </Button>
                   </form>
                 ) : (
@@ -301,7 +301,7 @@ export default async function FeesPage({ searchParams }: FeesPageProps) {
                       Add students before creating fee records.
                     </p>
                     <Button asChild variant="outline">
-                      <Link href="/dashboard/students">Open students</Link>
+                      <Link href="/dashboard/students">View students</Link>
                     </Button>
                   </div>
                 )}
@@ -324,7 +324,7 @@ export default async function FeesPage({ searchParams }: FeesPageProps) {
             <Card>
               <CardContent className="pt-5">
                 <p className="text-sm font-medium text-muted-foreground">
-                  Paid
+                  Amount collected
                 </p>
                 <p className="mt-2 text-2xl font-semibold tracking-tight">
                   {formatCurrency(totals.paidAmount)}
@@ -334,7 +334,7 @@ export default async function FeesPage({ searchParams }: FeesPageProps) {
             <Card>
               <CardContent className="pt-5">
                 <p className="text-sm font-medium text-muted-foreground">
-                  Needs attention
+                  Pending or overdue
                 </p>
                 <p className="mt-2 text-2xl font-semibold tracking-tight">
                   {totals.pendingRecords + totals.overdueRecords}
@@ -375,7 +375,7 @@ export default async function FeesPage({ searchParams }: FeesPageProps) {
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
                             <h3 className="font-medium">
-                              {student?.full_name ?? "Unknown student"}
+                              {student?.full_name ?? "Student not available"}
                             </h3>
                             <Badge
                               variant={getStatusBadgeVariant(record.status)}
@@ -430,8 +430,8 @@ export default async function FeesPage({ searchParams }: FeesPageProps) {
                 </div>
               ) : (
                 <p className="rounded-md border border-dashed border-border px-3 py-3 text-sm text-muted-foreground">
-                  No fee records yet. Create the first fee record using the
-                  form.
+                  No fee records have been created yet. Create the first fee
+                  record to start tracking payments.
                 </p>
               )}
             </CardContent>

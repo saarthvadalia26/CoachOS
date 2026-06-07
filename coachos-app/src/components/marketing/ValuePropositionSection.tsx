@@ -6,10 +6,10 @@ export function ValuePropositionSection() {
           Less admin work. More time for teaching and growth.
         </h2>
         <p className="text-lg leading-8 text-muted-foreground">
-          Coaching teams need fast visibility into admissions, classes,
-          payments, and parent touchpoints. CoachOS brings the daily work into
-          one simple dashboard so owners, counselors, and coordinators can act
-          with the same information.
+          Coaching teams need fast visibility into students, batches,
+          attendance, branches, and payments. CoachOS brings daily operations
+          into one simple dashboard so owners, managers, and staff can act with
+          the same information.
         </p>
       </div>
     </section>

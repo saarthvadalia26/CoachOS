@@ -138,7 +138,7 @@ export default async function DashboardPage({
       : null,
     canViewAttendance
       ? {
-          label: "Attendance Sessions Today",
+          label: "Attendance Records Today",
           value: String(attendanceSessionsResponse.count ?? 0),
           helper: `${branchScope.selectedBranchName} | ${todayDate}`,
         }
@@ -179,13 +179,13 @@ export default async function DashboardPage({
             Dashboard snapshot
           </h2>
           <p className="text-sm text-muted-foreground">
-            Live counts from your institute workspace.
+            Current operational summary for your institute.
           </p>
         </div>
 
         {queryError ? (
           <p className="mt-5 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-            Could not load dashboard metrics.
+            Dashboard metrics are unavailable right now. Please try again.
           </p>
         ) : null}
 

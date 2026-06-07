@@ -56,7 +56,31 @@ function getRoleBadgeVariant(role: string) {
 }
 
 function getLinkStatusLabel(staffMember: Pick<StaffMember, "auth_user_id">) {
-  return staffMember.auth_user_id ? "Linked" : "Pending signup";
+  return staffMember.auth_user_id ? "Linked" : "Pending account setup";
+}
+
+function getRoleLabel(role: string) {
+  if (role === "branch_manager") {
+    return "Branch Manager";
+  }
+
+  if (role === "operations_staff") {
+    return "Operations Staff";
+  }
+
+  if (role === "accountant") {
+    return "Accountant";
+  }
+
+  if (role === "academic_coordinator") {
+    return "Academic Coordinator";
+  }
+
+  if (role === "teacher") {
+    return "Teacher";
+  }
+
+  return role;
 }
 
 function RoleSelect({ defaultValue }: { defaultValue?: string }) {
@@ -69,7 +93,7 @@ function RoleSelect({ defaultValue }: { defaultValue?: string }) {
     >
       {staffRoles.map((role) => (
         <option key={role} value={role}>
-          {role}
+          {getRoleLabel(role)}
         </option>
       ))}
     </select>
@@ -132,7 +156,8 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
 
         {params.error || staffError ? (
           <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-            {params.error ?? "Could not load staff data."}
+            {params.error ??
+              "Staff member records are unavailable right now. Please try again."}
           </p>
         ) : null}
 
@@ -141,7 +166,7 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
             <CardHeader>
               <CardTitle className="text-xl">Restricted access</CardTitle>
               <CardDescription>
-                You can view staff in your branch. Staff management is
+                You can view staff members in your branch. Staff management is
                 available only to the institute owner.
               </CardDescription>
             </CardHeader>
@@ -153,7 +178,7 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
                       <div className="flex flex-wrap items-center gap-2">
                         <h2 className="font-medium">{staffMember.full_name}</h2>
                         <Badge variant={getRoleBadgeVariant(staffMember.role)}>
-                          {staffMember.role}
+                          {getRoleLabel(staffMember.role)}
                         </Badge>
                       </div>
                       <p className="text-sm text-muted-foreground">
@@ -164,7 +189,7 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  No linked staff profile is available for this account.
+                  No staff members are available for your branch.
                 </p>
               )}
             </CardContent>
@@ -175,18 +200,18 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
               <CardHeader>
                 <CardTitle className="text-xl">Add staff member</CardTitle>
                 <CardDescription>
-                  Create a staff or teacher record for this institute.
+                  Add a staff member by email and assign a role and branch.
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <form action={createStaffMember} className="grid gap-4">
                   {context.branchScope === "all" &&
                   accessibleBranches.length > 1 ? (
-                          <Label>
-                            Branch
-                            <select
-                              required
-                              name="branchId"
+                    <Label>
+                      Branch
+                      <select
+                        required
+                        name="branchId"
                         defaultValue={branchScope.selectedBranchId ?? ""}
                         className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
                       >
@@ -212,7 +237,7 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
                       name="fullName"
                       type="text"
                       autoComplete="name"
-                      placeholder="Staff name"
+                      placeholder="Staff member name"
                     />
                   </Label>
                   <Label>
@@ -231,7 +256,7 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
                   </Label>
                   <Button type="submit" className="mt-1">
                     <UserPlus aria-hidden="true" data-icon="inline-start" />
-                    Create staff
+                    Add staff member
                   </Button>
                 </form>
               </CardContent>
@@ -241,7 +266,7 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
               <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   <h2 className="text-xl font-semibold tracking-tight">
-                    Staff list
+                    Staff members
                   </h2>
                   <p className="mt-1 text-sm text-muted-foreground">
                     {staffMembers.length}{" "}
@@ -265,7 +290,7 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
                             <Badge
                               variant={getRoleBadgeVariant(staffMember.role)}
                             >
-                              {staffMember.role}
+                              {getRoleLabel(staffMember.role)}
                             </Badge>
                           </div>
                           <p className="mt-1 text-sm text-muted-foreground">
@@ -382,8 +407,8 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
                 <Card>
                   <CardContent className="pt-5">
                     <p className="text-sm text-muted-foreground">
-                      No staff members yet. Add the first staff member using the
-                      form.
+                      No staff members have been added yet. Add your first
+                      staff member to begin.
                     </p>
                   </CardContent>
                 </Card>
