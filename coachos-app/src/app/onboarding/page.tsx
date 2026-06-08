@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,10 @@ import {
   getStaffLinkStatusMessage,
 } from "@/lib/auth/permissions";
 import { createInstituteAndProfile } from "@/lib/onboarding/actions";
+
+export const metadata: Metadata = {
+  title: "Institute Setup",
+};
 
 type OnboardingPageProps = {
   searchParams: Promise<{

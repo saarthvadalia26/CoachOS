@@ -1103,6 +1103,7 @@ export async function saveTodayAttendance(formData: FormData) {
     batchId,
     branchId,
     sessionDate,
+    success: "Attendance submitted and locked.",
   });
 
   redirect(`${ATTENDANCE_PATH}?${params.toString()}`);
@@ -1291,6 +1292,7 @@ export async function reopenAttendanceSession(formData: FormData) {
     batchId: session.batch_id,
     branchId: session.branch_id,
     sessionDate: session.session_date,
+    success: "Attendance reopened. Submit corrections to lock it again.",
   });
 
   redirect(`${ATTENDANCE_PATH}?${params.toString()}`);

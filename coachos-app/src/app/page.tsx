@@ -1,8 +1,17 @@
+import type { Metadata } from "next";
+
 import { CTASection } from "@/components/marketing/CTASection";
 import { FeaturesSection } from "@/components/marketing/FeaturesSection";
+import { Footer } from "@/components/marketing/Footer";
 import { Header } from "@/components/marketing/Header";
 import { HeroSection } from "@/components/marketing/HeroSection";
 import { ValuePropositionSection } from "@/components/marketing/ValuePropositionSection";
+
+export const metadata: Metadata = {
+  title: {
+    absolute: "CoachOS",
+  },
+};
 
 export default function Home() {
   return (
@@ -14,6 +23,7 @@ export default function Home() {
         <FeaturesSection />
         <CTASection />
       </main>
+      <Footer />
     </div>
   );
 }

@@ -20,6 +20,18 @@ function redirectWithError(message: string): never {
   redirect(`${STAFF_PATH}?error=${encodeURIComponent(message)}`);
 }
 
+function redirectWithSuccess(message: string, branchId?: string | null): never {
+  const params = new URLSearchParams({
+    success: message,
+  });
+
+  if (branchId) {
+    params.set("branchId", branchId);
+  }
+
+  redirect(`${STAFF_PATH}?${params.toString()}`);
+}
+
 function getRequiredText(formData: FormData, key: string, label: string) {
   const value = String(formData.get(key) ?? "").trim();
 
@@ -105,7 +117,7 @@ export async function createStaffMember(formData: FormData) {
   }
 
   revalidatePath(STAFF_PATH);
-  redirect(branchId ? `${STAFF_PATH}?branchId=${encodeURIComponent(branchId)}` : STAFF_PATH);
+  redirectWithSuccess("Staff member added.", branchId);
 }
 
 export async function updateStaffMember(formData: FormData) {
@@ -161,9 +173,7 @@ export async function updateStaffMember(formData: FormData) {
   }
 
   revalidatePath(STAFF_PATH);
-  redirect(
-    branchId ? `${STAFF_PATH}?branchId=${encodeURIComponent(branchId)}` : STAFF_PATH,
-  );
+  redirectWithSuccess("Staff member updated.", branchId);
 }
 
 export async function deleteStaffMember(formData: FormData) {
@@ -209,9 +219,5 @@ export async function deleteStaffMember(formData: FormData) {
   }
 
   revalidatePath(STAFF_PATH);
-  redirect(
-    existingStaffMember.branch_id
-      ? `${STAFF_PATH}?branchId=${encodeURIComponent(existingStaffMember.branch_id)}`
-      : STAFF_PATH,
-  );
+  redirectWithSuccess("Staff member deleted.", existingStaffMember.branch_id);
 }

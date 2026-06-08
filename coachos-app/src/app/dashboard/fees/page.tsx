@@ -1,6 +1,8 @@
 import { CheckCircle2, FileText, IndianRupee, Plus } from "lucide-react";
 import Link from "next/link";
+import type { Metadata } from "next";
 
+import { ActionMessage } from "@/components/dashboard/ActionMessage";
 import { BranchFilter } from "@/components/dashboard/BranchFilter";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { Badge } from "@/components/ui/badge";
@@ -28,7 +30,12 @@ type FeesPageProps = {
   searchParams: Promise<{
     branchId?: string;
     error?: string;
+    success?: string;
   }>;
+};
+
+export const metadata: Metadata = {
+  title: "Fees",
 };
 
 type Student = {
@@ -86,7 +93,8 @@ function getStudentLabel(student: Student | undefined) {
 
 export default async function FeesPage({ searchParams }: FeesPageProps) {
   const context = await requirePermission("fees.view");
-  const { accessibleBranches, supabase, claims, institute, role } = context;
+  const { accessibleBranches, supabase, claims, institute, profile, role } =
+    context;
   const params = await searchParams;
   const branchScope = getBranchScope(context, params.branchId);
   const branchesById = new Map(
@@ -199,6 +207,7 @@ export default async function FeesPage({ searchParams }: FeesPageProps) {
       role={role}
       title="Fees"
       userEmail={claims.email}
+      userName={profile.full_name}
     >
       <section className="grid gap-6">
         {branchScope.showOwnerBranchFilter ? (
@@ -219,6 +228,16 @@ export default async function FeesPage({ searchParams }: FeesPageProps) {
           </div>
         ) : null}
 
+        <ActionMessage
+          error={
+            params.error ??
+            (queryError
+              ? "Fee records are unavailable right now. Please try again."
+              : null)
+          }
+          success={params.success}
+        />
+
         <div
           className={
             canManageFees ? "grid gap-6 lg:grid-cols-[360px_1fr]" : "grid gap-6"
@@ -233,13 +252,6 @@ export default async function FeesPage({ searchParams }: FeesPageProps) {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {params.error || queryError ? (
-                  <p className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                    {params.error ??
-                      "Fee records are unavailable right now. Please try again."}
-                  </p>
-                ) : null}
-
                 {students.length ? (
                   <form action={createFeeRecord} className="grid gap-4">
                     <Label>
@@ -430,8 +442,7 @@ export default async function FeesPage({ searchParams }: FeesPageProps) {
                 </div>
               ) : (
                 <p className="rounded-md border border-dashed border-border px-3 py-3 text-sm text-muted-foreground">
-                  No fee records have been created yet. Create the first fee
-                  record to start tracking payments.
+                  No fee records match the selected filters.
                 </p>
               )}
             </CardContent>

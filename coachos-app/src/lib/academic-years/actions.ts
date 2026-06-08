@@ -16,6 +16,10 @@ function redirectWithError(message: string): never {
   redirect(`${ACADEMIC_YEARS_PATH}?error=${encodeURIComponent(message)}`);
 }
 
+function redirectWithSuccess(message: string): never {
+  redirect(`${ACADEMIC_YEARS_PATH}?success=${encodeURIComponent(message)}`);
+}
+
 function redirectWithSaveError(): never {
   redirectWithError(
     "This academic year could not be saved. Please review the dates and try again.",
@@ -209,15 +213,15 @@ export async function createAcademicYear(formData: FormData) {
         context,
         activeError,
       );
-    redirectWithError(
-      "The academic year was created, but it could not be marked active.",
-    );
+      redirectWithError(
+        "The academic year was created, but it could not be marked active.",
+      );
     }
   }
 
   revalidatePath(ACADEMIC_YEARS_PATH);
   revalidatePath("/dashboard");
-  redirect(ACADEMIC_YEARS_PATH);
+  redirectWithSuccess("Academic year created.");
 }
 
 export async function updateAcademicYear(formData: FormData) {
@@ -265,7 +269,7 @@ export async function updateAcademicYear(formData: FormData) {
 
   revalidatePath(ACADEMIC_YEARS_PATH);
   revalidatePath("/dashboard");
-  redirect(ACADEMIC_YEARS_PATH);
+  redirectWithSuccess("Academic year updated.");
 }
 
 export async function setActiveAcademicYear(formData: FormData) {
@@ -290,7 +294,7 @@ export async function setActiveAcademicYear(formData: FormData) {
 
   revalidatePath(ACADEMIC_YEARS_PATH);
   revalidatePath("/dashboard");
-  redirect(ACADEMIC_YEARS_PATH);
+  redirectWithSuccess("Active academic year updated.");
 }
 
 export async function deleteAcademicYear(formData: FormData) {
@@ -348,5 +352,5 @@ export async function deleteAcademicYear(formData: FormData) {
 
   revalidatePath(ACADEMIC_YEARS_PATH);
   revalidatePath("/dashboard");
-  redirect(ACADEMIC_YEARS_PATH);
+  redirectWithSuccess("Academic year deleted.");
 }

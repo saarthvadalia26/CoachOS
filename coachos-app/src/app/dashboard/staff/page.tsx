@@ -1,5 +1,7 @@
 import { Save, Trash2, UserPlus } from "lucide-react";
+import type { Metadata } from "next";
 
+import { ActionMessage } from "@/components/dashboard/ActionMessage";
 import { BranchFilter } from "@/components/dashboard/BranchFilter";
 import { ConfirmSubmitButton } from "@/components/dashboard/ConfirmSubmitButton";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
@@ -30,7 +32,12 @@ type StaffPageProps = {
   searchParams: Promise<{
     branchId?: string;
     error?: string;
+    success?: string;
   }>;
+};
+
+export const metadata: Metadata = {
+  title: "Staff",
 };
 
 type StaffMember = {
@@ -102,7 +109,8 @@ function RoleSelect({ defaultValue }: { defaultValue?: string }) {
 
 export default async function StaffPage({ searchParams }: StaffPageProps) {
   const context = await requirePermission("staff.view");
-  const { accessibleBranches, supabase, claims, institute, role } = context;
+  const { accessibleBranches, supabase, claims, institute, profile, role } =
+    context;
   const params = await searchParams;
   const branchScope = getBranchScope(context, params.branchId);
   const branchesById = new Map(
@@ -145,6 +153,7 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
       role={role}
       title="Staff"
       userEmail={claims.email}
+      userName={profile.full_name}
     >
       <section className="grid gap-6">
         {branchScope.showOwnerBranchFilter ? (
@@ -154,12 +163,15 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
           />
         ) : null}
 
-        {params.error || staffError ? (
-          <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-            {params.error ??
-              "Staff member records are unavailable right now. Please try again."}
-          </p>
-        ) : null}
+        <ActionMessage
+          error={
+            params.error ??
+            (staffError
+              ? "Staff member records are unavailable right now. Please try again."
+              : null)
+          }
+          success={params.success}
+        />
 
         {!canManageStaff ? (
           <Card>
@@ -406,10 +418,10 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
               ) : (
                 <Card>
                   <CardContent className="pt-5">
-                    <p className="text-sm text-muted-foreground">
-                      No staff members have been added yet. Add your first
-                      staff member to begin.
-                    </p>
+                <p className="text-sm text-muted-foreground">
+                  No staff members have been added yet. Add your team members
+                  and assign roles.
+                </p>
                   </CardContent>
                 </Card>
               )}

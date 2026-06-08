@@ -1,5 +1,7 @@
 import { Building2, Plus, Save } from "lucide-react";
+import type { Metadata } from "next";
 
+import { ActionMessage } from "@/components/dashboard/ActionMessage";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,13 +20,18 @@ import { createBranch, updateBranch } from "@/lib/branches/actions";
 type BranchesPageProps = {
   searchParams: Promise<{
     error?: string;
+    success?: string;
   }>;
+};
+
+export const metadata: Metadata = {
+  title: "Branches",
 };
 
 export default async function BranchesPage({
   searchParams,
 }: BranchesPageProps) {
-  const { accessibleBranches, claims, institute, role } =
+  const { accessibleBranches, claims, institute, profile, role } =
     await requirePermission("branches.view");
   const params = await searchParams;
   const canManageBranches = hasAnyPermission(role, [
@@ -39,6 +46,7 @@ export default async function BranchesPage({
       role={role}
       title="Branches"
       userEmail={claims.email}
+      userName={profile.full_name}
     >
       <section
         className={
@@ -56,11 +64,11 @@ export default async function BranchesPage({
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {params.error ? (
-                <p className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                  {params.error}
-                </p>
-              ) : null}
+              <ActionMessage
+                className="mb-4"
+                error={params.error}
+                success={params.success}
+              />
 
               <form action={createBranch} className="grid gap-4">
                 <Label>
@@ -90,9 +98,7 @@ export default async function BranchesPage({
             </CardContent>
           </Card>
         ) : params.error ? (
-          <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-            {params.error}
-          </p>
+          <ActionMessage error={params.error} />
         ) : null}
 
         <div className="grid gap-4">
@@ -189,7 +195,7 @@ export default async function BranchesPage({
               <CardContent className="pt-5">
                 <p className="text-sm text-muted-foreground">
                   {canManageBranches
-                    ? "No branches have been created yet. Create a branch to organize students and staff."
+                    ? "No branches have been created yet. Create a branch to organize operations."
                     : "No branches are available for this account. Ask the institute owner to assign a branch if you need access."}
                 </p>
               </CardContent>

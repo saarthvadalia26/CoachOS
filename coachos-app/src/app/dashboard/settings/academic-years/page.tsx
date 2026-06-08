@@ -1,5 +1,7 @@
 import { CalendarDays, CheckCircle2, Plus, Save, Trash2 } from "lucide-react";
+import type { Metadata } from "next";
 
+import { ActionMessage } from "@/components/dashboard/ActionMessage";
 import { ConfirmSubmitButton } from "@/components/dashboard/ConfirmSubmitButton";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { Badge } from "@/components/ui/badge";
@@ -24,7 +26,12 @@ import { canAccessPermission, requirePermission } from "@/lib/auth/permissions";
 type AcademicYearsPageProps = {
   searchParams: Promise<{
     error?: string;
+    success?: string;
   }>;
+};
+
+export const metadata: Metadata = {
+  title: "Academic Years",
 };
 
 type AcademicYear = {
@@ -64,7 +71,8 @@ export default async function AcademicYearsPage({
   searchParams,
 }: AcademicYearsPageProps) {
   const context = await requirePermission("academic_years.view");
-  const { claims, currentMembership, institute, role, supabase } = context;
+  const { claims, currentMembership, institute, profile, role, supabase } =
+    context;
   const params = await searchParams;
   const canManageAcademicYears =
     role === "owner" &&
@@ -104,6 +112,7 @@ export default async function AcademicYearsPage({
       role={role}
       title="Academic Years"
       userEmail={claims.email}
+      userName={profile.full_name}
     >
       <section
         className={
@@ -121,11 +130,11 @@ export default async function AcademicYearsPage({
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {params.error ? (
-                <p className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                  {params.error}
-                </p>
-              ) : null}
+              <ActionMessage
+                className="mb-4"
+                error={params.error}
+                success={params.success}
+              />
 
               <form action={createAcademicYear} className="grid gap-4">
                 <Label>
@@ -191,9 +200,7 @@ export default async function AcademicYearsPage({
           </div>
 
           {error ? (
-            <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              Academic years are unavailable right now. Please try again.
-            </p>
+            <ActionMessage error="Academic years are unavailable right now. Please try again." />
           ) : null}
 
           {academicYears.length ? (

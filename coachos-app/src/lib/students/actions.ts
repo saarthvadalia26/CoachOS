@@ -18,6 +18,18 @@ function redirectWithError(message: string): never {
   redirect(`${STUDENTS_PATH}?error=${encodeURIComponent(message)}`);
 }
 
+function redirectWithSuccess(message: string, branchId?: string | null): never {
+  const params = new URLSearchParams({
+    success: message,
+  });
+
+  if (branchId) {
+    params.set("branchId", branchId);
+  }
+
+  redirect(`${STUDENTS_PATH}?${params.toString()}`);
+}
+
 function redirectWithSaveError(): never {
   redirectWithError(
     "This student record could not be saved. Please review the details and try again.",
@@ -102,7 +114,7 @@ export async function createStudent(formData: FormData) {
 
   revalidatePath(STUDENTS_PATH);
   revalidatePath("/dashboard");
-  redirect(`${STUDENTS_PATH}?branchId=${encodeURIComponent(branchId)}`);
+  redirectWithSuccess("Student record created.", branchId);
 }
 
 export async function updateStudent(formData: FormData) {
@@ -159,9 +171,7 @@ export async function updateStudent(formData: FormData) {
   revalidatePath("/dashboard/batches");
   revalidatePath("/dashboard/attendance");
   revalidatePath("/dashboard/fees");
-  redirect(
-    `${STUDENTS_PATH}?branchId=${encodeURIComponent(existingStudent.branch_id)}`,
-  );
+  redirectWithSuccess("Student record updated.", existingStudent.branch_id);
 }
 
 export async function deleteStudent(formData: FormData) {
@@ -209,7 +219,5 @@ export async function deleteStudent(formData: FormData) {
   revalidatePath("/dashboard/batches");
   revalidatePath("/dashboard/attendance");
   revalidatePath("/dashboard/fees");
-  redirect(
-    `${STUDENTS_PATH}?branchId=${encodeURIComponent(existingStudent.branch_id)}`,
-  );
+  redirectWithSuccess("Student record deleted.", existingStudent.branch_id);
 }

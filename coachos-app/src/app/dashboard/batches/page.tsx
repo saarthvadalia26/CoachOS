@@ -1,5 +1,7 @@
 import { Plus, Save, Trash2, UserMinus, UserPlus } from "lucide-react";
+import type { Metadata } from "next";
 
+import { ActionMessage } from "@/components/dashboard/ActionMessage";
 import { BranchFilter } from "@/components/dashboard/BranchFilter";
 import { ConfirmSubmitButton } from "@/components/dashboard/ConfirmSubmitButton";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
@@ -34,7 +36,12 @@ type BatchesPageProps = {
   searchParams: Promise<{
     branchId?: string;
     error?: string;
+    success?: string;
   }>;
+};
+
+export const metadata: Metadata = {
+  title: "Batches",
 };
 
 type Batch = {
@@ -144,7 +151,8 @@ function getTeacherLabel(
 
 export default async function BatchesPage({ searchParams }: BatchesPageProps) {
   const context = await requirePermission("batches.view");
-  const { accessibleBranches, supabase, claims, institute, role } = context;
+  const { accessibleBranches, supabase, claims, institute, profile, role } =
+    context;
   const params = await searchParams;
   const branchScope = getBranchScope(context, params.branchId);
   const branchesById = new Map(
@@ -295,6 +303,7 @@ export default async function BatchesPage({ searchParams }: BatchesPageProps) {
       role={role}
       title="Batches"
       userEmail={claims.email}
+      userName={profile.full_name}
     >
       <section className="grid gap-6">
         {branchScope.showOwnerBranchFilter ? (
@@ -303,6 +312,16 @@ export default async function BatchesPage({ searchParams }: BatchesPageProps) {
             selectedBranchId={branchScope.selectedBranchId}
           />
         ) : null}
+
+        <ActionMessage
+          error={
+            params.error ??
+            (queryError
+              ? "Batch records are unavailable right now. Please try again."
+              : null)
+          }
+          success={params.success}
+        />
 
         <div
           className={
@@ -320,13 +339,6 @@ export default async function BatchesPage({ searchParams }: BatchesPageProps) {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {params.error || queryError ? (
-                  <p className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                    {params.error ??
-                      "Batch records are unavailable right now. Please try again."}
-                  </p>
-                ) : null}
-
                 <form action={createBatch} className="grid gap-4">
                   {context.branchScope === "all" &&
                   accessibleBranches.length > 1 ? (
@@ -742,8 +754,8 @@ export default async function BatchesPage({ searchParams }: BatchesPageProps) {
               <Card>
                 <CardContent className="pt-5">
                   <p className="text-sm text-muted-foreground">
-                    No batches have been created yet. Create your first batch
-                    to start grouping students.
+                    No batches have been created yet. Create a batch to
+                    organize students and schedules.
                   </p>
                 </CardContent>
               </Card>

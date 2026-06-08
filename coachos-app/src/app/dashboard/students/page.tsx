@@ -1,5 +1,7 @@
 import { Save, Trash2 } from "lucide-react";
+import type { Metadata } from "next";
 
+import { ActionMessage } from "@/components/dashboard/ActionMessage";
 import { BranchFilter } from "@/components/dashboard/BranchFilter";
 import { ConfirmSubmitButton } from "@/components/dashboard/ConfirmSubmitButton";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
@@ -30,7 +32,12 @@ type StudentsPageProps = {
   searchParams: Promise<{
     branchId?: string;
     error?: string;
+    success?: string;
   }>;
+};
+
+export const metadata: Metadata = {
+  title: "Students",
 };
 
 type Student = {
@@ -48,7 +55,8 @@ function getStatusLabel(status: string | null) {
 
 export default async function StudentsPage({ searchParams }: StudentsPageProps) {
   const context = await requirePermission("students.view");
-  const { accessibleBranches, supabase, claims, institute, role } = context;
+  const { accessibleBranches, supabase, claims, institute, profile, role } =
+    context;
   const params = await searchParams;
   const branchScope = getBranchScope(context, params.branchId);
   const branchesById = new Map(
@@ -84,6 +92,7 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
       role={role}
       title="Students"
       userEmail={claims.email}
+      userName={profile.full_name}
     >
       <section className="grid gap-6">
         {branchScope.showOwnerBranchFilter ? (
@@ -92,6 +101,8 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
             selectedBranchId={branchScope.selectedBranchId}
           />
         ) : null}
+
+        <ActionMessage error={params.error} success={params.success} />
 
         <div
           className={
@@ -110,12 +121,6 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {params.error ? (
-                  <p className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                    {params.error}
-                  </p>
-                ) : null}
-
                 <form action={createStudent} className="grid gap-4">
                   {context.branchScope === "all" &&
                   accessibleBranches.length > 1 ? (

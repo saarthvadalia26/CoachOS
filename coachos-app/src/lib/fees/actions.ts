@@ -18,6 +18,18 @@ function redirectWithError(message: string): never {
   redirect(`${FEES_PATH}?error=${encodeURIComponent(message)}`);
 }
 
+function redirectWithSuccess(message: string, branchId?: string | null): never {
+  const params = new URLSearchParams({
+    success: message,
+  });
+
+  if (branchId) {
+    params.set("branchId", branchId);
+  }
+
+  redirect(`${FEES_PATH}?${params.toString()}`);
+}
+
 function getRequiredText(formData: FormData, key: string, label: string) {
   const value = String(formData.get(key) ?? "").trim();
 
@@ -137,7 +149,7 @@ export async function createFeeRecord(formData: FormData) {
   }
 
   revalidatePath(FEES_PATH);
-  redirect(`${FEES_PATH}?branchId=${encodeURIComponent(student.branch_id)}`);
+  redirectWithSuccess("Fee record created.", student.branch_id);
 }
 
 export async function markFeeRecordPaid(formData: FormData) {
@@ -181,5 +193,5 @@ export async function markFeeRecordPaid(formData: FormData) {
   }
 
   revalidatePath(FEES_PATH);
-  redirect(`${FEES_PATH}?branchId=${encodeURIComponent(feeRecord.branch_id)}`);
+  redirectWithSuccess("Fee record marked as paid.", feeRecord.branch_id);
 }

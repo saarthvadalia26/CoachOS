@@ -11,6 +11,10 @@ function redirectWithError(message: string): never {
   redirect(`${BRANCHES_PATH}?error=${encodeURIComponent(message)}`);
 }
 
+function redirectWithSuccess(message: string): never {
+  redirect(`${BRANCHES_PATH}?success=${encodeURIComponent(message)}`);
+}
+
 function redirectWithSaveError(): never {
   redirectWithError(
     "This branch record could not be saved. Please review the details and try again.",
@@ -52,7 +56,7 @@ export async function createBranch(formData: FormData) {
 
   revalidatePath(BRANCHES_PATH);
   revalidatePath("/dashboard");
-  redirect(BRANCHES_PATH);
+  redirectWithSuccess("Branch created.");
 }
 
 export async function updateBranch(formData: FormData) {
@@ -85,5 +89,5 @@ export async function updateBranch(formData: FormData) {
 
   revalidatePath(BRANCHES_PATH);
   revalidatePath("/dashboard");
-  redirect(BRANCHES_PATH);
+  redirectWithSuccess("Branch updated.");
 }

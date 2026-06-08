@@ -7,7 +7,9 @@ import {
   Unlock,
 } from "lucide-react";
 import Link from "next/link";
+import type { Metadata } from "next";
 
+import { ActionMessage } from "@/components/dashboard/ActionMessage";
 import { BranchFilter } from "@/components/dashboard/BranchFilter";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { Badge } from "@/components/ui/badge";
@@ -42,7 +44,12 @@ type AttendancePageProps = {
     sessionDate?: string;
     startDate?: string;
     studentId?: string;
+    success?: string;
   }>;
+};
+
+export const metadata: Metadata = {
+  title: "Attendance",
 };
 
 type Batch = {
@@ -370,7 +377,8 @@ export default async function AttendancePage({
   searchParams,
 }: AttendancePageProps) {
   const context = await requirePermission("attendance.view");
-  const { accessibleBranches, supabase, claims, institute, role } = context;
+  const { accessibleBranches, supabase, claims, institute, profile, role } =
+    context;
   const params = await searchParams;
   const branchScope = getBranchScope(context, params.branchId);
   const todayDate = getTodayDateValue();
@@ -797,6 +805,7 @@ export default async function AttendancePage({
       role={role}
       title="Attendance"
       userEmail={claims.email}
+      userName={profile.full_name}
     >
       <section className="grid gap-6">
         {branchScope.showOwnerBranchFilter ? (
@@ -828,12 +837,16 @@ export default async function AttendancePage({
             </Badge>
           </CardHeader>
           <CardContent>
-            {params.error || queryError ? (
-              <p className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                {params.error ??
-                  "Attendance records are unavailable right now. Please try again."}
-              </p>
-            ) : null}
+            <ActionMessage
+              className="mb-4"
+              error={
+                params.error ??
+                (queryError
+                  ? "Attendance records are unavailable right now. Please try again."
+                  : null)
+              }
+              success={params.success}
+            />
 
             <form className="grid gap-3 sm:grid-cols-[1fr_auto]">
               {branchScope.selectedBranchId ? (

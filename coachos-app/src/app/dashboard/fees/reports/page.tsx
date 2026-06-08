@@ -1,5 +1,6 @@
 import { Download, Search } from "lucide-react";
 import Link from "next/link";
+import type { Metadata } from "next";
 
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +27,10 @@ type FeeReportsPageProps = {
     status?: string;
     studentId?: string;
   }>;
+};
+
+export const metadata: Metadata = {
+  title: "Financial Summary",
 };
 
 type Student = {
@@ -119,7 +124,8 @@ export default async function FeeReportsPage({
   searchParams,
 }: FeeReportsPageProps) {
   const context = await requirePermission("fees.view");
-  const { accessibleBranches, claims, institute, role, supabase } = context;
+  const { accessibleBranches, claims, institute, profile, role, supabase } =
+    context;
   const params = await searchParams;
 
   if (!canViewFeeReports(role)) {
@@ -130,6 +136,7 @@ export default async function FeeReportsPage({
         role={role}
         title="Financial Summary"
         userEmail={claims.email}
+        userName={profile.full_name}
       >
         <Card>
           <CardHeader>
@@ -270,6 +277,7 @@ export default async function FeeReportsPage({
       role={role}
       title="Financial Summary"
       userEmail={claims.email}
+      userName={profile.full_name}
     >
       <section className="grid gap-6">
         <Card>

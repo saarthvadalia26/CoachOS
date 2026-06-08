@@ -19,6 +19,18 @@ function redirectWithError(message: string): never {
   redirect(`${BATCHES_PATH}?error=${encodeURIComponent(message)}`);
 }
 
+function redirectWithSuccess(message: string, branchId?: string | null): never {
+  const params = new URLSearchParams({
+    success: message,
+  });
+
+  if (branchId) {
+    params.set("branchId", branchId);
+  }
+
+  redirect(`${BATCHES_PATH}?${params.toString()}`);
+}
+
 function redirectWithSaveError(): never {
   redirectWithError(
     "This batch record could not be saved. Please review the details and try again.",
@@ -93,7 +105,7 @@ export async function createBatch(formData: FormData) {
 
   revalidatePath(BATCHES_PATH);
   revalidatePath("/dashboard");
-  redirect(`${BATCHES_PATH}?branchId=${encodeURIComponent(branchId)}`);
+  redirectWithSuccess("Batch created.", branchId);
 }
 
 export async function assignStudentToBatch(formData: FormData) {
@@ -154,7 +166,7 @@ export async function assignStudentToBatch(formData: FormData) {
   }
 
   revalidatePath(BATCHES_PATH);
-  redirect(`${BATCHES_PATH}?branchId=${encodeURIComponent(batch.branch_id)}`);
+  redirectWithSuccess("Student assigned to batch.", batch.branch_id);
 }
 
 export async function assignTeacherToBatch(formData: FormData) {
@@ -221,7 +233,7 @@ export async function assignTeacherToBatch(formData: FormData) {
   }
 
   revalidatePath(BATCHES_PATH);
-  redirect(`${BATCHES_PATH}?branchId=${encodeURIComponent(batch.branch_id)}`);
+  redirectWithSuccess("Teacher assigned to batch.", batch.branch_id);
 }
 
 export async function removeTeacherFromBatch(formData: FormData) {
@@ -278,7 +290,7 @@ export async function removeTeacherFromBatch(formData: FormData) {
   }
 
   revalidatePath(BATCHES_PATH);
-  redirect(`${BATCHES_PATH}?branchId=${encodeURIComponent(batch.branch_id)}`);
+  redirectWithSuccess("Teacher removed from batch.", batch.branch_id);
 }
 
 export async function updateBatch(formData: FormData) {
@@ -331,9 +343,7 @@ export async function updateBatch(formData: FormData) {
   revalidatePath(BATCHES_PATH);
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/attendance");
-  redirect(
-    `${BATCHES_PATH}?branchId=${encodeURIComponent(existingBatch.branch_id)}`,
-  );
+  redirectWithSuccess("Batch updated.", existingBatch.branch_id);
 }
 
 export async function deleteBatch(formData: FormData) {
@@ -379,7 +389,5 @@ export async function deleteBatch(formData: FormData) {
   revalidatePath(BATCHES_PATH);
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/attendance");
-  redirect(
-    `${BATCHES_PATH}?branchId=${encodeURIComponent(existingBatch.branch_id)}`,
-  );
+  redirectWithSuccess("Batch deleted.", existingBatch.branch_id);
 }

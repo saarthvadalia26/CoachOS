@@ -1,7 +1,12 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 
 import { Button } from "@/components/ui/button";
 import { getCurrentUserContext } from "@/lib/auth/permissions";
+
+export const metadata: Metadata = {
+  title: "Access Denied",
+};
 
 export default async function AccessDeniedPage() {
   const { profile, role } = await getCurrentUserContext();

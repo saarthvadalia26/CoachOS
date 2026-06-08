@@ -1,3 +1,6 @@
+import type { Metadata } from "next";
+
+import { ActionMessage } from "@/components/dashboard/ActionMessage";
 import { BranchFilter } from "@/components/dashboard/BranchFilter";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { hasPermission } from "@/lib/auth/permissions";
@@ -29,11 +32,16 @@ type DashboardPageProps = {
   }>;
 };
 
+export const metadata: Metadata = {
+  title: "Dashboard",
+};
+
 export default async function DashboardPage({
   searchParams,
 }: DashboardPageProps) {
   const context = await getDashboardContext();
-  const { accessibleBranches, claims, institute, role, supabase } = context;
+  const { accessibleBranches, claims, institute, profile, role, supabase } =
+    context;
   const params = await searchParams;
   const branchScope = getBranchScope(context, params.branchId);
   const todayDate = getTodayDateValue();
@@ -163,6 +171,7 @@ export default async function DashboardPage({
       role={role}
       title="Overview"
       userEmail={claims.email}
+      userName={profile.full_name}
     >
       <section>
         {branchScope.showOwnerBranchFilter ? (
@@ -184,9 +193,10 @@ export default async function DashboardPage({
         </div>
 
         {queryError ? (
-          <p className="mt-5 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-            Dashboard metrics are unavailable right now. Please try again.
-          </p>
+          <ActionMessage
+            className="mt-5"
+            error="Dashboard metrics are unavailable right now. Please try again."
+          />
         ) : null}
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

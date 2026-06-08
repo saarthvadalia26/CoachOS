@@ -1,5 +1,16 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import {
+  Building2,
+  CalendarCheck,
+  GraduationCap,
+  LayoutDashboard,
+  Receipt,
+  Settings,
+  Users,
+  UserPlus,
+  type LucideIcon,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { logout } from "@/lib/auth/actions";
@@ -23,6 +34,7 @@ type NavItem = {
   activeKey: DashboardPageKey;
   enabled: boolean;
   href: string;
+  icon: LucideIcon;
   label: string;
   permission?: Permission;
   roles?: readonly AppRole[];
@@ -34,12 +46,14 @@ const navItems: NavItem[] = [
     href: "/dashboard",
     activeKey: "overview",
     enabled: true,
+    icon: LayoutDashboard,
   },
   {
     label: "Branches",
     href: "/dashboard/branches",
     activeKey: "branches",
     enabled: true,
+    icon: Building2,
     permission: "branches.view",
     roles: ["owner", "branch_manager"],
   },
@@ -48,6 +62,7 @@ const navItems: NavItem[] = [
     href: "/dashboard/students",
     activeKey: "students",
     enabled: true,
+    icon: Users,
     permission: "students.view",
   },
   {
@@ -55,6 +70,7 @@ const navItems: NavItem[] = [
     href: "/dashboard/batches",
     activeKey: "batches",
     enabled: true,
+    icon: GraduationCap,
     permission: "batches.view",
     roles: [
       "owner",
@@ -69,6 +85,7 @@ const navItems: NavItem[] = [
     href: "/dashboard/attendance",
     activeKey: "attendance",
     enabled: true,
+    icon: CalendarCheck,
     permission: "attendance.view",
     roles: [
       "owner",
@@ -83,6 +100,7 @@ const navItems: NavItem[] = [
     href: "/dashboard/fees",
     activeKey: "fees",
     enabled: true,
+    icon: Receipt,
     permission: "fees.view",
     roles: ["owner", "branch_manager", "operations_staff", "accountant"],
   },
@@ -91,6 +109,7 @@ const navItems: NavItem[] = [
     href: "/dashboard/staff",
     activeKey: "staff",
     enabled: true,
+    icon: UserPlus,
     permission: "staff.view",
     roles: ["owner"],
   },
@@ -99,6 +118,7 @@ const navItems: NavItem[] = [
     href: "/dashboard/settings/academic-years",
     activeKey: "settings",
     enabled: true,
+    icon: Settings,
     permission: "settings.manage",
     roles: ["owner"],
   },
@@ -108,6 +128,7 @@ type DashboardShellProps = {
   activePage: DashboardPageKey;
   instituteName: string;
   userEmail?: string;
+  userName?: string | null;
   title: string;
   children: ReactNode;
   role: AppRole;
@@ -118,9 +139,12 @@ export function DashboardShell({
   instituteName,
   role,
   userEmail,
+  userName,
   title,
   children,
 }: DashboardShellProps) {
+  const displayName = userName?.trim() || userEmail || "your account";
+
   return (
     <main className="min-h-full bg-background text-foreground">
       <div className="flex min-h-full flex-col md:flex-row">
@@ -134,6 +158,7 @@ export function DashboardShell({
           <nav className="flex gap-2 overflow-x-auto md:grid md:overflow-visible">
             {navItems.map((item) => {
               const isActive = item.activeKey === activePage;
+              const Icon = item.icon;
               const canViewRole = !item.roles || item.roles.includes(role);
               const canViewItem =
                 canViewRole &&
@@ -148,8 +173,9 @@ export function DashboardShell({
                   <span
                     key={item.label}
                     aria-disabled="true"
-                    className="shrink-0 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground"
+                    className="flex shrink-0 items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground"
                   >
+                    <Icon aria-hidden="true" className="size-4" />
                     {item.label}
                   </span>
                 );
@@ -162,10 +188,11 @@ export function DashboardShell({
                   aria-current={isActive ? "page" : undefined}
                   className={
                     isActive
-                      ? "shrink-0 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground"
-                      : "shrink-0 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                      ? "flex shrink-0 items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground shadow-sm"
+                      : "flex shrink-0 items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                   }
                 >
+                  <Icon aria-hidden="true" className="size-4" />
                   {item.label}
                 </Link>
               );
@@ -184,7 +211,7 @@ export function DashboardShell({
                   {title}
                 </h1>
                 <p className="mt-2 text-muted-foreground">
-                  Signed in as {userEmail ?? "your account"}.
+                  Signed in as {displayName}.
                 </p>
               </div>
               <form action={logout}>
