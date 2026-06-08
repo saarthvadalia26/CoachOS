@@ -6,7 +6,6 @@ import { BranchFilter } from "@/components/dashboard/BranchFilter";
 import { ConfirmSubmitButton } from "@/components/dashboard/ConfirmSubmitButton";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -16,6 +15,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SubmitButton } from "@/components/ui/submit-button";
 import {
   hasAnyPermission,
   requirePermission,
@@ -266,10 +266,10 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
                     Role
                     <RoleSelect />
                   </Label>
-                  <Button type="submit" className="mt-1">
+                  <SubmitButton className="mt-1" pendingLabel="Creating...">
                     <UserPlus aria-hidden="true" data-icon="inline-start" />
                     Add staff member
-                  </Button>
+                  </SubmitButton>
                 </form>
               </CardContent>
             </Card>
@@ -337,6 +337,7 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
                             variant="destructive"
                             size="sm"
                             confirmMessage={`Delete ${staffMember.full_name} from staff?`}
+                            pendingLabel="Deleting..."
                           >
                             <Trash2
                               aria-hidden="true"
@@ -400,16 +401,16 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
                               ))}
                             </select>
                           </Label>
-                          <Button
-                            type="submit"
+                          <SubmitButton
                             className="sm:col-span-2 sm:w-fit"
+                            pendingLabel="Updating..."
                           >
                             <Save
                               aria-hidden="true"
                               data-icon="inline-start"
                             />
                             Save changes
-                          </Button>
+                          </SubmitButton>
                         </form>
                       </details>
                     </article>

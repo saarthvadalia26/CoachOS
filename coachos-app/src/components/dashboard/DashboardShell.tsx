@@ -12,7 +12,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { logout } from "@/lib/auth/actions";
 import {
   hasPermission,
@@ -185,6 +185,7 @@ export function DashboardShell({
                 <Link
                   key={item.label}
                   href={item.href}
+                  prefetch
                   aria-current={isActive ? "page" : undefined}
                   className={
                     isActive
@@ -215,9 +216,9 @@ export function DashboardShell({
                 </p>
               </div>
               <form action={logout}>
-                <Button type="submit" variant="outline">
+                <SubmitButton pendingLabel="Signing out..." variant="outline">
                   Log out
-                </Button>
+                </SubmitButton>
               </form>
             </header>
 

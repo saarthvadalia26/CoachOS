@@ -80,6 +80,16 @@ function exportErrorResponse() {
   });
 }
 
+function noRecordsResponse() {
+  return new Response("No attendance records match the selected filters.", {
+    headers: {
+      "Cache-Control": "no-store",
+      "Content-Type": "text/plain; charset=utf-8",
+    },
+    status: 404,
+  });
+}
+
 function logExportError(
   step: string,
   context: Record<string, string | number | null | undefined>,
@@ -170,7 +180,7 @@ export async function GET(request: NextRequest) {
   const filename = `attendance-${startDate}-to-${endDate}.csv`;
 
   if (!historyBatchIds.length) {
-    return csvResponse([csvHeaders], filename);
+    return noRecordsResponse();
   }
 
   const { data: studentBatchRows, error: studentBatchesError } = await supabase
@@ -251,7 +261,7 @@ export async function GET(request: NextRequest) {
   const sessionIds = sessions.map((session) => session.id);
 
   if (!sessionIds.length || !visibleStudentIds.length) {
-    return csvResponse([csvHeaders], filename);
+    return noRecordsResponse();
   }
 
   let recordsQuery = supabase
@@ -334,6 +344,10 @@ export async function GET(request: NextRequest) {
       ];
     })
     .filter((row): row is string[] => Boolean(row));
+
+  if (!csvRows.length) {
+    return noRecordsResponse();
+  }
 
   return csvResponse([csvHeaders, ...csvRows], filename);
 }

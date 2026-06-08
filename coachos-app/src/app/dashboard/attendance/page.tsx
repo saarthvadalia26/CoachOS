@@ -1,6 +1,5 @@
 import {
   CalendarCheck,
-  Download,
   Eye,
   Save,
   Search,
@@ -14,6 +13,7 @@ import { BranchFilter } from "@/components/dashboard/BranchFilter";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ExportButton } from "@/components/ui/export-button";
 import {
   Card,
   CardContent,
@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { canAccessPermission, requirePermission } from "@/lib/auth/permissions";
 import {
   reopenAttendanceSession,
@@ -882,15 +883,15 @@ export default async function AttendancePage({
                   ))}
                 </select>
               </Label>
-              <Button
-                type="submit"
+              <SubmitButton
                 variant="outline"
                 className="self-end"
                 disabled={!batches.length}
+                pendingLabel="Loading..."
               >
                 <CalendarCheck aria-hidden="true" data-icon="inline-start" />
                 View batch
-              </Button>
+              </SubmitButton>
             </form>
           </CardContent>
         </Card>
@@ -1010,7 +1011,7 @@ export default async function AttendancePage({
                                       value={option.value}
                                       defaultChecked={isSelected}
                                     />
-                                    <span className="flex h-9 items-center justify-center rounded-md border border-border px-2 text-xs font-medium text-muted-foreground transition-colors peer-checked:border-primary peer-checked:bg-primary peer-checked:text-primary-foreground">
+                                    <span className="flex h-9 items-center justify-center rounded-md border border-border px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground peer-checked:border-primary peer-checked:bg-primary peer-checked:text-primary-foreground">
                                       {option.label}
                                     </span>
                                   </label>
@@ -1022,10 +1023,13 @@ export default async function AttendancePage({
                       );
                     })}
                   </div>
-                  <Button type="submit" className="justify-self-start">
+                  <SubmitButton
+                    className="justify-self-start"
+                    pendingLabel="Saving..."
+                  >
                     <Save aria-hidden="true" data-icon="inline-start" />
                     Submit attendance
-                  </Button>
+                  </SubmitButton>
                 </form>
               ) : (
                 <div className="grid gap-5">
@@ -1098,10 +1102,13 @@ export default async function AttendancePage({
                           required
                         />
                       </Label>
-                      <Button type="submit" variant="outline">
+                      <SubmitButton
+                        pendingLabel="Updating..."
+                        variant="outline"
+                      >
                         <Unlock aria-hidden="true" data-icon="inline-start" />
                         Reopen attendance
-                      </Button>
+                      </SubmitButton>
                     </form>
                   ) : null}
                   {isReopenLimitReached ? (
@@ -1224,16 +1231,19 @@ export default async function AttendancePage({
               </div>
 
               <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
-                <Button type="submit" className="w-full sm:w-auto">
+                <SubmitButton
+                  className="w-full sm:w-auto"
+                  pendingLabel="Filtering..."
+                >
                   <Search aria-hidden="true" data-icon="inline-start" />
                   Filter
-                </Button>
-                <Button asChild variant="outline" className="w-full sm:w-auto">
-                  <Link href={exportHistoryHref}>
-                    <Download aria-hidden="true" data-icon="inline-start" />
-                    Export CSV
-                  </Link>
-                </Button>
+                </SubmitButton>
+                <ExportButton
+                  className="w-full sm:w-auto"
+                  disabled={!filteredHistorySessions.length}
+                  href={exportHistoryHref}
+                  variant="outline"
+                />
                 <Button asChild variant="outline" className="w-full sm:w-auto">
                   <Link href={resetHistoryHref}>Reset</Link>
                 </Button>

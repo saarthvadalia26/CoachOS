@@ -2,9 +2,9 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { login } from "@/lib/auth/actions";
 import { createClient } from "@/lib/supabase/server";
 
@@ -78,9 +78,9 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
               placeholder="Enter your password"
             />
           </Label>
-          <Button type="submit" className="mt-2">
+          <SubmitButton className="mt-2" pendingLabel="Signing in...">
             Log in
-          </Button>
+          </SubmitButton>
         </form>
 
         <p className="mt-6 text-center text-sm text-muted-foreground">

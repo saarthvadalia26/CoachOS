@@ -4,7 +4,6 @@ import type { Metadata } from "next";
 import { ActionMessage } from "@/components/dashboard/ActionMessage";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -14,6 +13,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { hasAnyPermission, requirePermission } from "@/lib/auth/permissions";
 import { createBranch, updateBranch } from "@/lib/branches/actions";
 
@@ -90,10 +90,10 @@ export default async function BranchesPage({
                     placeholder="Optional branch address"
                   />
                 </Label>
-                <Button type="submit" className="mt-1">
+                <SubmitButton className="mt-1" pendingLabel="Creating...">
                   <Plus aria-hidden="true" data-icon="inline-start" />
                   Create branch
-                </Button>
+                </SubmitButton>
               </form>
             </CardContent>
           </Card>
@@ -176,13 +176,13 @@ export default async function BranchesPage({
                               autoComplete="street-address"
                             />
                           </Label>
-                          <Button
-                            type="submit"
+                          <SubmitButton
                             className="sm:col-span-2 sm:w-fit"
+                            pendingLabel="Updating..."
                           >
                             <Save aria-hidden="true" data-icon="inline-start" />
                             Save changes
-                          </Button>
+                          </SubmitButton>
                         </form>
                       </details>
                     </CardContent>

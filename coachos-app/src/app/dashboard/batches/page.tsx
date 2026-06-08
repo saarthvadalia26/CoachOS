@@ -6,7 +6,6 @@ import { BranchFilter } from "@/components/dashboard/BranchFilter";
 import { ConfirmSubmitButton } from "@/components/dashboard/ConfirmSubmitButton";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -16,6 +15,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SubmitButton } from "@/components/ui/submit-button";
 import {
   hasAnyPermission,
   hasPermission,
@@ -393,10 +393,10 @@ export default async function BatchesPage({ searchParams }: BatchesPageProps) {
                       placeholder="Mon, Wed, Fri - 7:00 AM"
                     />
                   </Label>
-                  <Button type="submit" className="mt-1">
+                  <SubmitButton className="mt-1" pendingLabel="Creating...">
                     <Plus aria-hidden="true" data-icon="inline-start" />
                     Create batch
-                  </Button>
+                  </SubmitButton>
                 </form>
               </CardContent>
             </Card>
@@ -512,6 +512,7 @@ export default async function BatchesPage({ searchParams }: BatchesPageProps) {
                               variant="destructive"
                               size="sm"
                               confirmMessage={`Delete ${batch.name}? This also removes student assignments and attendance records for this batch.`}
+                              pendingLabel="Deleting..."
                             >
                               <Trash2
                                 aria-hidden="true"
@@ -574,17 +575,17 @@ export default async function BatchesPage({ searchParams }: BatchesPageProps) {
                                       type="hidden"
                                       value={teacher.assignmentId}
                                     />
-                                    <Button
-                                      type="submit"
+                                    <SubmitButton
                                       variant="outline"
                                       size="sm"
+                                      pendingLabel="Removing..."
                                     >
                                       <UserMinus
                                         aria-hidden="true"
                                         data-icon="inline-start"
                                       />
                                       Remove
-                                    </Button>
+                                    </SubmitButton>
                                   </form>
                                 </li>
                               ))}
@@ -630,18 +631,18 @@ export default async function BatchesPage({ searchParams }: BatchesPageProps) {
                                 ))}
                               </select>
                             </Label>
-                            <Button
-                              type="submit"
+                            <SubmitButton
                               variant="outline"
                               className="self-end"
                               disabled={!availableTeachers.length}
+                              pendingLabel="Assigning..."
                             >
                               <UserPlus
                                 aria-hidden="true"
                                 data-icon="inline-start"
                               />
                               Assign
-                            </Button>
+                            </SubmitButton>
                           </form>
                         </div>
                       ) : null}
@@ -689,16 +690,16 @@ export default async function BatchesPage({ searchParams }: BatchesPageProps) {
                                   autoComplete="off"
                                 />
                               </Label>
-                              <Button
-                                type="submit"
+                              <SubmitButton
                                 className="sm:col-span-3 sm:w-fit"
+                                pendingLabel="Updating..."
                               >
                                 <Save
                                   aria-hidden="true"
                                   data-icon="inline-start"
                                 />
                                 Save changes
-                              </Button>
+                              </SubmitButton>
                             </form>
                           </details>
 
@@ -731,18 +732,18 @@ export default async function BatchesPage({ searchParams }: BatchesPageProps) {
                                 ))}
                               </select>
                             </label>
-                            <Button
-                              type="submit"
+                            <SubmitButton
                               variant="outline"
                               className="self-end"
                               disabled={!availableStudents.length}
+                              pendingLabel="Assigning..."
                             >
                               <UserPlus
                                 aria-hidden="true"
                                 data-icon="inline-start"
                               />
                               Add
-                            </Button>
+                            </SubmitButton>
                           </form>
                         </>
                       ) : null}

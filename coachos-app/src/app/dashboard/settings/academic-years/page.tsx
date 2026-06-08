@@ -5,7 +5,6 @@ import { ActionMessage } from "@/components/dashboard/ActionMessage";
 import { ConfirmSubmitButton } from "@/components/dashboard/ConfirmSubmitButton";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -15,6 +14,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SubmitButton } from "@/components/ui/submit-button";
 import {
   createAcademicYear,
   deleteAcademicYear,
@@ -171,10 +171,10 @@ export default async function AcademicYearsPage({
                   />
                   Set as active
                 </label>
-                <Button type="submit" className="mt-1">
+                <SubmitButton className="mt-1" pendingLabel="Creating...">
                   <Plus aria-hidden="true" data-icon="inline-start" />
                   Create academic year
-                </Button>
+                </SubmitButton>
               </form>
             </CardContent>
           </Card>
@@ -278,16 +278,16 @@ export default async function AcademicYearsPage({
                                 Example end date: 2027-05-31
                               </span>
                             </Label>
-                            <Button
-                              type="submit"
+                            <SubmitButton
                               className="self-end sm:w-fit"
+                              pendingLabel="Updating..."
                             >
                               <Save
                                 aria-hidden="true"
                                 data-icon="inline-start"
                               />
                               Save changes
-                            </Button>
+                            </SubmitButton>
                           </form>
                         </details>
 
@@ -299,17 +299,17 @@ export default async function AcademicYearsPage({
                                 type="hidden"
                                 value={academicYear.id}
                               />
-                              <Button
-                                type="submit"
+                              <SubmitButton
                                 variant="outline"
                                 className="w-full sm:w-auto"
+                                pendingLabel="Updating..."
                               >
                                 <CheckCircle2
                                   aria-hidden="true"
                                   data-icon="inline-start"
                                 />
                                 Mark active
-                              </Button>
+                              </SubmitButton>
                             </form>
                           )}
                           <form action={deleteAcademicYear}>
@@ -323,6 +323,7 @@ export default async function AcademicYearsPage({
                               variant="destructive"
                               className="w-full sm:w-auto"
                               confirmMessage={`Delete ${academicYear.name}? This is only allowed when no attendance records are linked.`}
+                              pendingLabel="Deleting..."
                             >
                               <Trash2
                                 aria-hidden="true"

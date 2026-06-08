@@ -1,5 +1,5 @@
-import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { SubmitButton } from "@/components/ui/submit-button";
 import type { Branch } from "@/lib/auth/permissions";
 
 type BranchFilterProps = {
@@ -35,9 +35,9 @@ export function BranchFilter({
           ))}
         </select>
       </Label>
-      <Button type="submit" variant="outline">
+      <SubmitButton pendingLabel="Filtering..." variant="outline">
         Apply
-      </Button>
+      </SubmitButton>
     </form>
   );
 }

@@ -6,7 +6,6 @@ import { BranchFilter } from "@/components/dashboard/BranchFilter";
 import { ConfirmSubmitButton } from "@/components/dashboard/ConfirmSubmitButton";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -16,6 +15,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SubmitButton } from "@/components/ui/submit-button";
 import {
   hasAnyPermission,
   hasPermission,
@@ -175,9 +175,9 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
                       placeholder="Optional parent phone"
                     />
                   </Label>
-                  <Button type="submit" className="mt-1">
+                  <SubmitButton className="mt-1" pendingLabel="Creating...">
                     Create student
-                  </Button>
+                  </SubmitButton>
                 </form>
               </CardContent>
             </Card>
@@ -231,6 +231,7 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
                                 variant="destructive"
                                 size="sm"
                                 confirmMessage={`Delete ${student.full_name}? This also removes batch relationships, attendance records, and fee records for this student.`}
+                                pendingLabel="Deleting..."
                               >
                                 <Trash2
                                   aria-hidden="true"
@@ -296,16 +297,16 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
                                 <option value="inactive">Inactive</option>
                               </select>
                             </Label>
-                            <Button
-                              type="submit"
+                            <SubmitButton
                               className="sm:col-span-2 sm:w-fit"
+                              pendingLabel="Updating..."
                             >
                               <Save
                                 aria-hidden="true"
                                 data-icon="inline-start"
                               />
                               Save changes
-                            </Button>
+                            </SubmitButton>
                           </form>
                         </details>
                       ) : null}

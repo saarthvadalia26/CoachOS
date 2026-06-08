@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SubmitButton } from "@/components/ui/submit-button";
 import {
   hasAnyPermission,
   hasPermission,
@@ -302,10 +303,10 @@ export default async function FeesPage({ searchParams }: FeesPageProps) {
                         placeholder="Optional billing note"
                       />
                     </Label>
-                    <Button type="submit" className="mt-1">
+                    <SubmitButton className="mt-1" pendingLabel="Creating...">
                       <Plus aria-hidden="true" data-icon="inline-start" />
                       Create fee record
-                    </Button>
+                    </SubmitButton>
                   </form>
                 ) : (
                   <div className="grid gap-4">
@@ -426,13 +427,16 @@ export default async function FeesPage({ searchParams }: FeesPageProps) {
                                 type="hidden"
                                 value={record.id}
                               />
-                              <Button type="submit" variant="outline">
+                              <SubmitButton
+                                pendingLabel="Updating..."
+                                variant="outline"
+                              >
                                 <IndianRupee
                                   aria-hidden="true"
                                   data-icon="inline-start"
                                 />
                                 Mark paid
-                              </Button>
+                              </SubmitButton>
                             </form>
                           ) : null}
                         </div>

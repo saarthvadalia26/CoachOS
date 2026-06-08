@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SubmitButton } from "@/components/ui/submit-button";
 import {
   getCurrentUserContext,
   getStaffLinkStatusMessage,
@@ -78,9 +78,9 @@ export default async function OnboardingPage({
                 placeholder="Bright Future Classes"
               />
             </Label>
-            <Button type="submit" className="mt-2">
+            <SubmitButton className="mt-2" pendingLabel="Creating...">
               Create institute
-            </Button>
+            </SubmitButton>
           </form>
         )}
       </section>

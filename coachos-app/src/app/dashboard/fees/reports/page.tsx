@@ -1,10 +1,11 @@
-import { Download, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import Link from "next/link";
 import type { Metadata } from "next";
 
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ExportButton } from "@/components/ui/export-button";
 import {
   Card,
   CardContent,
@@ -14,6 +15,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { requirePermission, type AppRole } from "@/lib/auth/permissions";
 import { getTodayDateValue } from "@/lib/attendance/date";
 import { getBranchScope } from "@/lib/dashboard/branch-scope";
@@ -373,16 +375,19 @@ export default async function FeeReportsPage({
               </div>
 
               <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
-                <Button type="submit" className="w-full sm:w-auto">
+                <SubmitButton
+                  className="w-full sm:w-auto"
+                  pendingLabel="Filtering..."
+                >
                   <Search aria-hidden="true" data-icon="inline-start" />
                   Filter
-                </Button>
-                <Button asChild variant="outline" className="w-full sm:w-auto">
-                  <Link href={exportHref}>
-                    <Download aria-hidden="true" data-icon="inline-start" />
-                    Export CSV
-                  </Link>
-                </Button>
+                </SubmitButton>
+                <ExportButton
+                  className="w-full sm:w-auto"
+                  disabled={!feeRecords.length}
+                  href={exportHref}
+                  variant="outline"
+                />
                 <Button asChild variant="outline" className="w-full sm:w-auto">
                   <Link href={resetHref}>Reset</Link>
                 </Button>

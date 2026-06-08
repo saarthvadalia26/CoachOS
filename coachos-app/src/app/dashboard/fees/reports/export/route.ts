@@ -79,6 +79,16 @@ function exportErrorResponse(status = 500) {
   });
 }
 
+function noRecordsResponse() {
+  return new Response("No fee records match the selected filters.", {
+    headers: {
+      "Cache-Control": "no-store",
+      "Content-Type": "text/plain; charset=utf-8",
+    },
+    status: 404,
+  });
+}
+
 function logExportError(
   step: string,
   context: Record<string, string | number | null | undefined>,
@@ -237,6 +247,10 @@ export async function GET(request: NextRequest) {
         record.notes ?? "",
       ];
     });
+
+  if (!csvRows.length) {
+    return noRecordsResponse();
+  }
 
   return csvResponse([csvHeaders, ...csvRows], filename);
 }
