@@ -5,22 +5,23 @@ import { redirect } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SubmitButton } from "@/components/ui/submit-button";
-import { login } from "@/lib/auth/actions";
+import { requestPasswordReset } from "@/lib/auth/actions";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
-  title: "Log in",
+  title: "Reset Password",
 };
 
-type LoginPageProps = {
+type ForgotPasswordPageProps = {
   searchParams: Promise<{
     error?: string;
     message?: string;
-    next?: string;
   }>;
 };
 
-export default async function LoginPage({ searchParams }: LoginPageProps) {
+export default async function ForgotPasswordPage({
+  searchParams,
+}: ForgotPasswordPageProps) {
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
   const claims = data?.claims;
@@ -37,10 +38,11 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         <div>
           <p className="text-sm font-medium text-muted-foreground">CoachOS</p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight">
-            Log in to your institute
+            Reset your password
           </h1>
           <p className="mt-3 text-sm leading-6 text-muted-foreground">
-            Access your students, batches, attendance, and fees from one secure dashboard.
+            Enter your account email and we will send secure instructions to
+            help you set a new password.
           </p>
         </div>
 
@@ -56,8 +58,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           </p>
         ) : null}
 
-        <form action={login} className="mt-6 grid gap-4">
-          <input type="hidden" name="next" value={params.next ?? "/dashboard"} />
+        <form action={requestPasswordReset} className="mt-6 grid gap-4">
           <Label>
             Email
             <Input
@@ -68,30 +69,15 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
               placeholder="owner@institute.com"
             />
           </Label>
-          <Label>
-            Password
-            <Input
-              required
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              placeholder="Enter your password"
-            />
-          </Label>
-          <div className="-mt-2 text-right text-sm">
-            <Link href="/forgot-password" className="font-medium text-foreground underline">
-              Forgot password?
-            </Link>
-          </div>
-          <SubmitButton className="mt-2" pendingLabel="Signing in...">
-            Log in
+          <SubmitButton className="mt-2" pendingLabel="Sending...">
+            Send reset instructions
           </SubmitButton>
         </form>
 
         <p className="mt-6 text-center text-sm text-muted-foreground">
-          New to CoachOS?{" "}
-          <Link href="/signup" className="font-medium text-foreground underline">
-            Create an account
+          Remember your password?{" "}
+          <Link href="/login" className="font-medium text-foreground underline">
+            Log in
           </Link>
         </p>
       </section>

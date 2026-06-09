@@ -144,13 +144,19 @@ export function DashboardShell({
   children,
 }: DashboardShellProps) {
   const displayName = userName?.trim() || userEmail || "your account";
+  const roleLabel = role.replaceAll("_", " ");
 
   return (
     <main className="min-h-full bg-background text-foreground">
       <div className="flex min-h-full flex-col md:flex-row">
-        <aside className="border-b border-border bg-card px-4 py-4 md:min-h-screen md:w-64 md:border-b-0 md:border-r md:px-5">
+        <aside className="border-b border-sidebar-border bg-sidebar px-4 py-4 text-sidebar-foreground md:min-h-screen md:w-64 md:border-b-0 md:border-r md:px-5">
           <div className="mb-5">
-            <p className="text-lg font-semibold tracking-tight">CoachOS</p>
+            <p className="flex items-center gap-2 text-lg font-semibold tracking-tight">
+              <span className="grid size-8 place-items-center rounded-lg bg-sidebar-primary text-sm font-bold text-sidebar-primary-foreground shadow-sm">
+                C
+              </span>
+              CoachOS
+            </p>
             <p className="mt-1 text-xs text-muted-foreground">
               Institute operations
             </p>
@@ -189,8 +195,8 @@ export function DashboardShell({
                   aria-current={isActive ? "page" : undefined}
                   className={
                     isActive
-                      ? "flex shrink-0 items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground shadow-sm"
-                      : "flex shrink-0 items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                      ? "flex shrink-0 items-center gap-2 rounded-md bg-sidebar-primary px-3 py-2 text-sm font-medium text-sidebar-primary-foreground shadow-sm"
+                      : "flex shrink-0 items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                   }
                 >
                   <Icon aria-hidden="true" className="size-4" />
@@ -215,11 +221,16 @@ export function DashboardShell({
                   Signed in as {displayName}.
                 </p>
               </div>
-              <form action={logout}>
-                <SubmitButton pendingLabel="Signing out..." variant="outline">
-                  Log out
-                </SubmitButton>
-              </form>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="rounded-md border border-border bg-card px-2.5 py-1 text-xs font-medium capitalize text-muted-foreground">
+                  {roleLabel}
+                </span>
+                <form action={logout}>
+                  <SubmitButton pendingLabel="Signing out..." variant="outline">
+                    Log out
+                  </SubmitButton>
+                </form>
+              </div>
             </header>
 
             {children}

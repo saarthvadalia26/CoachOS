@@ -1,11 +1,13 @@
-import { Save, Trash2, UserPlus } from "lucide-react";
+import { Save, Search, Trash2, UserPlus } from "lucide-react";
+import Link from "next/link";
 import type { Metadata } from "next";
 
 import { ActionMessage } from "@/components/dashboard/ActionMessage";
-import { BranchFilter } from "@/components/dashboard/BranchFilter";
 import { ConfirmSubmitButton } from "@/components/dashboard/ConfirmSubmitButton";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
+import { PaginationControls } from "@/components/dashboard/PaginationControls";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -23,6 +25,13 @@ import {
 } from "@/lib/auth/permissions";
 import { getBranchScope } from "@/lib/dashboard/branch-scope";
 import {
+  defaultPageSize,
+  getPage,
+  getPageSummary,
+  getPaginationRange,
+  getSearchTerm,
+} from "@/lib/dashboard/list-controls";
+import {
   createStaffMember,
   deleteStaffMember,
   updateStaffMember,
@@ -32,6 +41,10 @@ type StaffPageProps = {
   searchParams: Promise<{
     branchId?: string;
     error?: string;
+    linkStatus?: string;
+    page?: string;
+    q?: string;
+    role?: string;
     success?: string;
   }>;
 };
@@ -64,6 +77,16 @@ function getRoleBadgeVariant(role: string) {
 
 function getLinkStatusLabel(staffMember: Pick<StaffMember, "auth_user_id">) {
   return staffMember.auth_user_id ? "Linked" : "Pending account setup";
+}
+
+function getSelectedRole(value: string | null | undefined) {
+  return staffRoles.includes(value as (typeof staffRoles)[number])
+    ? String(value)
+    : "";
+}
+
+function getSelectedLinkStatus(value: string | null | undefined) {
+  return value === "linked" || value === "pending" ? value : "";
 }
 
 function getRoleLabel(role: string) {
@@ -113,6 +136,11 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
     context;
   const params = await searchParams;
   const branchScope = getBranchScope(context, params.branchId);
+  const searchTerm = getSearchTerm(params.q);
+  const selectedRole = getSelectedRole(params.role);
+  const selectedLinkStatus = getSelectedLinkStatus(params.linkStatus);
+  const page = getPage(params.page);
+  const paginationRange = getPaginationRange(page);
   const branchesById = new Map(
     accessibleBranches.map((branch) => [branch.id, branch]),
   );
@@ -124,7 +152,9 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
 
   const staffQuery = supabase
     .from("staff_members")
-    .select("id, branch_id, auth_user_id, full_name, email, role, created_at")
+    .select("id, branch_id, auth_user_id, full_name, email, role, created_at", {
+      count: "exact",
+    })
     .neq("role", "owner")
     .order("created_at", { ascending: false });
 
@@ -142,9 +172,40 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
     );
   }
 
-  const { data: staffRows, error: staffError } = await scopedStaffQuery;
+  if (searchTerm) {
+    const searchPattern = `%${searchTerm}%`;
+    scopedStaffQuery = scopedStaffQuery.or(
+      `full_name.ilike.${searchPattern},email.ilike.${searchPattern}`,
+    );
+  }
+
+  if (selectedRole) {
+    scopedStaffQuery = scopedStaffQuery.eq("role", selectedRole);
+  }
+
+  if (selectedLinkStatus === "linked") {
+    scopedStaffQuery = scopedStaffQuery.not("auth_user_id", "is", null);
+  } else if (selectedLinkStatus === "pending") {
+    scopedStaffQuery = scopedStaffQuery.is("auth_user_id", null);
+  }
+
+  const { data: staffRows, count: staffCount, error: staffError } =
+    await scopedStaffQuery.range(paginationRange.from, paginationRange.to);
 
   const staffMembers = (staffRows ?? []) as StaffMember[];
+  const totalStaffMembers = staffCount ?? 0;
+  const filterParams = {
+    branchId: branchScope.selectedBranchId,
+    linkStatus: selectedLinkStatus,
+    q: searchTerm,
+    role: selectedRole,
+  };
+  const hasActiveFilters = Boolean(
+    searchTerm ||
+      selectedRole ||
+      selectedLinkStatus ||
+      branchScope.selectedBranchId,
+  );
 
   return (
     <DashboardShell
@@ -156,12 +217,91 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
       userName={profile.full_name}
     >
       <section className="grid gap-6">
-        {branchScope.showOwnerBranchFilter ? (
-          <BranchFilter
-            branches={accessibleBranches}
-            selectedBranchId={branchScope.selectedBranchId}
-          />
-        ) : null}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-xl">Find staff members</CardTitle>
+            <CardDescription>
+              Search by name or email, then filter by role and account status.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form className="grid gap-3">
+              <div
+                className={
+                  branchScope.showOwnerBranchFilter
+                    ? "grid gap-3 md:grid-cols-2 xl:grid-cols-4"
+                    : "grid gap-3 md:grid-cols-3"
+                }
+              >
+                <Label>
+                  Search
+                  <Input
+                    name="q"
+                    type="search"
+                    defaultValue={searchTerm}
+                    placeholder="Name or email"
+                  />
+                </Label>
+                {branchScope.showOwnerBranchFilter ? (
+                  <Label>
+                    Branch
+                    <select
+                      name="branchId"
+                      defaultValue={branchScope.selectedBranchId ?? ""}
+                      className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
+                    >
+                      <option value="">All branches</option>
+                      {accessibleBranches.map((branch) => (
+                        <option key={branch.id} value={branch.id}>
+                          {branch.name}
+                        </option>
+                      ))}
+                    </select>
+                  </Label>
+                ) : null}
+                <Label>
+                  Role
+                  <select
+                    name="role"
+                    defaultValue={selectedRole}
+                    className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
+                  >
+                    <option value="">All roles</option>
+                    {staffRoles.map((staffRole) => (
+                      <option key={staffRole} value={staffRole}>
+                        {getRoleLabel(staffRole)}
+                      </option>
+                    ))}
+                  </select>
+                </Label>
+                <Label>
+                  Account status
+                  <select
+                    name="linkStatus"
+                    defaultValue={selectedLinkStatus}
+                    className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
+                  >
+                    <option value="">All statuses</option>
+                    <option value="linked">Linked</option>
+                    <option value="pending">Pending setup</option>
+                  </select>
+                </Label>
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                <SubmitButton
+                  className="w-full sm:w-auto"
+                  pendingLabel="Filtering..."
+                >
+                  <Search aria-hidden="true" data-icon="inline-start" />
+                  Filter
+                </SubmitButton>
+                <Button asChild variant="outline" className="w-full sm:w-auto">
+                  <Link href="/dashboard/staff">Reset filters</Link>
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
 
         <ActionMessage
           error={
@@ -184,24 +324,39 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
             </CardHeader>
             <CardContent>
               {staffMembers.length ? (
-                <div className="divide-y divide-border rounded-md border border-border">
-                  {staffMembers.map((staffMember) => (
-                    <article key={staffMember.id} className="grid gap-2 p-4">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h2 className="font-medium">{staffMember.full_name}</h2>
-                        <Badge variant={getRoleBadgeVariant(staffMember.role)}>
-                          {getRoleLabel(staffMember.role)}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        {staffMember.email}
-                      </p>
-                    </article>
-                  ))}
+                <div className="grid gap-4">
+                  <div className="divide-y divide-border rounded-md border border-border">
+                    {staffMembers.map((staffMember) => (
+                      <article key={staffMember.id} className="grid gap-2 p-4">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h2 className="font-medium">
+                            {staffMember.full_name}
+                          </h2>
+                          <Badge
+                            variant={getRoleBadgeVariant(staffMember.role)}
+                          >
+                            {getRoleLabel(staffMember.role)}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          {staffMember.email}
+                        </p>
+                      </article>
+                    ))}
+                  </div>
+                  <PaginationControls
+                    basePath="/dashboard/staff"
+                    page={page}
+                    pageSize={defaultPageSize}
+                    params={filterParams}
+                    totalCount={totalStaffMembers}
+                  />
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  No staff members are available for your branch.
+                  {hasActiveFilters
+                    ? "No records match the selected filters."
+                    : "No staff members are available for your branch."}
                 </p>
               )}
             </CardContent>
@@ -281,18 +436,22 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
                     Staff members
                   </h2>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    {staffMembers.length}{" "}
-                    {staffMembers.length === 1 ? "member" : "members"} in{" "}
-                    {institute.name}
+                    {getPageSummary({
+                      page,
+                      shownCount: staffMembers.length,
+                      totalCount: totalStaffMembers,
+                    })}{" "}
+                    in {institute.name}
                   </p>
                 </div>
                 <Badge variant="outline">Owner managed</Badge>
               </div>
 
               {staffMembers.length ? (
-                <div className="divide-y divide-border rounded-lg border border-border bg-card shadow-sm">
-                  {staffMembers.map((staffMember) => (
-                    <article key={staffMember.id} className="grid gap-4 p-5">
+                <div className="grid gap-4">
+                  <div className="divide-y divide-border rounded-lg border border-border bg-card shadow-sm">
+                    {staffMembers.map((staffMember) => (
+                      <article key={staffMember.id} className="grid gap-4 p-5">
                       <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
                         <div>
                           <div className="flex flex-wrap items-center gap-2">
@@ -413,16 +572,25 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
                           </SubmitButton>
                         </form>
                       </details>
-                    </article>
-                  ))}
+                      </article>
+                    ))}
+                  </div>
+                  <PaginationControls
+                    basePath="/dashboard/staff"
+                    page={page}
+                    pageSize={defaultPageSize}
+                    params={filterParams}
+                    totalCount={totalStaffMembers}
+                  />
                 </div>
               ) : (
                 <Card>
                   <CardContent className="pt-5">
-                <p className="text-sm text-muted-foreground">
-                  No staff members have been added yet. Add your team members
-                  and assign roles.
-                </p>
+                    <p className="text-sm text-muted-foreground">
+                      {hasActiveFilters
+                        ? "No records match the selected filters."
+                        : "No staff members have been added yet. Add your team members and assign roles."}
+                    </p>
                   </CardContent>
                 </Card>
               )}

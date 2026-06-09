@@ -1,9 +1,12 @@
-import { Building2, Plus, Save } from "lucide-react";
+import { Building2, Plus, Save, Search } from "lucide-react";
+import Link from "next/link";
 import type { Metadata } from "next";
 
 import { ActionMessage } from "@/components/dashboard/ActionMessage";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
+import { PaginationControls } from "@/components/dashboard/PaginationControls";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -16,10 +19,19 @@ import { Label } from "@/components/ui/label";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { hasAnyPermission, requirePermission } from "@/lib/auth/permissions";
 import { createBranch, updateBranch } from "@/lib/branches/actions";
+import {
+  defaultPageSize,
+  getPage,
+  getPageSummary,
+  getPaginationRange,
+  getSearchTerm,
+} from "@/lib/dashboard/list-controls";
 
 type BranchesPageProps = {
   searchParams: Promise<{
     error?: string;
+    page?: string;
+    q?: string;
     success?: string;
   }>;
 };
@@ -34,10 +46,27 @@ export default async function BranchesPage({
   const { accessibleBranches, claims, institute, profile, role } =
     await requirePermission("branches.view");
   const params = await searchParams;
+  const searchTerm = getSearchTerm(params.q);
+  const page = getPage(params.page);
+  const paginationRange = getPaginationRange(page);
   const canManageBranches = hasAnyPermission(role, [
     "branches.create",
     "branches.update",
   ]);
+  const filteredBranches = searchTerm
+    ? accessibleBranches.filter((branch) => {
+        const haystack = `${branch.name} ${branch.address ?? ""}`.toLowerCase();
+
+        return haystack.includes(searchTerm.toLowerCase());
+      })
+    : accessibleBranches;
+  const paginatedBranches = filteredBranches.slice(
+    paginationRange.from,
+    paginationRange.to + 1,
+  );
+  const filterParams = {
+    q: searchTerm,
+  };
 
   return (
     <DashboardShell
@@ -102,6 +131,35 @@ export default async function BranchesPage({
         ) : null}
 
         <div className="grid gap-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-xl">Find branches</CardTitle>
+              <CardDescription>
+                Search by branch name or address.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form className="grid gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-end">
+                <Label>
+                  Search
+                  <Input
+                    name="q"
+                    type="search"
+                    defaultValue={searchTerm}
+                    placeholder="Branch name or address"
+                  />
+                </Label>
+                <SubmitButton pendingLabel="Filtering..." variant="outline">
+                  <Search aria-hidden="true" data-icon="inline-start" />
+                  Filter
+                </SubmitButton>
+                <Button asChild variant="outline">
+                  <Link href="/dashboard/branches">Reset filters</Link>
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <h2 className="text-xl font-semibold tracking-tight">
@@ -109,9 +167,11 @@ export default async function BranchesPage({
               </h2>
               <p className="mt-1 text-sm text-muted-foreground">
                 {canManageBranches
-                  ? `${accessibleBranches.length} ${
-                      accessibleBranches.length === 1 ? "branch" : "branches"
-                    } in ${institute.name}`
+                  ? `${getPageSummary({
+                      page,
+                      shownCount: paginatedBranches.length,
+                      totalCount: filteredBranches.length,
+                    })} in ${institute.name}`
                   : "Your assigned branch"}
               </p>
             </div>
@@ -120,9 +180,9 @@ export default async function BranchesPage({
             </Badge>
           </div>
 
-          {accessibleBranches.length ? (
+          {paginatedBranches.length ? (
             <div className="grid gap-4">
-              {accessibleBranches.map((branch) => (
+              {paginatedBranches.map((branch) => (
                 <Card key={branch.id}>
                   <CardHeader className="gap-3 sm:grid-cols-[1fr_auto] sm:items-start">
                     <div>
@@ -189,14 +249,23 @@ export default async function BranchesPage({
                   ) : null}
                 </Card>
               ))}
+              <PaginationControls
+                basePath="/dashboard/branches"
+                page={page}
+                pageSize={defaultPageSize}
+                params={filterParams}
+                totalCount={filteredBranches.length}
+              />
             </div>
           ) : (
             <Card>
               <CardContent className="pt-5">
                 <p className="text-sm text-muted-foreground">
-                  {canManageBranches
-                    ? "No branches have been created yet. Create a branch to organize operations."
-                    : "No branches are available for this account. Ask the institute owner to assign a branch if you need access."}
+                  {searchTerm
+                    ? "No records match the selected filters."
+                    : canManageBranches
+                      ? "No branches have been created yet. Create a branch to organize operations."
+                      : "No branches are available for this account. Ask the institute owner to assign a branch if you need access."}
                 </p>
               </CardContent>
             </Card>

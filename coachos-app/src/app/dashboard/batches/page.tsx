@@ -1,11 +1,13 @@
-import { Plus, Save, Trash2, UserMinus, UserPlus } from "lucide-react";
+import { Eye, Plus, Save, Search, Trash2, UserMinus, UserPlus } from "lucide-react";
+import Link from "next/link";
 import type { Metadata } from "next";
 
 import { ActionMessage } from "@/components/dashboard/ActionMessage";
-import { BranchFilter } from "@/components/dashboard/BranchFilter";
 import { ConfirmSubmitButton } from "@/components/dashboard/ConfirmSubmitButton";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
+import { PaginationControls } from "@/components/dashboard/PaginationControls";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -31,11 +33,21 @@ import {
   updateBatch,
 } from "@/lib/batches/actions";
 import { getBranchScope } from "@/lib/dashboard/branch-scope";
+import {
+  defaultPageSize,
+  getPage,
+  getPageSummary,
+  getPaginationRange,
+  getSearchTerm,
+} from "@/lib/dashboard/list-controls";
 
 type BatchesPageProps = {
   searchParams: Promise<{
     branchId?: string;
     error?: string;
+    page?: string;
+    q?: string;
+    subject?: string;
     success?: string;
   }>;
 };
@@ -155,6 +167,10 @@ export default async function BatchesPage({ searchParams }: BatchesPageProps) {
     context;
   const params = await searchParams;
   const branchScope = getBranchScope(context, params.branchId);
+  const searchTerm = getSearchTerm(params.q);
+  const selectedSubject = String(params.subject ?? "").trim();
+  const page = getPage(params.page);
+  const paginationRange = getPaginationRange(page);
   const branchesById = new Map(
     accessibleBranches.map((branch) => [branch.id, branch]),
   );
@@ -173,7 +189,9 @@ export default async function BatchesPage({ searchParams }: BatchesPageProps) {
 
   let batchesQuery = supabase
     .from("batches")
-    .select("id, branch_id, name, subject, schedule, created_at")
+    .select("id, branch_id, name, subject, schedule, created_at", {
+      count: "exact",
+    })
     .eq("institute_id", institute.id)
     .order("created_at", { ascending: false });
   let studentsQuery = supabase
@@ -181,34 +199,71 @@ export default async function BatchesPage({ searchParams }: BatchesPageProps) {
     .select("id, branch_id, full_name, phone")
     .eq("institute_id", institute.id)
     .order("full_name", { ascending: true });
+  let subjectsQuery = supabase
+    .from("batches")
+    .select("subject")
+    .eq("institute_id", institute.id)
+    .not("subject", "is", null)
+    .order("subject", { ascending: true });
 
   if (branchScope.selectedBranchId) {
     batchesQuery = batchesQuery.eq("branch_id", branchScope.selectedBranchId);
     studentsQuery = studentsQuery.eq("branch_id", branchScope.selectedBranchId);
+    subjectsQuery = subjectsQuery.eq("branch_id", branchScope.selectedBranchId);
   } else if (branchScope.visibleBranchIds.length) {
     batchesQuery = batchesQuery.in("branch_id", branchScope.visibleBranchIds);
     studentsQuery = studentsQuery.in("branch_id", branchScope.visibleBranchIds);
+    subjectsQuery = subjectsQuery.in("branch_id", branchScope.visibleBranchIds);
   }
 
-  const [batchesResponse, studentsResponse, studentBatchesResponse] =
+  if (searchTerm) {
+    const searchPattern = `%${searchTerm}%`;
+    batchesQuery = batchesQuery.or(
+      `name.ilike.${searchPattern},subject.ilike.${searchPattern}`,
+    );
+  }
+
+  if (selectedSubject) {
+    batchesQuery = batchesQuery.eq("subject", selectedSubject);
+  }
+
+  const [batchesResponse, studentsResponse, subjectsResponse] =
     await Promise.all([
-      batchesQuery,
+      batchesQuery.range(paginationRange.from, paginationRange.to),
       studentsQuery,
-      supabase
-        .from("student_batches")
-        .select("id, student_id, batch_id, created_at")
-        .order("created_at", { ascending: true }),
+      subjectsQuery,
     ]);
 
   const batches = (batchesResponse.data ?? []) as Batch[];
   const students = (studentsResponse.data ?? []) as Student[];
-  const studentBatches = (studentBatchesResponse.data ?? []) as StudentBatch[];
+  const totalBatches = batchesResponse.count ?? 0;
+  const subjectOptions = Array.from(
+    new Set(
+      ((subjectsResponse.data ?? []) as { subject: string | null }[])
+        .map((row) => row.subject?.trim())
+        .filter((subject): subject is string => Boolean(subject)),
+    ),
+  );
+  const batchIds = batches.map((batch) => batch.id);
+  let studentBatches: StudentBatch[] = [];
+  let studentBatchesError: unknown = null;
   let teacherMemberships: TeacherMembership[] = [];
   let staffTeachers: StaffTeacher[] = [];
   let batchTeachers: BatchTeacher[] = [];
   let teacherAssignmentError = false;
 
-  if (canManageAnyTeacherAssignments) {
+  if (batchIds.length) {
+    const { data: studentBatchRows, error } = await supabase
+      .from("student_batches")
+      .select("id, student_id, batch_id, created_at")
+      .in("batch_id", batchIds)
+      .order("created_at", { ascending: true });
+
+    studentBatches = (studentBatchRows ?? []) as StudentBatch[];
+    studentBatchesError = error;
+  }
+
+  if (canManageAnyTeacherAssignments && batchIds.length) {
     let teacherMembershipsQuery = supabase
       .from("memberships")
       .select("id, user_id, branch_id, role")
@@ -235,6 +290,7 @@ export default async function BatchesPage({ searchParams }: BatchesPageProps) {
         supabase
           .from("batch_teachers")
           .select("id, batch_id, membership_id, created_at")
+          .in("batch_id", batchIds)
           .order("created_at", { ascending: true }),
       ]);
 
@@ -292,8 +348,17 @@ export default async function BatchesPage({ searchParams }: BatchesPageProps) {
   const queryError = Boolean(
     batchesResponse.error ??
       studentsResponse.error ??
-      studentBatchesResponse.error ??
+      subjectsResponse.error ??
+      studentBatchesError ??
       teacherAssignmentError,
+  );
+  const filterParams = {
+    branchId: branchScope.selectedBranchId,
+    q: searchTerm,
+    subject: selectedSubject,
+  };
+  const hasActiveFilters = Boolean(
+    searchTerm || selectedSubject || branchScope.selectedBranchId,
   );
 
   return (
@@ -306,12 +371,79 @@ export default async function BatchesPage({ searchParams }: BatchesPageProps) {
       userName={profile.full_name}
     >
       <section className="grid gap-6">
-        {branchScope.showOwnerBranchFilter ? (
-          <BranchFilter
-            branches={accessibleBranches}
-            selectedBranchId={branchScope.selectedBranchId}
-          />
-        ) : null}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-xl">Find batches</CardTitle>
+            <CardDescription>
+              Search by batch name or subject, then narrow by branch or subject.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form className="grid gap-3">
+              <div
+                className={
+                  branchScope.showOwnerBranchFilter
+                    ? "grid gap-3 md:grid-cols-3"
+                    : "grid gap-3 md:grid-cols-2"
+                }
+              >
+                <Label>
+                  Search
+                  <Input
+                    name="q"
+                    type="search"
+                    defaultValue={searchTerm}
+                    placeholder="Batch name or subject"
+                  />
+                </Label>
+                {branchScope.showOwnerBranchFilter ? (
+                  <Label>
+                    Branch
+                    <select
+                      name="branchId"
+                      defaultValue={branchScope.selectedBranchId ?? ""}
+                      className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
+                    >
+                      <option value="">All branches</option>
+                      {accessibleBranches.map((branch) => (
+                        <option key={branch.id} value={branch.id}>
+                          {branch.name}
+                        </option>
+                      ))}
+                    </select>
+                  </Label>
+                ) : null}
+                <Label>
+                  Subject
+                  <select
+                    name="subject"
+                    defaultValue={selectedSubject}
+                    className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
+                  >
+                    <option value="">All subjects</option>
+                    {subjectOptions.map((subject) => (
+                      <option key={subject} value={subject}>
+                        {subject}
+                      </option>
+                    ))}
+                  </select>
+                </Label>
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                <SubmitButton
+                  className="w-full sm:w-auto"
+                  pendingLabel="Filtering..."
+                >
+                  <Search aria-hidden="true" data-icon="inline-start" />
+                  Filter
+                </SubmitButton>
+                <Button asChild variant="outline" className="w-full sm:w-auto">
+                  <Link href="/dashboard/batches">Reset filters</Link>
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
 
         <ActionMessage
           error={
@@ -409,7 +541,11 @@ export default async function BatchesPage({ searchParams }: BatchesPageProps) {
                   Batch records
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {batches.length} {batches.length === 1 ? "batch" : "batches"}{" "}
+                  {getPageSummary({
+                    page,
+                    shownCount: batches.length,
+                    totalCount: totalBatches,
+                  })}{" "}
                   in {branchScope.selectedBranchName}
                 </p>
               </div>
@@ -420,7 +556,8 @@ export default async function BatchesPage({ searchParams }: BatchesPageProps) {
             </div>
 
             {batchesWithStudents.length ? (
-              batchesWithStudents.map((batch) => {
+              <div className="grid gap-4">
+                {batchesWithStudents.map((batch) => {
                 const assignedStudentIds = new Set(
                   batch.students.map((student) => student.id),
                 );
@@ -472,8 +609,8 @@ export default async function BatchesPage({ searchParams }: BatchesPageProps) {
                 const canManageTeacherAssignments =
                   canManageTeacherAssignmentsForBranch(context, batch.branch_id);
 
-                return (
-                  <Card key={batch.id}>
+                  return (
+                    <Card key={batch.id}>
                     <CardHeader className="gap-3 sm:grid-cols-[1fr_auto] sm:items-start">
                       <div>
                         <CardTitle className="text-lg">{batch.name}</CardTitle>
@@ -500,6 +637,12 @@ export default async function BatchesPage({ searchParams }: BatchesPageProps) {
                         <Badge variant="outline">
                           {branchesById.get(batch.branch_id)?.name ?? "Branch"}
                         </Badge>
+                        <Button asChild size="sm" variant="outline">
+                          <Link href={`/dashboard/batches/${batch.id}`}>
+                            <Eye aria-hidden="true" data-icon="inline-start" />
+                            View details
+                          </Link>
+                        </Button>
                         {canDeleteBatches ? (
                           <form action={deleteBatch}>
                             <input
@@ -575,17 +718,19 @@ export default async function BatchesPage({ searchParams }: BatchesPageProps) {
                                       type="hidden"
                                       value={teacher.assignmentId}
                                     />
-                                    <SubmitButton
+                                    <ConfirmSubmitButton
+                                      type="submit"
                                       variant="outline"
                                       size="sm"
                                       pendingLabel="Removing..."
+                                      confirmMessage={`Remove ${teacher.label} from ${batch.name}?`}
                                     >
                                       <UserMinus
                                         aria-hidden="true"
                                         data-icon="inline-start"
                                       />
                                       Remove
-                                    </SubmitButton>
+                                    </ConfirmSubmitButton>
                                   </form>
                                 </li>
                               ))}
@@ -749,14 +894,23 @@ export default async function BatchesPage({ searchParams }: BatchesPageProps) {
                       ) : null}
                     </CardContent>
                   </Card>
-                );
-              })
+                  );
+                })}
+                <PaginationControls
+                  basePath="/dashboard/batches"
+                  page={page}
+                  pageSize={defaultPageSize}
+                  params={filterParams}
+                  totalCount={totalBatches}
+                />
+              </div>
             ) : (
               <Card>
                 <CardContent className="pt-5">
                   <p className="text-sm text-muted-foreground">
-                    No batches have been created yet. Create a batch to
-                    organize students and schedules.
+                    {hasActiveFilters
+                      ? "No records match the selected filters."
+                      : "No batches have been created yet. Create a batch to organize students and schedules."}
                   </p>
                 </CardContent>
               </Card>

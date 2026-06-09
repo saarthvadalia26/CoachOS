@@ -19,12 +19,14 @@ import { SubmitButton } from "@/components/ui/submit-button";
 import { requirePermission, type AppRole } from "@/lib/auth/permissions";
 import { getTodayDateValue } from "@/lib/attendance/date";
 import { getBranchScope } from "@/lib/dashboard/branch-scope";
+import { getSearchTerm } from "@/lib/dashboard/list-controls";
 import { type FeeStatus, getFeeStatus } from "@/lib/fees/status";
 
 type FeeReportsPageProps = {
   searchParams: Promise<{
     branchId?: string;
     endDate?: string;
+    q?: string;
     startDate?: string;
     status?: string;
     studentId?: string;
@@ -159,6 +161,7 @@ export default async function FeeReportsPage({
   }
 
   const branchScope = getBranchScope(context, params.branchId);
+  const searchTerm = getSearchTerm(params.q);
   const selectedStatus = getSelectedStatus(params.status);
   const startDate = isDateValue(params.startDate) ? params.startDate! : "";
   const endDate = isDateValue(params.endDate) ? params.endDate! : "";
@@ -178,12 +181,20 @@ export default async function FeeReportsPage({
     studentsQuery = studentsQuery.in("branch_id", branchScope.visibleBranchIds);
   }
 
+  if (searchTerm) {
+    const searchPattern = `%${searchTerm}%`;
+    studentsQuery = studentsQuery.or(
+      `full_name.ilike.${searchPattern},phone.ilike.${searchPattern}`,
+    );
+  }
+
   const { data: studentRows, error: studentsError } = await studentsQuery;
   const students = (studentRows ?? []) as Student[];
   const studentsById = new Map(students.map((student) => [student.id, student]));
   const selectedStudent =
     students.find((student) => student.id === params.studentId) ?? null;
   const selectedStudentId = selectedStudent?.id ?? "";
+  const searchStudentIds = students.map((student) => student.id);
 
   let feeRecordsQuery = supabase
     .from("fee_records")
@@ -205,6 +216,13 @@ export default async function FeeReportsPage({
 
   if (selectedStudentId) {
     feeRecordsQuery = feeRecordsQuery.eq("student_id", selectedStudentId);
+  } else if (searchTerm) {
+    feeRecordsQuery = searchStudentIds.length
+      ? feeRecordsQuery.in("student_id", searchStudentIds)
+      : feeRecordsQuery.eq(
+          "student_id",
+          "00000000-0000-0000-0000-000000000000",
+        );
   }
 
   if (startDate) {
@@ -267,6 +285,7 @@ export default async function FeeReportsPage({
   const exportHref = getFeeReportsExportHref({
     branchId: branchScope.selectedBranchId,
     endDate,
+    q: searchTerm,
     startDate,
     status: selectedStatus,
     studentId: selectedStudentId,
@@ -306,10 +325,19 @@ export default async function FeeReportsPage({
               <div
                 className={
                   branchScope.showOwnerBranchFilter
-                    ? "grid gap-3 md:grid-cols-2 xl:grid-cols-5"
-                    : "grid gap-3 md:grid-cols-2 xl:grid-cols-4"
+                    ? "grid gap-3 md:grid-cols-2 xl:grid-cols-6"
+                    : "grid gap-3 md:grid-cols-2 xl:grid-cols-5"
                 }
               >
+                <Label>
+                  Search
+                  <Input
+                    name="q"
+                    type="search"
+                    defaultValue={searchTerm}
+                    placeholder="Student name or phone"
+                  />
+                </Label>
                 {branchScope.showOwnerBranchFilter ? (
                   <Label>
                     Branch

@@ -3,6 +3,7 @@ import { NextRequest } from "next/server";
 import { requirePermission, type AppRole } from "@/lib/auth/permissions";
 import { getTodayDateValue } from "@/lib/attendance/date";
 import { getBranchScope } from "@/lib/dashboard/branch-scope";
+import { getSearchTerm } from "@/lib/dashboard/list-controls";
 import { type FeeStatus, getFeeStatus } from "@/lib/fees/status";
 
 export const dynamic = "force-dynamic";
@@ -57,7 +58,7 @@ function csvCell(value: string | number | null | undefined) {
   return `"${String(value ?? "").replaceAll('"', '""')}"`;
 }
 
-function csvResponse(rows: string[][], filename: string) {
+function csvResponse(rows: Array<Array<string | number>>, filename: string) {
   const csv = rows.map((row) => row.map(csvCell).join(",")).join("\r\n");
 
   return new Response(csv, {
@@ -115,6 +116,7 @@ export async function GET(request: NextRequest) {
     searchParams.get("branchId") ?? undefined,
   );
   const selectedStatus = getSelectedStatus(searchParams.get("status"));
+  const searchTerm = getSearchTerm(searchParams.get("q"));
   const startDate = isDateValue(searchParams.get("startDate"))
     ? searchParams.get("startDate")!
     : "";
@@ -152,6 +154,13 @@ export async function GET(request: NextRequest) {
     studentsQuery = studentsQuery.in("branch_id", branchScope.visibleBranchIds);
   }
 
+  if (searchTerm) {
+    const searchPattern = `%${searchTerm}%`;
+    studentsQuery = studentsQuery.or(
+      `full_name.ilike.${searchPattern},phone.ilike.${searchPattern}`,
+    );
+  }
+
   const { data: studentRows, error: studentsError } = await studentsQuery;
 
   if (studentsError) {
@@ -164,6 +173,7 @@ export async function GET(request: NextRequest) {
     students.find((student) => student.id === searchParams.get("studentId")) ??
     null;
   const selectedStudentId = selectedStudent?.id ?? "";
+  const searchStudentIds = students.map((student) => student.id);
 
   let feeRecordsQuery = supabase
     .from("fee_records")
@@ -188,6 +198,13 @@ export async function GET(request: NextRequest) {
 
   if (selectedStudentId) {
     feeRecordsQuery = feeRecordsQuery.eq("student_id", selectedStudentId);
+  } else if (searchTerm) {
+    feeRecordsQuery = searchStudentIds.length
+      ? feeRecordsQuery.in("student_id", searchStudentIds)
+      : feeRecordsQuery.eq(
+          "student_id",
+          "00000000-0000-0000-0000-000000000000",
+        );
   }
 
   if (startDate) {
