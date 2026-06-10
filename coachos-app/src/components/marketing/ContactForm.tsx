@@ -85,7 +85,7 @@ export function ContactForm() {
             required
             name="instituteSize"
             defaultValue=""
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
+            className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
           >
             <option value="" disabled>
               Select size
