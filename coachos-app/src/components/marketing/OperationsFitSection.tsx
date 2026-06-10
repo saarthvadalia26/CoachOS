@@ -1,25 +1,29 @@
-const proofPoints = [
-  "Multi-branch operating model",
-  "Role-aware access for teams",
-  "Attendance and fee workflows",
-  "Clean records for institute owners",
+const workflowPoints = [
+  "Multi-branch operating structure",
+  "Role-aware access for daily teams",
+  "Attendance and fee follow-up workflows",
+  "Clean operational records for owners",
 ];
 
-export function SocialProofSection() {
+export function OperationsFitSection() {
   return (
     <section className="mx-auto w-full max-w-6xl px-6 py-16">
       <div className="rounded-2xl border border-border bg-card p-8 shadow-sm">
         <div className="grid gap-8 md:grid-cols-[0.85fr_1.15fr] md:items-center">
           <div>
             <p className="text-sm font-medium uppercase tracking-[0.18em] text-primary">
-              Built for growing coaching institutes
+              Built for institute operations
             </p>
             <h2 className="mt-3 text-3xl font-semibold tracking-tight">
-              Professional operations without enterprise complexity.
+              Designed for multi-branch coaching workflows.
             </h2>
+            <p className="mt-4 text-sm leading-6 text-muted-foreground">
+              CoachOS keeps branch, student, batch, attendance, fee, and staff
+              workflows aligned in one practical operating dashboard.
+            </p>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
-            {proofPoints.map((point) => (
+            {workflowPoints.map((point) => (
               <div
                 key={point}
                 className="rounded-lg border border-border bg-background px-4 py-3 text-sm font-medium text-muted-foreground"

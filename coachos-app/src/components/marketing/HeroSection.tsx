@@ -72,7 +72,9 @@ export function HeroSection() {
               </div>
               <div className="flex items-center gap-2">
                 <span className="size-2 rounded-full bg-emerald-500" />
-                <span className="text-xs text-muted-foreground">Live data</span>
+                <span className="text-xs text-muted-foreground">
+                  Example view
+                </span>
               </div>
             </div>
 

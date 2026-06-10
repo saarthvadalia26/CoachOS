@@ -149,19 +149,25 @@ export function DashboardShell({
   return (
     <main className="min-h-full bg-background text-foreground">
       <div className="flex min-h-full flex-col md:flex-row">
-        <aside className="border-b border-sidebar-border bg-sidebar px-4 py-4 text-sidebar-foreground md:min-h-screen md:w-64 md:border-b-0 md:border-r md:px-5">
+        <aside className="border-b border-sidebar-border bg-sidebar px-4 py-4 text-sidebar-foreground md:flex md:min-h-screen md:w-64 md:flex-col md:border-b-0 md:border-r md:px-5">
           <div className="mb-5">
-            <p className="flex items-center gap-2 text-lg font-semibold tracking-tight">
+            <Link
+              href="/dashboard"
+              className="flex items-center gap-2 text-lg font-semibold tracking-tight transition-colors hover:text-sidebar-primary"
+            >
               <span className="grid size-8 place-items-center rounded-lg bg-sidebar-primary text-sm font-bold text-sidebar-primary-foreground shadow-sm">
                 C
               </span>
               CoachOS
+            </Link>
+            <p className="mt-3 truncate text-sm font-medium">
+              {instituteName}
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
               Institute operations
             </p>
           </div>
-          <nav className="flex gap-2 overflow-x-auto md:grid md:overflow-visible">
+          <nav className="flex gap-2 overflow-x-auto md:grid md:flex-1 md:content-start md:overflow-visible">
             {navItems.map((item) => {
               const isActive = item.activeKey === activePage;
               const Icon = item.icon;
@@ -205,6 +211,12 @@ export function DashboardShell({
               );
             })}
           </nav>
+          <div className="mt-5 hidden rounded-lg border border-sidebar-border bg-sidebar-accent/40 p-3 md:block">
+            <p className="truncate text-sm font-medium">{displayName}</p>
+            <p className="mt-1 text-xs capitalize text-muted-foreground">
+              {roleLabel}
+            </p>
+          </div>
         </aside>
 
         <section className="flex-1 px-6 py-8 md:px-8 lg:px-10">

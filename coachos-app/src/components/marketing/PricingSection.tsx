@@ -1,23 +1,41 @@
 import { CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 const plans = [
   {
     name: "Starter",
+    label: "Free during beta",
     description: "For institutes organizing their first digital operations.",
-    features: ["One institute dashboard", "Core student and batch records", "Attendance and fee tracking"],
+    features: [
+      "One institute dashboard",
+      "Core student and batch records",
+      "Attendance and fee tracking",
+    ],
   },
   {
     name: "Growth",
+    label: "Best for growing institutes",
     description: "For growing teams managing multiple branches and roles.",
-    features: ["Branch management", "Staff roles and permissions", "Reports and CSV exports"],
+    features: [
+      "Branch management",
+      "Staff roles and permissions",
+      "Reports and CSV exports",
+    ],
+    isPopular: true,
   },
   {
     name: "Institute",
+    label: "Custom plan",
     description: "For established coaching brands that need guided rollout.",
-    features: ["Multi-branch rollout support", "Operational workflow setup", "Priority onboarding"],
+    features: [
+      "Multi-branch rollout support",
+      "Operational workflow setup",
+      "Priority onboarding",
+    ],
   },
 ];
 
@@ -42,9 +60,26 @@ export function PricingSection() {
           {plans.map((plan) => (
             <article
               key={plan.name}
-              className="rounded-lg border border-border bg-card p-6 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/10"
+              className={cn(
+                "relative rounded-lg border bg-card p-6 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg",
+                plan.isPopular
+                  ? "border-primary/50 shadow-primary/10 hover:shadow-primary/15"
+                  : "border-border hover:border-primary/30 hover:shadow-primary/10",
+              )}
             >
-              <h3 className="text-xl font-semibold">{plan.name}</h3>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-xl font-semibold">{plan.name}</h3>
+                  <p className="mt-2 text-sm font-medium text-primary">
+                    {plan.label}
+                  </p>
+                </div>
+                {plan.isPopular ? (
+                  <Badge className="bg-accent text-accent-foreground">
+                    Most popular
+                  </Badge>
+                ) : null}
+              </div>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">
                 {plan.description}
               </p>
@@ -62,7 +97,11 @@ export function PricingSection() {
                   </li>
                 ))}
               </ul>
-              <Button asChild className="mt-6 w-full" variant="outline">
+              <Button
+                asChild
+                className="mt-6 w-full"
+                variant={plan.isPopular ? "accent" : "outline"}
+              >
                 <Link href="/contact">Discuss {plan.name}</Link>
               </Button>
             </article>

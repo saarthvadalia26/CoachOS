@@ -13,19 +13,38 @@ import { getDashboardContext } from "@/lib/dashboard/context";
 import { formatDate, formatDateRange } from "@/lib/formatters/date";
 
 function MetricCard({
+  href,
   label,
   value,
   helper,
 }: {
+  href: string | undefined;
   label: string;
   value: string;
   helper: string;
 }) {
-  return (
-    <article className="rounded-lg border border-border bg-card p-5 shadow-sm">
+  const content = (
+    <>
       <p className="text-sm font-medium text-muted-foreground">{label}</p>
       <p className="mt-3 text-3xl font-semibold tracking-tight">{value}</p>
       <p className="mt-2 text-sm text-muted-foreground">{helper}</p>
+    </>
+  );
+
+  if (href) {
+    return (
+      <Link
+        href={href}
+        className="rounded-lg border border-border bg-card p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/10 focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
+      >
+        {content}
+      </Link>
+    );
+  }
+
+  return (
+    <article className="rounded-lg border border-border bg-card p-5 shadow-sm">
+      {content}
     </article>
   );
 }
@@ -123,8 +142,14 @@ export default async function DashboardPage({
     name: string;
     start_date: string;
   } | null;
+  const branchQuery = branchScope.selectedBranchId
+    ? `?branchId=${encodeURIComponent(branchScope.selectedBranchId)}`
+    : "";
   const metrics = [
     {
+      href: hasPermission(role, "settings.manage")
+        ? "/dashboard/settings/academic-years"
+        : undefined,
       label: "Academic Year",
       value: activeAcademicYear?.name ?? "Not set",
       helper: activeAcademicYear
@@ -132,17 +157,24 @@ export default async function DashboardPage({
         : "No active academic year",
     },
     {
+      href: hasPermission(role, "students.view")
+        ? `/dashboard/students${branchQuery}`
+        : undefined,
       label: "Total Students",
       value: String(studentsResponse.count ?? 0),
       helper: `Students in ${branchScope.selectedBranchName}`,
     },
     {
+      href: hasPermission(role, "batches.view")
+        ? `/dashboard/batches${branchQuery}`
+        : undefined,
       label: "Active Batches",
       value: String(batchesResponse.count ?? 0),
       helper: `Batches in ${branchScope.selectedBranchName}`,
     },
     canViewFees
       ? {
+          href: `/dashboard/fees${branchQuery}`,
           label: "Pending Fee Records",
           value: String(pendingFeesResponse.count ?? 0),
           helper: `Pending records in ${branchScope.selectedBranchName}`,
@@ -150,14 +182,21 @@ export default async function DashboardPage({
       : null,
     canViewAttendance
       ? {
+          href: `/dashboard/attendance${branchQuery}`,
           label: "Attendance Records Today",
           value: String(attendanceSessionsResponse.count ?? 0),
           helper: `${branchScope.selectedBranchName} | ${formatDate(todayDate)}`,
         }
       : null,
   ].filter(
-    (metric): metric is { helper: string; label: string; value: string } =>
-      Boolean(metric),
+    (
+      metric,
+    ): metric is {
+      helper: string;
+      href: string | undefined;
+      label: string;
+      value: string;
+    } => Boolean(metric),
   );
 
   const queryError = Boolean(
@@ -249,6 +288,7 @@ export default async function DashboardPage({
           {metrics.map((metric) => (
             <MetricCard
               key={metric.label}
+              href={metric.href}
               label={metric.label}
               value={metric.value}
               helper={metric.helper}
