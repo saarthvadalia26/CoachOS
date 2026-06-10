@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { ActionMessage } from "@/components/dashboard/ActionMessage";
 import { ConfirmSubmitButton } from "@/components/dashboard/ConfirmSubmitButton";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
+import { EmptyState } from "@/components/dashboard/EmptyState";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -123,7 +124,7 @@ export default async function AcademicYearsPage({
         }
       >
         {canManageAcademicYears ? (
-          <Card>
+          <Card id="create-academic-year">
             <CardHeader>
               <CardTitle className="text-xl">Create academic year</CardTitle>
               <CardDescription>
@@ -346,10 +347,16 @@ export default async function AcademicYearsPage({
           ) : (
             <Card>
               <CardContent className="pt-5">
-                <p className="text-sm text-muted-foreground">
-                  No academic years have been created yet. Create an academic
-                  year to organize attendance and future reports.
-                </p>
+                <EmptyState
+                  actionHref={
+                    canManageAcademicYears
+                      ? "/dashboard/settings/academic-years#create-academic-year"
+                      : undefined
+                  }
+                  actionLabel="Create academic year"
+                  title="No academic years created yet"
+                  description="Create an academic year to organize attendance and future reports."
+                />
               </CardContent>
             </Card>
           )}

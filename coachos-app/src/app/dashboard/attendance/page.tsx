@@ -11,6 +11,7 @@ import type { Metadata } from "next";
 import { ActionMessage } from "@/components/dashboard/ActionMessage";
 import { BranchFilter } from "@/components/dashboard/BranchFilter";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
+import { EmptyState } from "@/components/dashboard/EmptyState";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ExportButton } from "@/components/ui/export-button";
@@ -903,14 +904,13 @@ export default async function AttendancePage({
 
         {!batches.length ? (
           <Card>
-            <CardContent className="flex flex-col gap-4 pt-5 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm text-muted-foreground">
-                No batches match your current branch access. Create or select a
-                batch to begin recording attendance.
-              </p>
-              <Button asChild variant="outline">
-                <Link href="/dashboard/batches">View batches</Link>
-              </Button>
+            <CardContent className="pt-5">
+              <EmptyState
+                actionHref="/dashboard/batches"
+                actionLabel="View batches"
+                title="No batches available"
+                description="No batches match your current branch access. Create or select a batch before recording attendance."
+              />
             </CardContent>
           </Card>
         ) : null}
@@ -926,11 +926,18 @@ export default async function AttendancePage({
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button asChild variant="outline">
-                <Link href="/dashboard/batches">
-                  {canEditAttendance ? "Manage batch students" : "View batches"}
-                </Link>
-              </Button>
+              <EmptyState
+                actionHref="/dashboard/batches"
+                actionLabel={
+                  canEditAttendance ? "Manage batch students" : "View batches"
+                }
+                title="No students assigned"
+                description={
+                  canEditAttendance
+                    ? "Assign students to this batch before saving attendance."
+                    : "No students are assigned to this batch yet."
+                }
+              />
             </CardContent>
           </Card>
         ) : null}
@@ -1100,7 +1107,7 @@ export default async function AttendancePage({
                         value={selectedBatch.id}
                       />
                       <Label>
-                        Reopen Reason
+                        Reopen reason
                         <Input
                           name="reopenReason"
                           placeholder="Describe why this attendance record needs correction"
@@ -1297,19 +1304,42 @@ export default async function AttendancePage({
                         return (
                           <article
                             key={session.id}
-                            className="grid gap-4 p-4 lg:grid-cols-[1fr_auto] lg:items-center"
+                            className="grid gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start"
                           >
-                            <div>
-                              <h3 className="text-sm font-medium">
-                                {formatDate(session.session_date)} |{" "}
-                                {batch?.name ?? "Batch not available"}
+                            <div className="min-w-0">
+                              <h3 className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium">
+                                <span className="whitespace-nowrap">
+                                  {formatDate(session.session_date)}
+                                </span>
+                                <span className="break-words">
+                                  <span
+                                    aria-hidden="true"
+                                    className="hidden text-muted-foreground/60 sm:inline"
+                                  >
+                                    |{" "}
+                                  </span>
+                                  {batch?.name ?? "Batch not available"}
+                                </span>
                               </h3>
-                              <p className="mt-1 text-xs text-muted-foreground">
-                                {academicYear?.name ?? "Academic year not set"}
-                                {session.notes ? ` | ${session.notes}` : ""}
-                              </p>
+                              <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                                <span className="whitespace-nowrap">
+                                  {academicYear?.name ??
+                                    "Academic year not set"}
+                                </span>
+                                {session.notes ? (
+                                  <span className="break-words">
+                                    <span
+                                      aria-hidden="true"
+                                      className="hidden text-muted-foreground/60 sm:inline"
+                                    >
+                                      |{" "}
+                                    </span>
+                                    {session.notes}
+                                  </span>
+                                ) : null}
+                              </div>
                             </div>
-                            <div className="flex flex-wrap items-center gap-2">
+                            <div className="flex shrink-0 flex-wrap items-start gap-2 lg:justify-end">
                               <Badge variant={getSessionStatusVariant(session)}>
                                 {getSessionStatusLabel(session)}
                               </Badge>
@@ -1326,7 +1356,7 @@ export default async function AttendancePage({
                                     aria-hidden="true"
                                     data-icon="inline-start"
                                   />
-                                  View record
+                                  View details
                                 </Link>
                               </Button>
                             </div>
@@ -1335,9 +1365,10 @@ export default async function AttendancePage({
                       })}
                     </div>
                   ) : (
-                    <p className="text-sm text-muted-foreground">
-                      No attendance records match the selected filters.
-                    </p>
+                    <EmptyState
+                      title="No attendance records match these filters"
+                      description="Adjust your academic year, batch, student, or date filters to review attendance records."
+                    />
                   )}
                 </CardContent>
               </Card>
@@ -1447,9 +1478,10 @@ export default async function AttendancePage({
                   })}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">
-                  No student attendance entries were recorded for this date.
-                </p>
+                <EmptyState
+                  title="No student entries recorded"
+                  description="No student attendance entries were recorded for this date."
+                />
               )}
             </CardContent>
           </Card>

@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import { ActionMessage } from "@/components/dashboard/ActionMessage";
 import { ConfirmSubmitButton } from "@/components/dashboard/ConfirmSubmitButton";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
+import { EmptyState } from "@/components/dashboard/EmptyState";
 import { PaginationControls } from "@/components/dashboard/PaginationControls";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -463,7 +464,7 @@ export default async function BatchesPage({ searchParams }: BatchesPageProps) {
           }
         >
           {canCreateBatches ? (
-            <Card>
+            <Card id="create-batch">
               <CardHeader>
                 <CardTitle className="text-xl">Create batch</CardTitle>
                 <CardDescription>
@@ -611,15 +612,29 @@ export default async function BatchesPage({ searchParams }: BatchesPageProps) {
 
                   return (
                     <Card key={batch.id}>
-                    <CardHeader className="gap-3 sm:grid-cols-[1fr_auto] sm:items-start">
-                      <div>
-                        <CardTitle className="text-lg">{batch.name}</CardTitle>
-                        <CardDescription className="mt-1">
-                          {batch.subject ?? "Subject not specified"}
-                          {batch.schedule ? ` | ${batch.schedule}` : ""}
+                    <CardHeader className="gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
+                      <div className="min-w-0">
+                        <CardTitle className="break-words text-lg">
+                          {batch.name}
+                        </CardTitle>
+                        <CardDescription className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+                          <span className="whitespace-nowrap">
+                            {batch.subject ?? "Subject not specified"}
+                          </span>
+                          {batch.schedule ? (
+                            <span className="whitespace-nowrap">
+                              <span
+                                aria-hidden="true"
+                                className="hidden text-muted-foreground/60 sm:inline"
+                              >
+                                |{" "}
+                              </span>
+                              {batch.schedule}
+                            </span>
+                          ) : null}
                         </CardDescription>
                       </div>
-                      <div className="flex flex-wrap gap-2 sm:justify-end">
+                      <div className="flex shrink-0 flex-wrap items-start gap-2 sm:justify-end">
                         <Badge variant="secondary">
                           {batch.students.length}{" "}
                           {batch.students.length === 1
@@ -686,9 +701,10 @@ export default async function BatchesPage({ searchParams }: BatchesPageProps) {
                             ))}
                           </ul>
                         ) : (
-                          <p className="rounded-md border border-dashed border-border px-3 py-3 text-sm text-muted-foreground">
-                            No students are assigned to this batch yet.
-                          </p>
+                          <EmptyState
+                            title="No students assigned"
+                            description="Assign students to this batch to organize schedules and attendance."
+                          />
                         )}
                       </div>
 
@@ -736,9 +752,10 @@ export default async function BatchesPage({ searchParams }: BatchesPageProps) {
                               ))}
                             </ul>
                           ) : (
-                            <p className="rounded-md border border-dashed border-border px-3 py-3 text-sm text-muted-foreground">
-                              No teachers are assigned to this batch yet.
-                            </p>
+                            <EmptyState
+                              title="No teachers assigned"
+                              description="Assign teacher staff members from this branch when they are available."
+                            />
                           )}
 
                           <form
@@ -904,17 +921,30 @@ export default async function BatchesPage({ searchParams }: BatchesPageProps) {
                   totalCount={totalBatches}
                 />
               </div>
-            ) : (
-              <Card>
-                <CardContent className="pt-5">
-                  <p className="text-sm text-muted-foreground">
-                    {hasActiveFilters
-                      ? "No records match the selected filters."
-                      : "No batches have been created yet. Create a batch to organize students and schedules."}
-                  </p>
-                </CardContent>
-              </Card>
-            )}
+              ) : (
+                <Card>
+                  <CardContent className="pt-5">
+                    <EmptyState
+                      actionHref={
+                        !hasActiveFilters && canCreateBatches
+                          ? "/dashboard/batches#create-batch"
+                          : undefined
+                      }
+                      actionLabel="Create batch"
+                      title={
+                        hasActiveFilters
+                          ? "No batches match these filters"
+                          : "No batches created yet"
+                      }
+                      description={
+                        hasActiveFilters
+                          ? "Adjust your search, branch, or subject filters to find batch records."
+                          : "Create a batch to organize students, schedules, and attendance."
+                      }
+                    />
+                  </CardContent>
+                </Card>
+              )}
           </div>
         </div>
       </section>

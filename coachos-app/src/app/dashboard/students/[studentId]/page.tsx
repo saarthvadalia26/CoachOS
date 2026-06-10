@@ -10,6 +10,7 @@ import type { Metadata } from "next";
 
 import { ActionMessage } from "@/components/dashboard/ActionMessage";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
+import { EmptyState } from "@/components/dashboard/EmptyState";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -648,32 +649,53 @@ async function StudentProfileContent({
                     {assignedBatches.map((batch) => (
                       <article
                         key={batch.id}
-                        className="grid gap-3 p-4 sm:grid-cols-[1fr_auto] sm:items-center"
+                        className="grid gap-3 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start"
                       >
-                        <div>
-                          <h3 className="text-sm font-medium">{batch.name}</h3>
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            {batch.subject ?? "Subject not specified"}
-                            {batch.schedule ? ` | ${batch.schedule}` : ""}
-                          </p>
+                        <div className="min-w-0">
+                          <h3 className="break-words text-sm font-medium">
+                            {batch.name}
+                          </h3>
+                          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                            <span className="whitespace-nowrap">
+                              {batch.subject ?? "Subject not specified"}
+                            </span>
+                            {batch.schedule ? (
+                              <span className="whitespace-nowrap">
+                                <span
+                                  aria-hidden="true"
+                                  className="hidden text-muted-foreground/60 sm:inline"
+                                >
+                                  |{" "}
+                                </span>
+                                {batch.schedule}
+                              </span>
+                            ) : null}
+                          </div>
                         </div>
-                        <Button asChild size="sm" variant="outline">
+                        <Button
+                          asChild
+                          size="sm"
+                          variant="outline"
+                          className="shrink-0"
+                        >
                           <Link href={getBatchProfileHref(batch)}>
-                            View batch
+                            View details
                           </Link>
                         </Button>
                       </article>
                     ))}
                   </div>
                 ) : (
-                  <p className="rounded-md border border-dashed border-border px-3 py-3 text-sm text-muted-foreground">
-                    No batches are assigned to this student yet.
-                  </p>
+                  <EmptyState
+                    title="No batches assigned"
+                    description="Assign this student to a batch to organize schedules and attendance."
+                  />
                 )
               ) : (
-                <p className="rounded-md border border-dashed border-border px-3 py-3 text-sm text-muted-foreground">
-                  Batch information is not available for your role.
-                </p>
+                <EmptyState
+                  title="Batch information unavailable"
+                  description="Batch information is not available for your role."
+                />
               )}
             </CardContent>
           </Card>
@@ -695,14 +717,24 @@ async function StudentProfileContent({
                       return (
                         <article
                           key={entry.id}
-                          className="grid gap-3 p-4 sm:grid-cols-[1fr_auto] sm:items-center"
+                          className="grid gap-3 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start"
                         >
-                          <div>
-                            <h3 className="text-sm font-medium">
-                              {formatDate(entry.session.session_date)} |{" "}
-                              {entry.batch?.name ?? "Batch not available"}
+                          <div className="min-w-0">
+                            <h3 className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium">
+                              <span className="whitespace-nowrap">
+                                {formatDate(entry.session.session_date)}
+                              </span>
+                              <span className="break-words">
+                                <span
+                                  aria-hidden="true"
+                                  className="hidden text-muted-foreground/60 sm:inline"
+                                >
+                                  |{" "}
+                                </span>
+                                {entry.batch?.name ?? "Batch not available"}
+                              </span>
                             </h3>
-                            <p className="mt-1 text-xs text-muted-foreground">
+                            <p className="mt-1 break-words text-xs text-muted-foreground">
                               {entry.session.notes ?? "No session note"}
                             </p>
                           </div>
@@ -714,15 +746,16 @@ async function StudentProfileContent({
                     })}
                   </div>
                 ) : (
-                  <p className="rounded-md border border-dashed border-border px-3 py-3 text-sm text-muted-foreground">
-                    No attendance records have been recorded for this student
-                    yet.
-                  </p>
+                  <EmptyState
+                    title="No attendance records yet"
+                    description="No attendance records have been recorded for this student yet."
+                  />
                 )
               ) : (
-                <p className="rounded-md border border-dashed border-border px-3 py-3 text-sm text-muted-foreground">
-                  Attendance records are not available for your role.
-                </p>
+                <EmptyState
+                  title="Attendance unavailable"
+                  description="Attendance records are not available for your role."
+                />
               )}
             </CardContent>
           </Card>
@@ -821,7 +854,7 @@ async function StudentProfileContent({
                     {feeRecords.map((record) => (
                       <article key={record.id} className="grid gap-2 p-4">
                         <div className="flex flex-wrap items-center justify-between gap-2">
-                          <h3 className="text-sm font-medium">
+                          <h3 className="break-words text-sm font-medium">
                             Due {formatCurrency(record.amountDue)}
                           </h3>
                           <Badge
@@ -830,26 +863,50 @@ async function StudentProfileContent({
                             {record.computedStatus}
                           </Badge>
                         </div>
-                        <p className="text-xs text-muted-foreground">
-                          Paid {formatCurrency(record.amountPaid)} | Pending{" "}
-                          {formatCurrency(record.pendingAmount)}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Due date: {formatDate(record.due_date)}
-                          {record.notes ? ` | ${record.notes}` : ""}
-                        </p>
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                          <span className="whitespace-nowrap">
+                            Paid {formatCurrency(record.amountPaid)}
+                          </span>
+                          <span className="whitespace-nowrap">
+                            <span
+                              aria-hidden="true"
+                              className="hidden text-muted-foreground/60 sm:inline"
+                            >
+                              |{" "}
+                            </span>
+                            Pending {formatCurrency(record.pendingAmount)}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                          <span className="whitespace-nowrap">
+                            Due date: {formatDate(record.due_date)}
+                          </span>
+                          {record.notes ? (
+                            <span className="break-words">
+                              <span
+                                aria-hidden="true"
+                                className="hidden text-muted-foreground/60 sm:inline"
+                              >
+                                |{" "}
+                              </span>
+                              {record.notes}
+                            </span>
+                          ) : null}
+                        </div>
                       </article>
                     ))}
                   </div>
                 ) : (
-                  <p className="rounded-md border border-dashed border-border px-3 py-3 text-sm text-muted-foreground">
-                    No fee records have been created for this student yet.
-                  </p>
+                  <EmptyState
+                    title="No fee records yet"
+                    description="No fee records have been created for this student yet."
+                  />
                 )
               ) : (
-                <p className="rounded-md border border-dashed border-border px-3 py-3 text-sm text-muted-foreground">
-                  Fee records are not available for your role.
-                </p>
+                <EmptyState
+                  title="Fee records unavailable"
+                  description="Fee records are not available for your role."
+                />
               )}
             </CardContent>
           </Card>

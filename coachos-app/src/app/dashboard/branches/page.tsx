@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 
 import { ActionMessage } from "@/components/dashboard/ActionMessage";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
+import { EmptyState } from "@/components/dashboard/EmptyState";
 import { PaginationControls } from "@/components/dashboard/PaginationControls";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -85,7 +86,7 @@ export default async function BranchesPage({
         }
       >
         {canManageBranches ? (
-          <Card>
+          <Card id="create-branch">
             <CardHeader>
               <CardTitle className="text-xl">Create branch</CardTitle>
               <CardDescription>
@@ -149,11 +150,15 @@ export default async function BranchesPage({
                     placeholder="Branch name or address"
                   />
                 </Label>
-                <SubmitButton pendingLabel="Filtering..." variant="outline">
+                <SubmitButton
+                  className="w-full sm:w-auto"
+                  pendingLabel="Filtering..."
+                  variant="outline"
+                >
                   <Search aria-hidden="true" data-icon="inline-start" />
                   Filter
                 </SubmitButton>
-                <Button asChild variant="outline">
+                <Button asChild variant="outline" className="w-full sm:w-auto">
                   <Link href="/dashboard/branches">Reset filters</Link>
                 </Button>
               </form>
@@ -260,13 +265,28 @@ export default async function BranchesPage({
           ) : (
             <Card>
               <CardContent className="pt-5">
-                <p className="text-sm text-muted-foreground">
-                  {searchTerm
-                    ? "No records match the selected filters."
-                    : canManageBranches
-                      ? "No branches have been created yet. Create a branch to organize operations."
-                      : "No branches are available for this account. Ask the institute owner to assign a branch if you need access."}
-                </p>
+                <EmptyState
+                  actionHref={
+                    !searchTerm && canManageBranches
+                      ? "/dashboard/branches#create-branch"
+                      : undefined
+                  }
+                  actionLabel="Create branch"
+                  title={
+                    searchTerm
+                      ? "No branches match these filters"
+                      : canManageBranches
+                        ? "No branches created yet"
+                        : "No branch assigned"
+                  }
+                  description={
+                    searchTerm
+                      ? "Adjust your search to find branch records."
+                      : canManageBranches
+                        ? "Create a branch to organize students, batches, staff, and operations."
+                        : "Ask the institute owner to assign a branch if you need access."
+                  }
+                />
               </CardContent>
             </Card>
           )}

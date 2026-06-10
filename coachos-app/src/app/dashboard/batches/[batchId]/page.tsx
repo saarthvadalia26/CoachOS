@@ -9,6 +9,7 @@ import type { Metadata } from "next";
 
 import { ActionMessage } from "@/components/dashboard/ActionMessage";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
+import { EmptyState } from "@/components/dashboard/EmptyState";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -543,17 +544,17 @@ async function BatchDetailContent({
                   {students.map((student) => (
                     <article
                       key={student.id}
-                      className="grid gap-3 p-4 sm:grid-cols-[1fr_auto] sm:items-center"
+                      className="grid gap-3 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start"
                     >
-                      <div>
-                        <h3 className="text-sm font-medium">
+                      <div className="min-w-0">
+                        <h3 className="break-words text-sm font-medium">
                           {student.full_name}
                         </h3>
-                        <p className="mt-1 text-xs text-muted-foreground">
+                        <p className="mt-1 break-all text-xs text-muted-foreground sm:break-normal">
                           {student.phone ?? "Phone not added"}
                         </p>
                       </div>
-                      <div className="flex flex-wrap gap-2 sm:justify-end">
+                      <div className="flex shrink-0 flex-wrap items-start gap-2 sm:justify-end">
                         <Badge
                           variant={
                             student.status === "inactive"
@@ -573,9 +574,10 @@ async function BatchDetailContent({
                   ))}
                 </div>
               ) : (
-                <p className="rounded-md border border-dashed border-border px-3 py-3 text-sm text-muted-foreground">
-                  No students are assigned to this batch yet.
-                </p>
+                <EmptyState
+                  title="No students assigned"
+                  description="Assign students to this batch to organize schedules and attendance."
+                />
               )}
             </CardContent>
           </Card>
@@ -613,17 +615,17 @@ async function BatchDetailContent({
                       return (
                         <article
                           key={session.id}
-                          className="grid gap-3 p-4 lg:grid-cols-[1fr_auto] lg:items-center"
+                          className="grid gap-3 p-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start"
                         >
-                          <div>
+                          <div className="min-w-0">
                             <h3 className="text-sm font-medium">
                               {formatDate(session.session_date)}
                             </h3>
-                            <p className="mt-1 text-xs text-muted-foreground">
+                            <p className="mt-1 break-words text-xs text-muted-foreground">
                               {session.notes ?? "No session note"}
                             </p>
                           </div>
-                          <div className="flex flex-wrap gap-2 lg:justify-end">
+                          <div className="flex shrink-0 flex-wrap items-start gap-2 lg:justify-end">
                             <Badge
                               variant={session.locked_at ? "secondary" : "outline"}
                             >
@@ -643,15 +645,16 @@ async function BatchDetailContent({
                     })}
                   </div>
                 ) : (
-                  <p className="rounded-md border border-dashed border-border px-3 py-3 text-sm text-muted-foreground">
-                    No attendance sessions have been recorded for this batch
-                    yet.
-                  </p>
+                  <EmptyState
+                    title="No attendance records yet"
+                    description="No attendance records have been submitted for this batch yet."
+                  />
                 )
               ) : (
-                <p className="rounded-md border border-dashed border-border px-3 py-3 text-sm text-muted-foreground">
-                  Attendance details are not available for your role.
-                </p>
+                <EmptyState
+                  title="Attendance unavailable"
+                  description="Attendance details are not available for your role."
+                />
               )}
             </CardContent>
           </Card>
@@ -684,9 +687,10 @@ async function BatchDetailContent({
                   ))}
                 </div>
               ) : (
-                <p className="rounded-md border border-dashed border-border px-3 py-3 text-sm text-muted-foreground">
-                  No teachers are assigned to this batch yet.
-                </p>
+                <EmptyState
+                  title="No teachers assigned"
+                  description="No teacher staff members are assigned to this batch yet."
+                />
               )}
             </CardContent>
           </Card>

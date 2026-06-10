@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import { ActionMessage } from "@/components/dashboard/ActionMessage";
 import { ConfirmSubmitButton } from "@/components/dashboard/ConfirmSubmitButton";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
+import { EmptyState } from "@/components/dashboard/EmptyState";
 import { PaginationControls } from "@/components/dashboard/PaginationControls";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -236,7 +237,7 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
           }
         >
           {canCreateStudents ? (
-            <Card>
+            <Card id="add-student">
               <CardHeader>
                 <CardTitle className="text-xl">Add student</CardTitle>
                 <CardDescription>
@@ -477,11 +478,24 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
                   />
                 </div>
               ) : (
-                <p className="rounded-md border border-dashed border-border px-3 py-3 text-sm text-muted-foreground">
-                  {hasActiveFilters
-                    ? "No records match the selected filters."
-                    : "No students have been added yet. Add your first student to begin."}
-                </p>
+                <EmptyState
+                  actionHref={
+                    !hasActiveFilters && canCreateStudents
+                      ? "/dashboard/students#add-student"
+                      : undefined
+                  }
+                  actionLabel="Add student"
+                  title={
+                    hasActiveFilters
+                      ? "No students match these filters"
+                      : "No students added yet"
+                  }
+                  description={
+                    hasActiveFilters
+                      ? "Adjust your search, branch, or status filters to find student records."
+                      : "Add your first student to begin managing batches, attendance, and fee records."
+                  }
+                />
               )}
             </CardContent>
           </Card>

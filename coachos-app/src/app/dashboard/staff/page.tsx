@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import { ActionMessage } from "@/components/dashboard/ActionMessage";
 import { ConfirmSubmitButton } from "@/components/dashboard/ConfirmSubmitButton";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
+import { EmptyState } from "@/components/dashboard/EmptyState";
 import { PaginationControls } from "@/components/dashboard/PaginationControls";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -327,20 +328,30 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
                 <div className="grid gap-4">
                   <div className="divide-y divide-border rounded-md border border-border">
                     {staffMembers.map((staffMember) => (
-                      <article key={staffMember.id} className="grid gap-2 p-4">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h2 className="font-medium">
-                            {staffMember.full_name}
-                          </h2>
-                          <Badge
-                            variant={getRoleBadgeVariant(staffMember.role)}
-                          >
-                            {getRoleLabel(staffMember.role)}
-                          </Badge>
+                      <article key={staffMember.id} className="grid gap-3 p-4">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="min-w-0">
+                            <h2 className="break-words font-medium">
+                              {staffMember.full_name}
+                            </h2>
+                            <p className="mt-1 break-all text-sm text-muted-foreground sm:break-normal">
+                              {staffMember.email}
+                            </p>
+                          </div>
+                          <div className="flex shrink-0 flex-wrap items-start gap-2 sm:justify-end">
+                            <Badge
+                              variant={getRoleBadgeVariant(staffMember.role)}
+                            >
+                              {getRoleLabel(staffMember.role)}
+                            </Badge>
+                            <Badge variant="outline">
+                              {staffMember.branch_id
+                                ? branchesById.get(staffMember.branch_id)
+                                    ?.name ?? "Branch"
+                                : "Institute-wide"}
+                            </Badge>
+                          </div>
                         </div>
-                        <p className="text-sm text-muted-foreground">
-                          {staffMember.email}
-                        </p>
                       </article>
                     ))}
                   </div>
@@ -353,17 +364,24 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
                   />
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">
-                  {hasActiveFilters
-                    ? "No records match the selected filters."
-                    : "No staff members are available for your branch."}
-                </p>
+                <EmptyState
+                  title={
+                    hasActiveFilters
+                      ? "No staff members match these filters"
+                      : "No staff members available"
+                  }
+                  description={
+                    hasActiveFilters
+                      ? "Adjust your search, role, branch, or account status filters to find staff records."
+                      : "No staff members are available for your branch."
+                  }
+                />
               )}
             </CardContent>
           </Card>
         ) : (
           <section className="grid gap-6 lg:grid-cols-[360px_1fr]">
-            <Card>
+            <Card id="add-staff-member">
               <CardHeader>
                 <CardTitle className="text-xl">Add staff member</CardTitle>
                 <CardDescription>
@@ -452,28 +470,25 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
                   <div className="divide-y divide-border rounded-lg border border-border bg-card shadow-sm">
                     {staffMembers.map((staffMember) => (
                       <article key={staffMember.id} className="grid gap-4 p-5">
-                      <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
-                        <div>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h3 className="font-medium">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="min-w-0">
+                          <h3 className="break-words font-medium">
                               {staffMember.full_name}
-                            </h3>
+                          </h3>
+                          <p className="mt-1 break-all text-sm text-muted-foreground sm:break-normal">
+                            {staffMember.email}
+                          </p>
+                          <div className="mt-2 flex flex-wrap items-center gap-2">
                             <Badge
                               variant={getRoleBadgeVariant(staffMember.role)}
                             >
                               {getRoleLabel(staffMember.role)}
                             </Badge>
-                          </div>
-                          <p className="mt-1 text-sm text-muted-foreground">
-                            {staffMember.email}
-                          </p>
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            Branch:{" "}
+                            <Badge variant="outline">
                             {staffMember.branch_id
                               ? branchesById.get(staffMember.branch_id)?.name
                               : "Institute-wide"}
-                          </p>
-                          <div className="mt-2">
+                            </Badge>
                             <Badge
                               variant={
                                 staffMember.auth_user_id
@@ -485,7 +500,7 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
                             </Badge>
                           </div>
                         </div>
-                        <form action={deleteStaffMember}>
+                        <form action={deleteStaffMember} className="shrink-0">
                           <input
                             name="staffMemberId"
                             type="hidden"
@@ -586,11 +601,24 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
               ) : (
                 <Card>
                   <CardContent className="pt-5">
-                    <p className="text-sm text-muted-foreground">
-                      {hasActiveFilters
-                        ? "No records match the selected filters."
-                        : "No staff members have been added yet. Add your team members and assign roles."}
-                    </p>
+                    <EmptyState
+                      actionHref={
+                        !hasActiveFilters
+                          ? "/dashboard/staff#add-staff-member"
+                          : undefined
+                      }
+                      actionLabel="Add staff member"
+                      title={
+                        hasActiveFilters
+                          ? "No staff members match these filters"
+                          : "No staff members added yet"
+                      }
+                      description={
+                        hasActiveFilters
+                          ? "Adjust your search, role, branch, or account status filters to find staff records."
+                          : "Add your team members and assign branch-level roles."
+                      }
+                    />
                   </CardContent>
                 </Card>
               )}

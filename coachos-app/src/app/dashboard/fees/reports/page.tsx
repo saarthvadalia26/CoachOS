@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
+import { EmptyState } from "@/components/dashboard/EmptyState";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ExportButton } from "@/components/ui/export-button";
@@ -499,20 +500,38 @@ export default async function FeeReportsPage({
                   return (
                     <article
                       key={record.id}
-                      className="grid gap-3 p-4 lg:grid-cols-[1fr_auto] lg:items-center"
+                      className="grid gap-3 p-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start"
                     >
-                      <div>
-                        <h3 className="text-sm font-medium">
+                      <div className="min-w-0">
+                        <h3 className="break-words text-sm font-medium">
                           {student?.full_name ?? "Student not available"}
                         </h3>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {branchesById.get(record.branch_id)?.name ??
-                            "Branch"}{" "}
-                          | Due date: {formatDate(record.due_date)} | Status:{" "}
-                          {record.status}
-                        </p>
+                        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                          <span className="whitespace-nowrap">
+                            {branchesById.get(record.branch_id)?.name ??
+                              "Branch"}
+                          </span>
+                          <span className="whitespace-nowrap">
+                            <span
+                              aria-hidden="true"
+                              className="hidden text-muted-foreground/60 sm:inline"
+                            >
+                              |{" "}
+                            </span>
+                            Due date: {formatDate(record.due_date)}
+                          </span>
+                          <span className="whitespace-nowrap capitalize">
+                            <span
+                              aria-hidden="true"
+                              className="hidden text-muted-foreground/60 sm:inline"
+                            >
+                              |{" "}
+                            </span>
+                            Status: {record.status}
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex flex-wrap gap-2 lg:justify-end">
+                      <div className="flex shrink-0 flex-wrap items-start gap-2 lg:justify-end">
                         <Badge variant="outline">
                           Due {formatCurrency(record.amountDue)}
                         </Badge>
@@ -528,9 +547,10 @@ export default async function FeeReportsPage({
                 })}
               </div>
             ) : (
-              <p className="rounded-md border border-dashed border-border px-3 py-3 text-sm text-muted-foreground">
-                No fee records match the selected filters.
-              </p>
+              <EmptyState
+                title="No fee records match these filters"
+                description="Adjust your branch, student, status, or due date filters to review fee records."
+              />
             )}
           </CardContent>
         </Card>

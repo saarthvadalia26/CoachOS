@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 
 import { ActionMessage } from "@/components/dashboard/ActionMessage";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
+import { EmptyState } from "@/components/dashboard/EmptyState";
 import { PaginationControls } from "@/components/dashboard/PaginationControls";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -442,7 +443,7 @@ export default async function FeesPage({ searchParams }: FeesPageProps) {
           }
         >
           {canCreateFees ? (
-            <Card>
+            <Card id="create-fee-record">
               <CardHeader>
                 <CardTitle className="text-xl">Create fee record</CardTitle>
                 <CardDescription>
@@ -506,14 +507,12 @@ export default async function FeesPage({ searchParams }: FeesPageProps) {
                     </SubmitButton>
                   </form>
                 ) : (
-                  <div className="grid gap-4">
-                    <p className="text-sm text-muted-foreground">
-                      Add students before creating fee records.
-                    </p>
-                    <Button asChild variant="outline">
-                      <Link href="/dashboard/students">View students</Link>
-                    </Button>
-                  </div>
+                  <EmptyState
+                    actionHref="/dashboard/students"
+                    actionLabel="View students"
+                    title="No students available"
+                    description="Add students before creating fee records."
+                  />
                 )}
               </CardContent>
             </Card>
@@ -584,35 +583,67 @@ export default async function FeesPage({ searchParams }: FeesPageProps) {
                     return (
                       <article
                         key={record.id}
-                        className="grid gap-4 p-4 xl:grid-cols-[1fr_auto] xl:items-center"
+                        className="grid gap-4 p-4 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-start"
                       >
                         <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h3 className="font-medium">
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                            <h3 className="break-words font-medium">
                               {student?.full_name ?? "Student not available"}
                             </h3>
+                          </div>
+                          <div className="mt-2 flex flex-wrap items-center gap-2">
                             <Badge
                               variant={getStatusBadgeVariant(record.status)}
                             >
                               {record.status}
                             </Badge>
+                            <Badge variant="outline">
+                              {branchesById.get(record.branch_id)?.name ??
+                                "Branch"}
+                            </Badge>
                           </div>
-                          <p className="mt-1 text-sm text-muted-foreground">
-                            Due {formatCurrency(record.amountDue)} | Paid{" "}
-                            {formatCurrency(record.amountPaid)} | Balance{" "}
-                            {formatCurrency(record.remainingAmount)}
-                          </p>
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            Branch:{" "}
-                            {branchesById.get(record.branch_id)?.name ??
-                              "Branch"}{" "}
-                            |{" "}
-                            Due date: {formatDate(record.due_date)}
-                            {record.notes ? ` | ${record.notes}` : ""}
-                          </p>
+                          <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+                            <span className="whitespace-nowrap">
+                              Due {formatCurrency(record.amountDue)}
+                            </span>
+                            <span className="whitespace-nowrap">
+                              <span
+                                aria-hidden="true"
+                                className="hidden text-muted-foreground/60 sm:inline"
+                              >
+                                |{" "}
+                              </span>
+                              Paid {formatCurrency(record.amountPaid)}
+                            </span>
+                            <span className="whitespace-nowrap">
+                              <span
+                                aria-hidden="true"
+                                className="hidden text-muted-foreground/60 sm:inline"
+                              >
+                                |{" "}
+                              </span>
+                              Balance {formatCurrency(record.remainingAmount)}
+                            </span>
+                          </div>
+                          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                            <span className="whitespace-nowrap">
+                              Due date: {formatDate(record.due_date)}
+                            </span>
+                            {record.notes ? (
+                              <span className="break-words">
+                                <span
+                                  aria-hidden="true"
+                                  className="hidden text-muted-foreground/60 sm:inline"
+                                >
+                                  |{" "}
+                                </span>
+                                {record.notes}
+                              </span>
+                            ) : null}
+                          </div>
                         </div>
 
-                        <div className="flex flex-wrap gap-2 xl:justify-end">
+                        <div className="flex shrink-0 flex-wrap items-start gap-2 xl:justify-end">
                           {record.status === "paid" ? (
                             <Badge variant="secondary">
                               <CheckCircle2
@@ -654,11 +685,24 @@ export default async function FeesPage({ searchParams }: FeesPageProps) {
                   />
                 </div>
               ) : (
-                <p className="rounded-md border border-dashed border-border px-3 py-3 text-sm text-muted-foreground">
-                  {hasActiveFilters
-                    ? "No records match the selected filters."
-                    : "No fee records match the selected filters."}
-                </p>
+                <EmptyState
+                  actionHref={
+                    !hasActiveFilters && canCreateFees
+                      ? "/dashboard/fees#create-fee-record"
+                      : undefined
+                  }
+                  actionLabel="Create fee record"
+                  title={
+                    hasActiveFilters
+                      ? "No fee records match these filters"
+                      : "No fee records yet"
+                  }
+                  description={
+                    hasActiveFilters
+                      ? "Adjust your search, status, branch, or due date filters to find fee records."
+                      : "Create fee records to track payment status and pending balances."
+                  }
+                />
               )}
             </CardContent>
           </Card>
