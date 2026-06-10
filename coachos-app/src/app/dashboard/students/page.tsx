@@ -318,130 +318,132 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
                 <div className="grid gap-4">
                   <div className="divide-y divide-border rounded-md border border-border">
                     {students.map((student) => (
-                    <article key={student.id} className="grid gap-4 p-4">
-                      <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
-                        <div>
-                          <h3 className="font-medium">{student.full_name}</h3>
-                          <p className="mt-1 text-sm text-muted-foreground">
-                            Student: {student.phone ?? "Not added"} | Parent:{" "}
-                            {student.parent_phone ?? "Not added"}
-                          </p>
+                      <article key={student.id} className="grid gap-4 p-4">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="min-w-0 flex-1">
+                            <h3 className="truncate text-base font-semibold tracking-tight">
+                              {student.full_name}
+                            </h3>
+                            <p className="mt-1 text-sm text-muted-foreground">
+                              Student: {student.phone ?? "Not added"} | Parent:{" "}
+                              {student.parent_phone ?? "Not added"}
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap items-start gap-2 sm:justify-end">
+                            <Badge
+                              variant={
+                                student.status === "inactive"
+                                  ? "outline"
+                                  : "secondary"
+                              }
+                            >
+                              {getStatusLabel(student.status)}
+                            </Badge>
+                            <Badge variant="outline">
+                              {branchesById.get(student.branch_id)?.name ??
+                                "Branch"}
+                            </Badge>
+                            <Button asChild size="sm" variant="outline">
+                              <Link href={`/dashboard/students/${student.id}`}>
+                                <Eye
+                                  aria-hidden="true"
+                                  data-icon="inline-start"
+                                />
+                                View profile
+                              </Link>
+                            </Button>
+                            {canDeleteStudents ? (
+                              <form action={deleteStudent}>
+                                <input
+                                  name="studentId"
+                                  type="hidden"
+                                  value={student.id}
+                                />
+                                <ConfirmSubmitButton
+                                  type="submit"
+                                  variant="destructive"
+                                  size="sm"
+                                  confirmMessage={`Delete ${student.full_name}? This also removes batch relationships, attendance records, and fee records for this student.`}
+                                  pendingLabel="Deleting..."
+                                >
+                                  <Trash2
+                                    aria-hidden="true"
+                                    data-icon="inline-start"
+                                  />
+                                  Delete
+                                </ConfirmSubmitButton>
+                              </form>
+                            ) : null}
+                          </div>
                         </div>
-                        <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-                          <Badge
-                            variant={
-                              student.status === "inactive"
-                                ? "outline"
-                                : "secondary"
-                            }
-                          >
-                            {getStatusLabel(student.status)}
-                          </Badge>
-                          <Badge variant="outline">
-                            {branchesById.get(student.branch_id)?.name ??
-                              "Branch"}
-                          </Badge>
-                          <Button asChild size="sm" variant="outline">
-                            <Link href={`/dashboard/students/${student.id}`}>
-                              <Eye
-                                aria-hidden="true"
-                                data-icon="inline-start"
-                              />
-                              View profile
-                            </Link>
-                          </Button>
-                          {canDeleteStudents ? (
-                            <form action={deleteStudent}>
+
+                        {canUpdateStudents ? (
+                          <details className="rounded-md border border-border bg-muted/30 p-3">
+                            <summary className="cursor-pointer text-sm font-medium">
+                              Edit student
+                            </summary>
+                            <form
+                              action={updateStudent}
+                              className="mt-4 grid gap-3 sm:grid-cols-2"
+                            >
                               <input
                                 name="studentId"
                                 type="hidden"
                                 value={student.id}
                               />
-                              <ConfirmSubmitButton
-                                type="submit"
-                                variant="destructive"
-                                size="sm"
-                                confirmMessage={`Delete ${student.full_name}? This also removes batch relationships, attendance records, and fee records for this student.`}
-                                pendingLabel="Deleting..."
+                              <Label>
+                                Full name
+                                <Input
+                                  required
+                                  name="fullName"
+                                  type="text"
+                                  defaultValue={student.full_name}
+                                  autoComplete="name"
+                                />
+                              </Label>
+                              <Label>
+                                Student phone
+                                <Input
+                                  name="phone"
+                                  type="tel"
+                                  defaultValue={student.phone ?? ""}
+                                  autoComplete="tel"
+                                />
+                              </Label>
+                              <Label>
+                                Parent phone
+                                <Input
+                                  name="parentPhone"
+                                  type="tel"
+                                  defaultValue={student.parent_phone ?? ""}
+                                  autoComplete="tel"
+                                />
+                              </Label>
+                              <Label>
+                                Status
+                                <select
+                                  name="status"
+                                  defaultValue={student.status ?? "active"}
+                                  className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
+                                >
+                                  <option value="active">Active</option>
+                                  <option value="inactive">Inactive</option>
+                                </select>
+                              </Label>
+                              <SubmitButton
+                                className="sm:col-span-2 sm:w-fit"
+                                pendingLabel="Updating..."
                               >
-                                <Trash2
+                                <Save
                                   aria-hidden="true"
                                   data-icon="inline-start"
                                 />
-                                Delete
-                              </ConfirmSubmitButton>
+                                Save changes
+                              </SubmitButton>
                             </form>
-                          ) : null}
-                        </div>
-                      </div>
-
-                      {canUpdateStudents ? (
-                        <details className="rounded-md border border-border bg-muted/30 p-3">
-                          <summary className="cursor-pointer text-sm font-medium">
-                            Edit student
-                          </summary>
-                          <form
-                            action={updateStudent}
-                            className="mt-4 grid gap-3 sm:grid-cols-2"
-                          >
-                            <input
-                              name="studentId"
-                              type="hidden"
-                              value={student.id}
-                            />
-                            <Label>
-                              Full name
-                              <Input
-                                required
-                                name="fullName"
-                                type="text"
-                                defaultValue={student.full_name}
-                                autoComplete="name"
-                              />
-                            </Label>
-                            <Label>
-                              Student phone
-                              <Input
-                                name="phone"
-                                type="tel"
-                                defaultValue={student.phone ?? ""}
-                                autoComplete="tel"
-                              />
-                            </Label>
-                            <Label>
-                              Parent phone
-                              <Input
-                                name="parentPhone"
-                                type="tel"
-                                defaultValue={student.parent_phone ?? ""}
-                                autoComplete="tel"
-                              />
-                            </Label>
-                            <Label>
-                              Status
-                              <select
-                                name="status"
-                                defaultValue={student.status ?? "active"}
-                                className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
-                              >
-                                <option value="active">Active</option>
-                                <option value="inactive">Inactive</option>
-                              </select>
-                            </Label>
-                            <SubmitButton
-                              className="sm:col-span-2 sm:w-fit"
-                              pendingLabel="Updating..."
-                            >
-                              <Save
-                                aria-hidden="true"
-                                data-icon="inline-start"
-                              />
-                              Save changes
-                            </SubmitButton>
-                          </form>
-                        </details>
-                      ) : null}
-                    </article>
+                          </details>
+                        ) : null}
+                      </article>
                     ))}
                   </div>
                   <PaginationControls
