@@ -324,10 +324,20 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
                             <h3 className="break-words text-base font-semibold tracking-tight">
                               {student.full_name}
                             </h3>
-                            <p className="mt-1 break-words text-sm text-muted-foreground">
-                              Student: {student.phone ?? "Not added"} | Parent:{" "}
-                              {student.parent_phone ?? "Not added"}
-                            </p>
+                            <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+                              <span className="whitespace-nowrap">
+                                Student: {student.phone ?? "Not added"}
+                              </span>
+                              <span
+                                aria-hidden="true"
+                                className="hidden text-muted-foreground/60 sm:inline"
+                              >
+                                |
+                              </span>
+                              <span className="whitespace-nowrap">
+                                Parent: {student.parent_phone ?? "Not added"}
+                              </span>
+                            </div>
                           </div>
                           <div className="flex shrink-0 flex-wrap items-start justify-start gap-2 sm:justify-end">
                             <Badge
