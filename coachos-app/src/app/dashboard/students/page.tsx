@@ -69,6 +69,12 @@ function getSelectedStatus(value: string | null | undefined) {
   return value === "active" || value === "inactive" ? value : "";
 }
 
+function getContactValue(value: string | null) {
+  const trimmedValue = value?.trim();
+
+  return trimmedValue || null;
+}
+
 export default async function StudentsPage({ searchParams }: StudentsPageProps) {
   const context = await requirePermission("students.view");
   const { accessibleBranches, supabase, claims, institute, profile, role } =
@@ -326,16 +332,22 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
                             </h3>
                             <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
                               <span className="whitespace-nowrap">
-                                Student: {student.phone ?? "Not added"}
-                              </span>
-                              <span
-                                aria-hidden="true"
-                                className="hidden text-muted-foreground/60 sm:inline"
-                              >
-                                |
+                                Student:{" "}
+                                {getContactValue(student.phone) ?? "Not added"}
                               </span>
                               <span className="whitespace-nowrap">
-                                Parent: {student.parent_phone ?? "Not added"}
+                                {getContactValue(student.phone) &&
+                                getContactValue(student.parent_phone) ? (
+                                  <span
+                                    aria-hidden="true"
+                                    className="hidden text-muted-foreground/60 sm:inline"
+                                  >
+                                    |{" "}
+                                  </span>
+                                ) : null}
+                                Parent:{" "}
+                                {getContactValue(student.parent_phone) ??
+                                  "Not added"}
                               </span>
                             </div>
                           </div>
