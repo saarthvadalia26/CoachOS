@@ -76,7 +76,7 @@ export function ContactForm() {
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Label>
-          Phone <span className="font-normal text-muted-foreground">(optional)</span>
+          <span>Phone <span className="font-normal text-muted-foreground">(optional)</span></span>
           <Input name="phone" type="tel" placeholder="+91 98765 43210" />
         </Label>
         <Label>
