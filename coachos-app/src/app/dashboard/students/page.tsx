@@ -321,15 +321,15 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
                       <article key={student.id} className="grid gap-4 p-4">
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                           <div className="min-w-0 flex-1">
-                            <h3 className="truncate text-base font-semibold tracking-tight">
+                            <h3 className="break-words text-base font-semibold tracking-tight">
                               {student.full_name}
                             </h3>
-                            <p className="mt-1 text-sm text-muted-foreground">
+                            <p className="mt-1 break-words text-sm text-muted-foreground">
                               Student: {student.phone ?? "Not added"} | Parent:{" "}
                               {student.parent_phone ?? "Not added"}
                             </p>
                           </div>
-                          <div className="flex flex-wrap items-start gap-2 sm:justify-end">
+                          <div className="flex shrink-0 flex-wrap items-start justify-start gap-2 sm:justify-end">
                             <Badge
                               variant={
                                 student.status === "inactive"
