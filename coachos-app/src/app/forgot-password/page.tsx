@@ -36,7 +36,9 @@ export default async function ForgotPasswordPage({
     <main className="flex min-h-full items-center justify-center bg-background px-6 py-16 text-foreground">
       <section className="w-full max-w-md rounded-lg border border-border bg-card p-6 shadow-sm">
         <div>
-          <p className="text-sm font-medium text-muted-foreground">CoachOS</p>
+          <Link href="/" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
+            CoachOS
+          </Link>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight">
             Reset your password
           </h1>
@@ -78,6 +80,11 @@ export default async function ForgotPasswordPage({
           Remember your password?{" "}
           <Link href="/login" className="font-medium text-foreground underline">
             Log in
+          </Link>
+        </p>
+        <p className="mt-3 text-center text-sm text-muted-foreground">
+          <Link href="/" className="font-medium text-foreground underline">
+            Back to homepage
           </Link>
         </p>
       </section>

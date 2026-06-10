@@ -22,6 +22,7 @@ import {
   updateAcademicYear,
 } from "@/lib/academic-years/actions";
 import { canAccessPermission, requirePermission } from "@/lib/auth/permissions";
+import { formatDateRange } from "@/lib/formatters/date";
 
 type AcademicYearsPageProps = {
   searchParams: Promise<{
@@ -146,21 +147,21 @@ export default async function AcademicYearsPage({
                     placeholder="2026-27"
                   />
                   <span className="text-xs font-normal text-muted-foreground">
-                    Example name: 2026-27
+                    Example: 2026-27
                   </span>
                 </Label>
                 <Label>
                   Start date
                   <Input required name="startDate" type="date" />
                   <span className="text-xs font-normal text-muted-foreground">
-                    Example start date: 2026-06-01
+                    Example: Jun 1, 2026
                   </span>
                 </Label>
                 <Label>
                   End date
                   <Input required name="endDate" type="date" />
                   <span className="text-xs font-normal text-muted-foreground">
-                    Example end date: 2027-05-31
+                    Example: May 31, 2027
                   </span>
                 </Label>
                 <label className="flex items-center gap-2 text-sm font-medium">
@@ -217,7 +218,10 @@ export default async function AcademicYearsPage({
                         {academicYear.name}
                       </CardTitle>
                       <CardDescription className="mt-1">
-                        {academicYear.start_date} to {academicYear.end_date}
+                        {formatDateRange(
+                          academicYear.start_date,
+                          academicYear.end_date,
+                        )}
                       </CardDescription>
                     </div>
                     <Badge
@@ -251,7 +255,7 @@ export default async function AcademicYearsPage({
                                 defaultValue={academicYear.name}
                               />
                               <span className="text-xs font-normal text-muted-foreground">
-                                Example name: 2026-27
+                                Example: 2026-27
                               </span>
                             </Label>
                             <Label>
@@ -263,7 +267,7 @@ export default async function AcademicYearsPage({
                                 defaultValue={academicYear.start_date}
                               />
                               <span className="text-xs font-normal text-muted-foreground">
-                                Example start date: 2026-06-01
+                                Example: Jun 1, 2026
                               </span>
                             </Label>
                             <Label>
@@ -275,7 +279,7 @@ export default async function AcademicYearsPage({
                                 defaultValue={academicYear.end_date}
                               />
                               <span className="text-xs font-normal text-muted-foreground">
-                                Example end date: 2027-05-31
+                                Example: May 31, 2027
                               </span>
                             </Label>
                             <SubmitButton

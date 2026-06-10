@@ -5,6 +5,7 @@ import {
   ShieldCheck,
   UsersRound,
 } from "lucide-react";
+import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 
@@ -49,10 +50,10 @@ export function HeroSection() {
           </p>
           <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
             <Button asChild size="lg" variant="accent">
-              <a href="#contact">
+              <Link href="/contact">
                 Book a demo
                 <ArrowRight aria-hidden="true" data-icon="inline-end" />
-              </a>
+              </Link>
             </Button>
             <Button asChild variant="outline" size="lg">
               <a href="#features">View features</a>

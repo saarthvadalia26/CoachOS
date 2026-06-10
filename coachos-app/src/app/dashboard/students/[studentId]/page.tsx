@@ -22,6 +22,7 @@ import {
 import { canAccessPermission, requirePermission } from "@/lib/auth/permissions";
 import { getTodayDateValue } from "@/lib/attendance/date";
 import { getFeeStatus, type FeeStatus } from "@/lib/fees/status";
+import { formatDate } from "@/lib/formatters/date";
 
 export const metadata: Metadata = {
   title: "Student Profile",
@@ -698,7 +699,7 @@ async function StudentProfileContent({
                         >
                           <div>
                             <h3 className="text-sm font-medium">
-                              {entry.session.session_date} |{" "}
+                              {formatDate(entry.session.session_date)} |{" "}
                               {entry.batch?.name ?? "Batch not available"}
                             </h3>
                             <p className="mt-1 text-xs text-muted-foreground">
@@ -834,7 +835,7 @@ async function StudentProfileContent({
                           {formatCurrency(record.pendingAmount)}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          Due date: {record.due_date ?? "Not set"}
+                          Due date: {formatDate(record.due_date)}
                           {record.notes ? ` | ${record.notes}` : ""}
                         </p>
                       </article>

@@ -1,4 +1,5 @@
 import { CheckCircle2 } from "lucide-react";
+import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 
@@ -62,7 +63,7 @@ export function PricingSection() {
                 ))}
               </ul>
               <Button asChild className="mt-6 w-full" variant="outline">
-                <a href="#contact">Discuss {plan.name}</a>
+                <Link href="/contact">Discuss {plan.name}</Link>
               </Button>
             </article>
           ))}

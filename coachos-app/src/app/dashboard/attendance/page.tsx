@@ -31,6 +31,11 @@ import {
 } from "@/lib/attendance/actions";
 import { getTodayDateValue } from "@/lib/attendance/date";
 import { getBranchScope } from "@/lib/dashboard/branch-scope";
+import {
+  formatDate,
+  formatDateRange,
+  formatTimestamp,
+} from "@/lib/formatters/date";
 
 type AttendancePageProps = {
   searchParams: Promise<{
@@ -825,7 +830,7 @@ export default async function AttendancePage({
                   : "Attendance record"}
               </CardTitle>
               <CardDescription>
-                {activeSessionDate}
+                {formatDate(activeSessionDate)}
                 {selectedBatch ? ` | ${selectedBatch.name}` : ""}
               </CardDescription>
             </div>
@@ -1139,7 +1144,7 @@ export default async function AttendancePage({
           <CardHeader>
             <CardTitle className="text-xl">Attendance history</CardTitle>
             <CardDescription>
-              {historyStartDate} to {historyEndDate}
+              {formatDateRange(historyStartDate, historyEndDate)}
               {selectedAcademicYear ? ` | ${selectedAcademicYear.name}` : ""}
             </CardDescription>
           </CardHeader>
@@ -1296,7 +1301,7 @@ export default async function AttendancePage({
                           >
                             <div>
                               <h3 className="text-sm font-medium">
-                                {session.session_date} |{" "}
+                                {formatDate(session.session_date)} |{" "}
                                 {batch?.name ?? "Batch not available"}
                               </h3>
                               <p className="mt-1 text-xs text-muted-foreground">
@@ -1394,7 +1399,8 @@ export default async function AttendancePage({
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">
-                Attendance record | {selectedHistorySession.session_date}
+                Attendance record |{" "}
+                {formatDate(selectedHistorySession.session_date)}
               </CardTitle>
               <CardDescription>
                 {batchesById.get(selectedHistorySession.batch_id)?.name ??
@@ -1455,7 +1461,7 @@ export default async function AttendancePage({
               <div>
                 <CardTitle className="text-lg">Audit history</CardTitle>
                 <CardDescription>
-                  {selectedAuditSession.session_date} |{" "}
+                  {formatDate(selectedAuditSession.session_date)} |{" "}
                   {batchesById.get(selectedAuditSession.batch_id)?.name ??
                     selectedBatch?.name ??
                     "Selected attendance record"}
@@ -1486,7 +1492,7 @@ export default async function AttendancePage({
                             </h3>
                             <p className="mt-1 text-xs text-muted-foreground">
                               {getActorLabel(log.changed_by, claims.sub)} |{" "}
-                              {new Date(log.created_at).toLocaleString()}
+                              {formatTimestamp(log.created_at)}
                             </p>
                             {log.reason ? (
                               <p className="mt-1 text-xs text-muted-foreground">

@@ -34,6 +34,7 @@ import {
 } from "@/lib/dashboard/list-controls";
 import { createFeeRecord, markFeeRecordPaid } from "@/lib/fees/actions";
 import { type FeeStatus, getFeeStatus } from "@/lib/fees/status";
+import { formatDate } from "@/lib/formatters/date";
 
 type FeesPageProps = {
   searchParams: Promise<{
@@ -606,7 +607,7 @@ export default async function FeesPage({ searchParams }: FeesPageProps) {
                             {branchesById.get(record.branch_id)?.name ??
                               "Branch"}{" "}
                             |{" "}
-                            Due date: {record.due_date ?? "Not set"}
+                            Due date: {formatDate(record.due_date)}
                             {record.notes ? ` | ${record.notes}` : ""}
                           </p>
                         </div>

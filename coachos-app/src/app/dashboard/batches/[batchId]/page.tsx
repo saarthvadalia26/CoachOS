@@ -19,6 +19,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { canAccessPermission, requirePermission } from "@/lib/auth/permissions";
+import { formatDate } from "@/lib/formatters/date";
 
 export const metadata: Metadata = {
   title: "Batch Details",
@@ -616,7 +617,7 @@ async function BatchDetailContent({
                         >
                           <div>
                             <h3 className="text-sm font-medium">
-                              {session.session_date}
+                              {formatDate(session.session_date)}
                             </h3>
                             <p className="mt-1 text-xs text-muted-foreground">
                               {session.notes ?? "No session note"}

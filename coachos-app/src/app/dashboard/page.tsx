@@ -1,12 +1,16 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { Building2, CalendarDays, GraduationCap, UserPlus } from "lucide-react";
 
 import { ActionMessage } from "@/components/dashboard/ActionMessage";
 import { BranchFilter } from "@/components/dashboard/BranchFilter";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
+import { Button } from "@/components/ui/button";
 import { hasPermission } from "@/lib/auth/permissions";
 import { getTodayDateValue } from "@/lib/attendance/date";
 import { getBranchScope } from "@/lib/dashboard/branch-scope";
 import { getDashboardContext } from "@/lib/dashboard/context";
+import { formatDate, formatDateRange } from "@/lib/formatters/date";
 
 function MetricCard({
   label,
@@ -124,7 +128,7 @@ export default async function DashboardPage({
       label: "Academic Year",
       value: activeAcademicYear?.name ?? "Not set",
       helper: activeAcademicYear
-        ? `${activeAcademicYear.start_date} to ${activeAcademicYear.end_date}`
+        ? formatDateRange(activeAcademicYear.start_date, activeAcademicYear.end_date)
         : "No active academic year",
     },
     {
@@ -148,7 +152,7 @@ export default async function DashboardPage({
       ? {
           label: "Attendance Records Today",
           value: String(attendanceSessionsResponse.count ?? 0),
-          helper: `${branchScope.selectedBranchName} | ${todayDate}`,
+          helper: `${branchScope.selectedBranchName} | ${formatDate(todayDate)}`,
         }
       : null,
   ].filter(
@@ -162,6 +166,48 @@ export default async function DashboardPage({
       pendingFeesResponse.error ??
       attendanceSessionsResponse.error ??
       activeAcademicYearResponse.error,
+  );
+  const hasNoUsefulData =
+    !activeAcademicYear &&
+    (studentsResponse.count ?? 0) === 0 &&
+    (batchesResponse.count ?? 0) === 0;
+  const quickActions = [
+    hasPermission(role, "branches.create")
+      ? {
+          href: "/dashboard/branches",
+          icon: Building2,
+          label: "Add Branch",
+        }
+      : null,
+    hasPermission(role, "academic_years.create")
+      ? {
+          href: "/dashboard/settings/academic-years",
+          icon: CalendarDays,
+          label: "Create Academic Year",
+        }
+      : null,
+    hasPermission(role, "students.create")
+      ? {
+          href: "/dashboard/students",
+          icon: UserPlus,
+          label: "Add Student",
+        }
+      : null,
+    hasPermission(role, "batches.create")
+      ? {
+          href: "/dashboard/batches",
+          icon: GraduationCap,
+          label: "Create Batch",
+        }
+      : null,
+  ].filter(
+    (
+      action,
+    ): action is {
+      href: string;
+      icon: typeof Building2;
+      label: string;
+    } => Boolean(action),
   );
 
   return (
@@ -209,6 +255,39 @@ export default async function DashboardPage({
             />
           ))}
         </div>
+
+        {hasNoUsefulData && quickActions.length ? (
+          <div className="mt-6 rounded-lg border border-border bg-card p-5 shadow-sm">
+            <div className="max-w-2xl">
+              <h2 className="text-lg font-semibold tracking-tight">
+                Welcome to CoachOS.
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                Start by setting up your first branch, academic year, students,
+                and batches.
+              </p>
+            </div>
+            <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+              {quickActions.map((action) => {
+                const Icon = action.icon;
+
+                return (
+                  <Button
+                    key={action.href}
+                    asChild
+                    variant="outline"
+                    className="w-full sm:w-auto"
+                  >
+                    <Link href={action.href}>
+                      <Icon aria-hidden="true" data-icon="inline-start" />
+                      {action.label}
+                    </Link>
+                  </Button>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
       </section>
     </DashboardShell>
   );

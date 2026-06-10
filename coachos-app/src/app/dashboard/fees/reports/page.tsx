@@ -21,6 +21,7 @@ import { getTodayDateValue } from "@/lib/attendance/date";
 import { getBranchScope } from "@/lib/dashboard/branch-scope";
 import { getSearchTerm } from "@/lib/dashboard/list-controls";
 import { type FeeStatus, getFeeStatus } from "@/lib/fees/status";
+import { formatDate } from "@/lib/formatters/date";
 
 type FeeReportsPageProps = {
   searchParams: Promise<{
@@ -507,7 +508,7 @@ export default async function FeeReportsPage({
                         <p className="mt-1 text-xs text-muted-foreground">
                           {branchesById.get(record.branch_id)?.name ??
                             "Branch"}{" "}
-                          | Due date: {record.due_date ?? "Not set"} | Status:{" "}
+                          | Due date: {formatDate(record.due_date)} | Status:{" "}
                           {record.status}
                         </p>
                       </div>

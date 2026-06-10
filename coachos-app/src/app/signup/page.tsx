@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
+import { PasswordField } from "@/components/auth/PasswordField";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SubmitButton } from "@/components/ui/submit-button";
@@ -33,7 +34,9 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
     <main className="flex min-h-full items-center justify-center bg-background px-6 py-16 text-foreground">
       <section className="w-full max-w-md rounded-lg border border-border bg-card p-6 shadow-sm">
         <div>
-          <p className="text-sm font-medium text-muted-foreground">CoachOS</p>
+          <Link href="/" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
+            CoachOS
+          </Link>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight">
             Create your institute account
           </h1>
@@ -59,16 +62,15 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
               placeholder="owner@institute.com"
             />
           </Label>
-          <Label>
-            Password
-            <Input
-              required
-              name="password"
-              type="password"
-              autoComplete="new-password"
-              placeholder="Create a password"
-            />
-          </Label>
+          <PasswordField
+            required
+            minLength={8}
+            label="Password"
+            name="password"
+            autoComplete="new-password"
+            placeholder="Create a password"
+            hint="Use at least 8 characters."
+          />
           <SubmitButton className="mt-2" pendingLabel="Creating...">
             Sign up
           </SubmitButton>
@@ -78,6 +80,11 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
           Already have an account?{" "}
           <Link href="/login" className="font-medium text-foreground underline">
             Log in
+          </Link>
+        </p>
+        <p className="mt-3 text-center text-sm text-muted-foreground">
+          <Link href="/" className="font-medium text-foreground underline">
+            Back to homepage
           </Link>
         </p>
       </section>

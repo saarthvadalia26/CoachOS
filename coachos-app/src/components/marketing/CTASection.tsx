@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { Button } from "@/components/ui/button";
 
 export function CTASection() {
@@ -20,7 +22,7 @@ export function CTASection() {
           </div>
           <div className="flex flex-col gap-3 sm:flex-row md:flex-col">
             <Button asChild size="lg" variant="accent">
-              <a href="mailto:hello@coachos.app">Book a demo</a>
+              <Link href="/contact">Book a demo</Link>
             </Button>
             <Button
               asChild

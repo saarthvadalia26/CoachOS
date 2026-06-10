@@ -12,8 +12,21 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+function getMetadataBaseUrl() {
+  if (process.env.NEXT_PUBLIC_SITE_URL) {
+    return process.env.NEXT_PUBLIC_SITE_URL;
+  }
+
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+
+  return "http://localhost:3000";
+}
+
 export const metadata: Metadata = {
   applicationName: "CoachOS",
+  metadataBase: new URL(getMetadataBaseUrl()),
   title: {
     default: "CoachOS",
     template: "%s | CoachOS",
@@ -24,6 +37,14 @@ export const metadata: Metadata = {
     title: "CoachOS",
     description:
       "CoachOS helps coaching institutes manage branches, students, batches, attendance, fees, and staff from one secure dashboard.",
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "CoachOS institute operations dashboard",
+      },
+    ],
     siteName: "CoachOS",
     type: "website",
   },
@@ -32,6 +53,7 @@ export const metadata: Metadata = {
     title: "CoachOS",
     description:
       "CoachOS helps coaching institutes manage branches, students, batches, attendance, fees, and staff from one secure dashboard.",
+    images: ["/opengraph-image"],
   },
 };
 

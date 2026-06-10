@@ -2,8 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { PasswordField } from "@/components/auth/PasswordField";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { updatePassword } from "@/lib/auth/actions";
 import { passwordRecoveryCookieName } from "@/lib/auth/password-reset";
@@ -35,7 +34,9 @@ export default async function ResetPasswordPage({
     <main className="flex min-h-full items-center justify-center bg-background px-6 py-16 text-foreground">
       <section className="w-full max-w-md rounded-lg border border-border bg-card p-6 shadow-sm">
         <div>
-          <p className="text-sm font-medium text-muted-foreground">CoachOS</p>
+          <Link href="/" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
+            CoachOS
+          </Link>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight">
             Set a new password
           </h1>
@@ -58,28 +59,23 @@ export default async function ResetPasswordPage({
 
         {hasResetSession ? (
           <form action={updatePassword} className="mt-6 grid gap-4">
-            <Label>
-              New password
-              <Input
-                required
-                minLength={6}
-                name="password"
-                type="password"
-                autoComplete="new-password"
-                placeholder="Enter a new password"
-              />
-            </Label>
-            <Label>
-              Confirm new password
-              <Input
-                required
-                minLength={6}
-                name="confirmPassword"
-                type="password"
-                autoComplete="new-password"
-                placeholder="Confirm your new password"
-              />
-            </Label>
+            <PasswordField
+              required
+              minLength={8}
+              label="New password"
+              name="password"
+              autoComplete="new-password"
+              placeholder="Enter a new password"
+              hint="Use at least 8 characters."
+            />
+            <PasswordField
+              required
+              minLength={8}
+              label="Confirm new password"
+              name="confirmPassword"
+              autoComplete="new-password"
+              placeholder="Confirm your new password"
+            />
             <SubmitButton className="mt-2" pendingLabel="Updating...">
               Update password
             </SubmitButton>
@@ -103,6 +99,11 @@ export default async function ResetPasswordPage({
           Back to{" "}
           <Link href="/login" className="font-medium text-foreground underline">
             Log in
+          </Link>
+        </p>
+        <p className="mt-3 text-center text-sm text-muted-foreground">
+          <Link href="/" className="font-medium text-foreground underline">
+            Back to homepage
           </Link>
         </p>
       </section>
