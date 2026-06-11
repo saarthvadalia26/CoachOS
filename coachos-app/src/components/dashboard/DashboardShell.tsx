@@ -148,8 +148,8 @@ export function DashboardShell({
 
   return (
     <main className="min-h-full bg-background text-foreground">
-      <div className="flex min-h-full flex-col md:flex-row">
-        <aside className="border-b border-sidebar-border bg-sidebar px-4 py-4 text-sidebar-foreground md:flex md:min-h-screen md:w-64 md:flex-col md:border-b-0 md:border-r md:px-5">
+      <div className="flex min-h-full flex-col xl:flex-row">
+        <aside className="border-b border-sidebar-border bg-sidebar px-4 py-4 text-sidebar-foreground xl:flex xl:min-h-screen xl:w-64 xl:flex-col xl:border-b-0 xl:border-r xl:px-5">
           <div className="mb-5">
             <Link
               href="/dashboard"
@@ -167,7 +167,7 @@ export function DashboardShell({
               Institute operations
             </p>
           </div>
-          <nav className="flex gap-2 overflow-x-auto md:grid md:flex-1 md:content-start md:overflow-visible">
+          <nav className="flex gap-2 overflow-x-auto pb-1 xl:grid xl:flex-1 xl:content-start xl:overflow-visible xl:pb-0">
             {navItems.map((item) => {
               const isActive = item.activeKey === activePage;
               const Icon = item.icon;
@@ -211,7 +211,7 @@ export function DashboardShell({
               );
             })}
           </nav>
-          <div className="mt-5 hidden rounded-lg border border-sidebar-border bg-sidebar-accent/40 p-3 md:block">
+          <div className="mt-5 hidden rounded-lg border border-sidebar-border bg-sidebar-accent/40 p-3 xl:block">
             <p className="truncate text-sm font-medium">{displayName}</p>
             <p className="mt-1 text-xs capitalize text-muted-foreground">
               {roleLabel}
@@ -219,14 +219,14 @@ export function DashboardShell({
           </div>
         </aside>
 
-        <section className="flex-1 px-6 py-8 md:px-8 lg:px-10">
+        <section className="flex-1 px-4 py-6 sm:px-6 lg:px-8 xl:px-10">
           <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
             <header className="flex flex-col gap-4 border-b border-border pb-6 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">
                   {instituteName}
                 </p>
-                <h1 className="mt-2 text-3xl font-semibold tracking-tight">
+                <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
                   {title}
                 </h1>
                 <p className="mt-2 text-muted-foreground">

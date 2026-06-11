@@ -1003,7 +1003,7 @@ export default async function AttendancePage({
                             <legend className="sr-only">
                               Attendance status for {student.full_name}
                             </legend>
-                            <div className="grid grid-cols-3 gap-2 sm:w-[300px]">
+                            <div className="grid w-full grid-cols-3 gap-2 lg:w-[300px]">
                               {statusOptions.map((option) => {
                                 const inputId = `${student.id}-${option.value}`;
                                 const isSelected =
@@ -1071,7 +1071,7 @@ export default async function AttendancePage({
                               {student.phone ?? "Phone not added"}
                             </p>
                           </div>
-                          <div className="grid grid-cols-3 gap-2 sm:w-[300px]">
+                          <div className="grid w-full grid-cols-3 gap-2 lg:w-[300px]">
                             {statusOptions.map((option) => {
                               const isSelected =
                                 currentStatus === option.value;
@@ -1458,7 +1458,7 @@ export default async function AttendancePage({
                             {student?.phone ?? "Phone not added"}
                           </p>
                         </div>
-                        <div className="grid grid-cols-3 gap-2 sm:w-[300px]">
+                        <div className="grid w-full grid-cols-3 gap-2 lg:w-[300px]">
                           {statusOptions.map((option) => (
                             <span
                               key={option.value}

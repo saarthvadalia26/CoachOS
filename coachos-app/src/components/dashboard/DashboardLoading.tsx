@@ -15,8 +15,8 @@ export function DashboardLoading() {
       aria-label="Loading dashboard"
       className="min-h-full bg-background text-foreground"
     >
-      <div className="flex min-h-full flex-col md:flex-row">
-        <aside className="border-b border-sidebar-border bg-sidebar px-4 py-4 text-sidebar-foreground md:min-h-screen md:w-64 md:border-b-0 md:border-r md:px-5">
+      <div className="flex min-h-full flex-col xl:flex-row">
+        <aside className="border-b border-sidebar-border bg-sidebar px-4 py-4 text-sidebar-foreground xl:min-h-screen xl:w-64 xl:border-b-0 xl:border-r xl:px-5">
           <div className="mb-5">
             <div className="flex items-center gap-2">
               <SkeletonBlock className="size-8 rounded-lg" />
@@ -24,19 +24,19 @@ export function DashboardLoading() {
             </div>
             <SkeletonBlock className="mt-3 h-4 w-36" />
           </div>
-          <div className="flex gap-2 overflow-hidden md:grid">
+          <div className="flex gap-2 overflow-hidden xl:grid">
             {Array.from({ length: 7 }).map((_, index) => (
-              <SkeletonBlock key={index} className="h-9 w-28 md:w-full" />
+              <SkeletonBlock key={index} className="h-9 w-28 xl:w-full" />
             ))}
           </div>
         </aside>
 
-        <section className="flex-1 px-6 py-8 md:px-8 lg:px-10">
+        <section className="flex-1 px-4 py-6 sm:px-6 lg:px-8 xl:px-10">
           <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
             <header className="flex flex-col gap-4 border-b border-border pb-6 sm:flex-row sm:items-center sm:justify-between">
               <div className="grid gap-3">
                 <SkeletonBlock className="h-4 w-44" />
-                <SkeletonBlock className="h-9 w-64" />
+                <SkeletonBlock className="h-9 w-48 sm:w-64" />
                 <SkeletonBlock className="h-4 w-56" />
               </div>
               <SkeletonBlock className="h-8 w-24" />

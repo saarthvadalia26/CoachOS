@@ -81,7 +81,7 @@ export default async function BranchesPage({
       <section
         className={
           canManageBranches
-            ? "grid gap-6 lg:grid-cols-[360px_1fr]"
+            ? "grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]"
             : "grid gap-6"
         }
       >

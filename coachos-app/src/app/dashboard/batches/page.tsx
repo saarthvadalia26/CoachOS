@@ -459,7 +459,7 @@ export default async function BatchesPage({ searchParams }: BatchesPageProps) {
         <div
           className={
             canManageBatches
-              ? "grid gap-6 lg:grid-cols-[360px_1fr]"
+              ? "grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]"
               : "grid gap-6"
           }
         >

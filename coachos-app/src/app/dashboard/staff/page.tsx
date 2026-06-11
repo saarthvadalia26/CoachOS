@@ -380,7 +380,7 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
             </CardContent>
           </Card>
         ) : (
-          <section className="grid gap-6 lg:grid-cols-[360px_1fr]">
+          <section className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
             <Card id="add-staff-member">
               <CardHeader>
                 <CardTitle className="text-xl">Add staff member</CardTitle>

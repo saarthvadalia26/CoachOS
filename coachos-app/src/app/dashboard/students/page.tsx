@@ -232,7 +232,7 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
         <div
           className={
             canManageStudents
-              ? "grid gap-6 lg:grid-cols-[360px_1fr]"
+              ? "grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]"
               : "grid gap-6"
           }
         >

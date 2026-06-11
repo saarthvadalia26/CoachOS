@@ -439,7 +439,9 @@ export default async function FeesPage({ searchParams }: FeesPageProps) {
 
         <div
           className={
-            canManageFees ? "grid gap-6 lg:grid-cols-[360px_1fr]" : "grid gap-6"
+            canManageFees
+              ? "grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]"
+              : "grid gap-6"
           }
         >
           {canCreateFees ? (
