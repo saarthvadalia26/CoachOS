@@ -21,13 +21,20 @@ export default function Icon() {
         }}
       >
         <svg
-          width="18"
+          width="20"
           height="18"
-          viewBox="0 0 24 24"
+          viewBox="0 0 28 24"
           fill="none"
         >
           <path
-            d="M8 4L18 12L8 20"
+            d="M4 4L12 12L4 20"
+            stroke="white"
+            strokeWidth="3.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M15 4L23 12L15 20"
             stroke="white"
             strokeWidth="3.5"
             strokeLinecap="round"
