@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import type { NotificationItem } from "@/lib/communication/constants";
-import { errorToast } from "@/lib/toast";
+import { errorToast, successToast } from "@/lib/toast";
 
 export const notificationPollIntervalMs = 25_000;
 
@@ -138,6 +138,7 @@ export function useNotificationFeed({
           notificationId,
         }),
       );
+      successToast("Notification marked as read.");
     } catch {
       setNotifications(previousNotifications);
       setUnreadCount(previousUnreadCount);
@@ -167,6 +168,7 @@ export function useNotificationFeed({
           limit,
         }),
       );
+      successToast("Notifications marked as read.");
     } catch {
       setNotifications(previousNotifications);
       setUnreadCount(previousUnreadCount);
