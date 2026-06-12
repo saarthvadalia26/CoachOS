@@ -340,12 +340,12 @@ export default async function FeesPage({ searchParams }: FeesPageProps) {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form className="grid gap-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <Label className="min-w-0 w-full">
+            <form className="grid min-w-0 gap-4">
+              <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-2">
+                <Label className="w-full min-w-0">
                   Search
                   <Input
-                    className="min-w-0"
+                    className="box-border h-10 w-full min-w-0"
                     name="q"
                     type="search"
                     defaultValue={searchTerm}
@@ -353,12 +353,12 @@ export default async function FeesPage({ searchParams }: FeesPageProps) {
                   />
                 </Label>
                 {branchScope.showOwnerBranchFilter ? (
-                  <Label className="min-w-0 w-full">
+                  <Label className="w-full min-w-0">
                     Branch
                     <select
                       name="branchId"
                       defaultValue={branchScope.selectedBranchId ?? ""}
-                      className="h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
+                      className="box-border h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
                     >
                       <option value="">All branches</option>
                       {accessibleBranches.map((branch) => (
@@ -369,12 +369,12 @@ export default async function FeesPage({ searchParams }: FeesPageProps) {
                     </select>
                   </Label>
                 ) : null}
-                <Label className="min-w-0 w-full">
+                <Label className="w-full min-w-0">
                   Status
                   <select
                     name="status"
                     defaultValue={selectedStatus}
-                    className="h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
+                    className="box-border h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
                   >
                     <option value="">All statuses</option>
                     <option value="pending">Pending</option>
@@ -382,26 +382,26 @@ export default async function FeesPage({ searchParams }: FeesPageProps) {
                     <option value="overdue">Overdue</option>
                   </select>
                 </Label>
-                <Label className="min-w-0 w-full">
+                <Label className="w-full min-w-0">
                   Due from
                   <Input
-                    className="min-w-0"
+                    className="box-border h-10 w-full min-w-0"
                     name="startDate"
                     type="date"
                     defaultValue={startDate}
                   />
                 </Label>
-                <Label className="min-w-0 w-full">
+                <Label className="w-full min-w-0">
                   Due to
                   <Input
-                    className="min-w-0"
+                    className="box-border h-10 w-full min-w-0"
                     name="endDate"
                     type="date"
                     defaultValue={endDate}
                   />
                 </Label>
               </div>
-              <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+              <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
                 <SubmitButton
                   className="w-full sm:w-auto"
                   pendingLabel="Filtering..."
