@@ -1,12 +1,12 @@
+"use client";
+
 import Link from "next/link";
 import { Bell, CheckCheck } from "lucide-react";
+import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  markAllNotificationsRead,
-  markNotificationRead,
-} from "@/lib/communication/actions";
+import { useNotificationFeed } from "@/components/dashboard/use-notification-feed";
 import type { NotificationItem } from "@/lib/communication/constants";
 import { formatDate } from "@/lib/formatters/date";
 
@@ -32,11 +32,23 @@ type NotificationBellProps = {
 };
 
 export function NotificationBell({
-  notifications,
-  unreadCount,
+  notifications: initialNotifications,
+  unreadCount: initialUnreadCount,
 }: NotificationBellProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const { markAllRead, markRead, notifications, pendingAction, unreadCount } =
+    useNotificationFeed({
+      initialNotifications,
+      initialUnreadCount,
+      limit: 8,
+    });
+
   return (
-    <details className="relative">
+    <details
+      className="relative"
+      onToggle={(event) => setIsOpen(event.currentTarget.open)}
+      open={isOpen}
+    >
       <summary className="group flex h-9 cursor-pointer list-none items-center justify-center rounded-lg border border-border bg-card px-3 text-sm font-medium transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 [&::-webkit-details-marker]:hidden">
         <span className="sr-only">Open notifications</span>
         <Bell aria-hidden="true" className="size-4" />
@@ -56,17 +68,16 @@ export function NotificationBell({
             </p>
           </div>
           {unreadCount ? (
-            <form action={markAllNotificationsRead}>
-              <input
-                type="hidden"
-                name="next"
-                value="/dashboard/communication"
-              />
-              <Button size="sm" variant="ghost">
-                <CheckCheck aria-hidden="true" data-icon="inline-start" />
-                Mark all
-              </Button>
-            </form>
+            <Button
+              disabled={pendingAction !== null}
+              onClick={() => void markAllRead()}
+              size="sm"
+              type="button"
+              variant="ghost"
+            >
+              <CheckCheck aria-hidden="true" data-icon="inline-start" />
+              Mark all
+            </Button>
           ) : null}
         </div>
 
@@ -112,21 +123,18 @@ export function NotificationBell({
                   </div>
 
                   {notification.unread ? (
-                    <form action={markNotificationRead} className="mt-2">
-                      <input
-                        type="hidden"
-                        name="notificationId"
-                        value={notification.id}
-                      />
-                      <input
-                        type="hidden"
-                        name="next"
-                        value="/dashboard/communication"
-                      />
-                      <Button size="sm" variant="ghost">
-                        Mark as read
-                      </Button>
-                    </form>
+                    <Button
+                      className="mt-2"
+                      disabled={pendingAction !== null}
+                      onClick={() => void markRead(notification.id)}
+                      size="sm"
+                      type="button"
+                      variant="ghost"
+                    >
+                      {pendingAction === notification.id
+                        ? "Updating..."
+                        : "Mark as read"}
+                    </Button>
                   ) : null}
                 </li>
               ))}

@@ -166,6 +166,12 @@ export async function DashboardShell({
   const displayName = userName?.trim() || userEmail || "your account";
   const roleLabel = role.replaceAll("_", " ");
   const notificationData = await getNotificationBellData();
+  const notificationKey = [
+    notificationData.unreadCount,
+    ...notificationData.notifications.map(
+      (notification) => `${notification.id}:${notification.unread}`,
+    ),
+  ].join("|");
 
   return (
     <main className="min-h-full bg-background text-foreground">
@@ -256,6 +262,7 @@ export async function DashboardShell({
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <NotificationBell
+                  key={notificationKey}
                   notifications={notificationData.notifications}
                   unreadCount={notificationData.unreadCount}
                 />

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
-import { Bell, Megaphone, Save, Send, Trash2 } from "lucide-react";
+import { Megaphone, Save, Send, Trash2 } from "lucide-react";
 
 import { ActionMessage } from "@/components/dashboard/ActionMessage";
+import { CommunicationNotificationsPanel } from "@/components/dashboard/CommunicationNotificationsPanel";
 import { ConfirmSubmitButton } from "@/components/dashboard/ConfirmSubmitButton";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { EmptyState } from "@/components/dashboard/EmptyState";
@@ -25,8 +26,6 @@ import {
   deleteAnnouncement,
   listAnnouncements,
   listNotifications,
-  markAllNotificationsRead,
-  markNotificationRead,
   updateAnnouncement,
 } from "@/lib/communication/actions";
 import {
@@ -34,7 +33,6 @@ import {
   communicationPriorities,
   type CommunicationAudience,
   type CommunicationPriority,
-  type NotificationItem,
 } from "@/lib/communication/constants";
 import { formatTimestamp } from "@/lib/formatters/date";
 
@@ -102,22 +100,6 @@ function getPriorityVariant(priority: string) {
   }
 
   return "outline" as const;
-}
-
-function getNotificationTypeLabel(type: NotificationItem["type"]) {
-  if (type === "fee_reminder") {
-    return "Fee follow-up";
-  }
-
-  if (type === "attendance_alert") {
-    return "Attendance alert";
-  }
-
-  if (type === "system") {
-    return "System notice";
-  }
-
-  return "Announcement";
 }
 
 function getBranchLabel(
@@ -448,114 +430,6 @@ function AnnouncementCard({
   );
 }
 
-function NotificationsPanel({
-  notifications,
-}: {
-  notifications: NotificationItem[];
-}) {
-  const unreadCount = notifications.filter((notification) => notification.unread)
-    .length;
-
-  return (
-    <Card>
-      <CardHeader className="gap-3 sm:grid-cols-[1fr_auto] sm:items-start">
-        <div>
-          <CardTitle className="flex items-center gap-2 text-xl">
-            <Bell aria-hidden="true" className="size-5 text-muted-foreground" />
-            Notifications
-          </CardTitle>
-          <CardDescription>
-            Role-aware notices for your institute and branch.
-          </CardDescription>
-        </div>
-        {unreadCount ? (
-          <form action={markAllNotificationsRead}>
-            <input name="next" type="hidden" value="/dashboard/communication" />
-            <SubmitButton
-              className="w-full sm:w-auto"
-              pendingLabel="Updating..."
-              variant="outline"
-            >
-              Mark all as read
-            </SubmitButton>
-          </form>
-        ) : null}
-      </CardHeader>
-      <CardContent>
-        {notifications.length ? (
-          <div className="divide-y divide-border rounded-lg border border-border">
-            {notifications.map((notification) => (
-              <article
-                key={notification.id}
-                className={
-                  notification.unread
-                    ? "grid gap-3 bg-primary/5 p-4"
-                    : "grid gap-3 p-4"
-                }
-              >
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="min-w-0">
-                    <h3 className="break-words font-medium">
-                      {notification.title}
-                    </h3>
-                    <p className="mt-1 break-words text-sm leading-6 text-muted-foreground">
-                      {notification.body}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 flex-wrap items-start gap-2 sm:justify-end">
-                    {notification.unread ? (
-                      <Badge>Unread</Badge>
-                    ) : (
-                      <Badge variant="outline">Read</Badge>
-                    )}
-                    <Badge variant={getPriorityVariant(notification.priority)}>
-                      {getPriorityLabel(notification.priority)}
-                    </Badge>
-                    <Badge variant="outline">
-                      {getNotificationTypeLabel(notification.type)}
-                    </Badge>
-                  </div>
-                </div>
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-sm text-muted-foreground">
-                    {formatTimestamp(notification.created_at)}
-                  </p>
-                  {notification.unread ? (
-                    <form action={markNotificationRead}>
-                      <input
-                        name="notificationId"
-                        type="hidden"
-                        value={notification.id}
-                      />
-                      <input
-                        name="next"
-                        type="hidden"
-                        value="/dashboard/communication"
-                      />
-                      <SubmitButton
-                        className="w-full sm:w-auto"
-                        pendingLabel="Updating..."
-                        variant="outline"
-                      >
-                        Mark as read
-                      </SubmitButton>
-                    </form>
-                  ) : null}
-                </div>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <EmptyState
-            title="No notifications yet"
-            description="Notifications will appear here when announcements, fee follow-ups, or attendance alerts are created for your role."
-          />
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
 export default async function CommunicationPage({
   searchParams,
 }: CommunicationPageProps) {
@@ -571,6 +445,9 @@ export default async function CommunicationPage({
   );
   const canCreate = canCreateAnnouncement(context);
   const hasLoadError = Boolean(error);
+  const notificationPanelKey = notificationResult.notifications
+    .map((notification) => `${notification.id}:${notification.unread}`)
+    .join("|");
 
   return (
     <DashboardShell
@@ -604,7 +481,10 @@ export default async function CommunicationPage({
 
         {canCreate ? <AnnouncementComposer context={context} /> : null}
 
-        <NotificationsPanel notifications={notificationResult.notifications} />
+        <CommunicationNotificationsPanel
+          key={notificationPanelKey}
+          notifications={notificationResult.notifications}
+        />
 
         <div className="grid gap-4">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">

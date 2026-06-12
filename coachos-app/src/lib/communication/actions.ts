@@ -15,8 +15,14 @@ import {
   communicationPriorities,
   type CommunicationAudience,
   type CommunicationPriority,
-  type NotificationItem,
 } from "@/lib/communication/constants";
+import {
+  attachNotificationReadState,
+  getNotificationFeed,
+  getVisibleNotificationRows,
+  markAllNotificationsReadForContext,
+  markNotificationReadForContext,
+} from "@/lib/communication/notifications";
 
 const COMMUNICATION_PATH = "/dashboard/communication";
 
@@ -65,6 +71,11 @@ function isNextRedirectError(error: unknown) {
 
 function redirectWithCommunicationError(message: string): never {
   redirectWith(COMMUNICATION_PATH, "error", message);
+}
+
+function revalidateCommunicationPaths() {
+  revalidatePath(COMMUNICATION_PATH);
+  revalidatePath("/dashboard", "layout");
 }
 
 function parseAudience(value: string): CommunicationAudience {
@@ -321,7 +332,7 @@ export async function createAnnouncement(formData: FormData) {
       throw notificationError;
     }
 
-    revalidatePath("/dashboard", "layout");
+    revalidateCommunicationPaths();
     redirectWith(COMMUNICATION_PATH, "success", "Announcement published.");
   } catch (error) {
     if (isNextRedirectError(error)) {
@@ -398,7 +409,7 @@ export async function updateAnnouncement(formData: FormData) {
       throw new Error("Could not update announcement.");
     }
 
-    revalidatePath("/dashboard", "layout");
+    revalidateCommunicationPaths();
     redirectWith(COMMUNICATION_PATH, "success", "Announcement updated.");
   } catch (error) {
     if (isNextRedirectError(error)) {
@@ -468,7 +479,7 @@ export async function deleteAnnouncement(formData: FormData) {
       throw new Error("Could not delete announcement.");
     }
 
-    revalidatePath("/dashboard", "layout");
+    revalidateCommunicationPaths();
     redirectWith(COMMUNICATION_PATH, "success", "Announcement deleted.");
   } catch (error) {
     if (isNextRedirectError(error)) {
@@ -514,67 +525,10 @@ export async function listAnnouncements(limit = 50) {
   return { announcements: data ?? [], context, error: false };
 }
 
-async function getVisibleNotificationRows(context: DashboardContext, limit = 50) {
-  const { data, error } = await context.supabase
-    .from("notification_items")
-    .select("id, branch_id, title, body, type, priority, created_at")
-    .eq("institute_id", context.institute.id)
-    .order("created_at", { ascending: false })
-    .limit(limit);
-
-  if (error) {
-    console.error("notification list failed", {
-      code: error.code,
-      details: error.details,
-      hint: error.hint,
-      instituteId: context.institute.id,
-      message: error.message,
-      role: context.role,
-    });
-
-    return [];
-  }
-
-  return data ?? [];
-}
-
-async function attachReadState(
-  context: DashboardContext,
-  rows: Array<Omit<NotificationItem, "unread">>,
-) {
-  if (!rows.length) {
-    return [];
-  }
-
-  const ids = rows.map((row) => row.id);
-  const { data: readRows, error } = await context.supabase
-    .from("notification_reads")
-    .select("notification_id")
-    .eq("user_id", context.claims.sub)
-    .in("notification_id", ids);
-
-  if (error) {
-    console.error("notification read lookup failed", {
-      code: error.code,
-      details: error.details,
-      hint: error.hint,
-      message: error.message,
-      userId: context.claims.sub,
-    });
-  }
-
-  const readIds = new Set((readRows ?? []).map((row) => row.notification_id));
-
-  return rows.map((row) => ({
-    ...row,
-    unread: !readIds.has(row.id),
-  }));
-}
-
 export async function listNotifications(limit = 50) {
   const context = await requirePermission("notifications.view");
   const rows = await getVisibleNotificationRows(context, limit);
-  const notifications = await attachReadState(context, rows);
+  const notifications = await attachNotificationReadState(context, rows);
 
   return { context, notifications };
 }
@@ -586,14 +540,7 @@ export async function getNotificationBellData(limit = 8) {
     return { notifications: [], unreadCount: 0 };
   }
 
-  const rows = await getVisibleNotificationRows(context, 100);
-  const notifications = await attachReadState(context, rows);
-
-  return {
-    notifications: notifications.slice(0, limit),
-    unreadCount: notifications.filter((notification) => notification.unread)
-      .length,
-  };
+  return getNotificationFeed(context, limit);
 }
 
 export async function getUnreadNotificationCount() {
@@ -612,38 +559,9 @@ export async function markNotificationRead(formData: FormData) {
       "notificationId",
       "Notification",
     );
-    const { data: notification, error: notificationError } =
-      await context.supabase
-        .from("notification_items")
-        .select("id")
-        .eq("id", notificationId)
-        .maybeSingle();
+    await markNotificationReadForContext(context, notificationId);
 
-    if (notificationError || !notification) {
-      throw new Error("Notification could not be verified.");
-    }
-
-    const { error } = await context.supabase.from("notification_reads").upsert(
-      {
-        notification_id: notificationId,
-        user_id: context.claims.sub,
-      },
-      { onConflict: "notification_id,user_id" },
-    );
-
-    if (error) {
-      console.error("markNotificationRead failed", {
-        code: error.code,
-        details: error.details,
-        hint: error.hint,
-        message: error.message,
-        notificationId,
-        userId: context.claims.sub,
-      });
-      throw new Error("Notification could not be marked as read.");
-    }
-
-    revalidatePath("/dashboard", "layout");
+    revalidateCommunicationPaths();
     redirectWith(nextPath, "success", "Notification marked as read.");
   } catch (error) {
     if (isNextRedirectError(error)) {
@@ -659,30 +577,9 @@ export async function markAllNotificationsRead(formData: FormData) {
   const nextPath = getSafeNextPath(formData);
 
   try {
-    const rows = await getVisibleNotificationRows(context, 500);
-    const readRows = rows.map((row) => ({
-      notification_id: row.id,
-      user_id: context.claims.sub,
-    }));
+    await markAllNotificationsReadForContext(context);
 
-    if (readRows.length) {
-      const { error } = await context.supabase
-        .from("notification_reads")
-        .upsert(readRows, { onConflict: "notification_id,user_id" });
-
-      if (error) {
-        console.error("markAllNotificationsRead failed", {
-          code: error.code,
-          details: error.details,
-          hint: error.hint,
-          message: error.message,
-          userId: context.claims.sub,
-        });
-        throw new Error("Notifications could not be marked as read.");
-      }
-    }
-
-    revalidatePath("/dashboard", "layout");
+    revalidateCommunicationPaths();
     redirectWith(nextPath, "success", "Notifications marked as read.");
   } catch (error) {
     if (isNextRedirectError(error)) {
@@ -759,7 +656,7 @@ export async function createFeeReminderNotification(formData: FormData) {
       type: "fee_reminder",
     });
 
-    revalidatePath("/dashboard", "layout");
+    revalidateCommunicationPaths();
     redirectWith(nextPath, "success", "Fee reminder created.");
   } catch (error) {
     if (isNextRedirectError(error)) {
@@ -794,7 +691,7 @@ export async function createAttendanceAlertNotification(formData: FormData) {
       type: "attendance_alert",
     });
 
-    revalidatePath("/dashboard", "layout");
+    revalidateCommunicationPaths();
     redirectWith(nextPath, "success", "Attendance alert created.");
   } catch (error) {
     if (isNextRedirectError(error)) {
