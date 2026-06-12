@@ -17,11 +17,28 @@ function getAuthData(formData: FormData) {
 function getNextPath(formData: FormData) {
   const next = formData.get("next");
 
-  if (typeof next === "string" && next.startsWith("/") && !next.startsWith("//")) {
+  if (
+    typeof next === "string" &&
+    next.startsWith("/") &&
+    !next.startsWith("//")
+  ) {
     return next;
   }
 
   return "/dashboard";
+}
+
+function withToastParam(
+  path: string,
+  key: "error" | "message" | "success",
+  value: string,
+) {
+  const [pathname, queryString = ""] = path.split("?");
+  const params = new URLSearchParams(queryString);
+
+  params.set(key, value);
+
+  return `${pathname}?${params.toString()}`;
 }
 
 async function getAppOrigin() {
@@ -78,7 +95,9 @@ export async function login(formData: FormData) {
   }
 
   revalidatePath("/", "layout");
-  redirect(getNextPath(formData));
+  redirect(
+    withToastParam(getNextPath(formData), "success", "Signed in successfully."),
+  );
 }
 
 export async function signup(formData: FormData) {
@@ -210,5 +229,5 @@ export async function logout() {
   await supabase.auth.signOut();
 
   revalidatePath("/", "layout");
-  redirect("/login");
+  redirect("/login?message=Signed%20out%20successfully.");
 }

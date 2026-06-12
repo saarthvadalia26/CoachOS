@@ -13,13 +13,7 @@ export const metadata: Metadata = {
   title: "Create Account",
 };
 
-type SignupPageProps = {
-  searchParams: Promise<{
-    error?: string;
-  }>;
-};
-
-export default async function SignupPage({ searchParams }: SignupPageProps) {
+export default async function SignupPage() {
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
   const claims = data?.claims;
@@ -27,8 +21,6 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
   if (claims) {
     redirect("/dashboard");
   }
-
-  const params = await searchParams;
 
   return (
     <main className="flex min-h-full items-center justify-center bg-background px-6 py-16 text-foreground">
@@ -44,12 +36,6 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
             Create the owner account for your coaching institute and complete setup in the dashboard.
           </p>
         </div>
-
-        {params.error ? (
-          <p className="mt-5 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-            {params.error}
-          </p>
-        ) : null}
 
         <form action={signup} className="mt-6 grid gap-4">
           <Label>

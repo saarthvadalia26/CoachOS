@@ -448,12 +448,10 @@ export default async function BatchesPage({ searchParams }: BatchesPageProps) {
 
         <ActionMessage
           error={
-            params.error ??
-            (queryError
+            queryError
               ? "Batch records are unavailable right now. Please try again."
-              : null)
+              : null
           }
-          success={params.success}
         />
 
         <div

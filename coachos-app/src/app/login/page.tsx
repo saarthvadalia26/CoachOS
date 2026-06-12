@@ -15,8 +15,6 @@ export const metadata: Metadata = {
 
 type LoginPageProps = {
   searchParams: Promise<{
-    error?: string;
-    message?: string;
     next?: string;
   }>;
 };
@@ -46,18 +44,6 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             Access your students, batches, attendance, and fees from one secure dashboard.
           </p>
         </div>
-
-        {params.error ? (
-          <p className="mt-5 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-            {params.error}
-          </p>
-        ) : null}
-
-        {params.message ? (
-          <p className="mt-5 rounded-md border border-border bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
-            {params.message}
-          </p>
-        ) : null}
 
         <form action={login} className="mt-6 grid gap-4">
           <input type="hidden" name="next" value={params.next ?? "/dashboard"} />

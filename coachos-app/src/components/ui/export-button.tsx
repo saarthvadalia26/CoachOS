@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { Download, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { infoToast } from "@/lib/toast";
 
 type ExportButtonProps = Omit<ComponentProps<typeof Button>, "asChild"> & {
   disabledReason?: string;
@@ -39,6 +40,7 @@ export function ExportButton({
     }
 
     setIsExporting(true);
+    infoToast("Export started.");
     window.location.assign(href);
 
     if (resetTimerRef.current) {

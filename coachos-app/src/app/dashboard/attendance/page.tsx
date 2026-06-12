@@ -847,12 +847,10 @@ export default async function AttendancePage({
             <ActionMessage
               className="mb-4"
               error={
-                params.error ??
-                (queryError
+                queryError
                   ? "Attendance records are unavailable right now. Please try again."
-                  : null)
+                  : null
               }
-              success={params.success}
             />
 
             <form className="grid gap-3 sm:grid-cols-[1fr_auto]">

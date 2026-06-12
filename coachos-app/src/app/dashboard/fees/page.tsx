@@ -340,17 +340,12 @@ export default async function FeesPage({ searchParams }: FeesPageProps) {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form className="grid gap-3">
-              <div
-                className={
-                  branchScope.showOwnerBranchFilter
-                    ? "grid gap-3 md:grid-cols-2 xl:grid-cols-5"
-                    : "grid gap-3 md:grid-cols-2 xl:grid-cols-4"
-                }
-              >
-                <Label>
+            <form className="grid gap-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <Label className="min-w-0 w-full">
                   Search
                   <Input
+                    className="min-w-0"
                     name="q"
                     type="search"
                     defaultValue={searchTerm}
@@ -358,12 +353,12 @@ export default async function FeesPage({ searchParams }: FeesPageProps) {
                   />
                 </Label>
                 {branchScope.showOwnerBranchFilter ? (
-                  <Label>
+                  <Label className="min-w-0 w-full">
                     Branch
                     <select
                       name="branchId"
                       defaultValue={branchScope.selectedBranchId ?? ""}
-                      className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
+                      className="h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
                     >
                       <option value="">All branches</option>
                       {accessibleBranches.map((branch) => (
@@ -374,12 +369,12 @@ export default async function FeesPage({ searchParams }: FeesPageProps) {
                     </select>
                   </Label>
                 ) : null}
-                <Label>
+                <Label className="min-w-0 w-full">
                   Status
                   <select
                     name="status"
                     defaultValue={selectedStatus}
-                    className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
+                    className="h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
                   >
                     <option value="">All statuses</option>
                     <option value="pending">Pending</option>
@@ -387,17 +382,23 @@ export default async function FeesPage({ searchParams }: FeesPageProps) {
                     <option value="overdue">Overdue</option>
                   </select>
                 </Label>
-                <Label>
+                <Label className="min-w-0 w-full">
                   Due from
                   <Input
+                    className="min-w-0"
                     name="startDate"
                     type="date"
                     defaultValue={startDate}
                   />
                 </Label>
-                <Label>
+                <Label className="min-w-0 w-full">
                   Due to
-                  <Input name="endDate" type="date" defaultValue={endDate} />
+                  <Input
+                    className="min-w-0"
+                    name="endDate"
+                    type="date"
+                    defaultValue={endDate}
+                  />
                 </Label>
               </div>
               <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
@@ -429,12 +430,10 @@ export default async function FeesPage({ searchParams }: FeesPageProps) {
 
         <ActionMessage
           error={
-            params.error ??
-            (queryError
+            queryError
               ? "Fee records are unavailable right now. Please try again."
-              : null)
+              : null
           }
-          success={params.success}
         />
 
         <div

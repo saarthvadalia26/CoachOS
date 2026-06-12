@@ -12,23 +12,13 @@ export const metadata: Metadata = {
   title: "Set New Password",
 };
 
-type ResetPasswordPageProps = {
-  searchParams: Promise<{
-    error?: string;
-    message?: string;
-  }>;
-};
-
-export default async function ResetPasswordPage({
-  searchParams,
-}: ResetPasswordPageProps) {
+export default async function ResetPasswordPage() {
   const supabase = await createClient();
   const cookieStore = await cookies();
   const { data } = await supabase.auth.getClaims();
   const hasRecoveryMarker =
     cookieStore.get(passwordRecoveryCookieName)?.value === "1";
   const hasResetSession = Boolean(data?.claims && hasRecoveryMarker);
-  const params = await searchParams;
 
   return (
     <main className="flex min-h-full items-center justify-center bg-background px-6 py-16 text-foreground">
@@ -44,18 +34,6 @@ export default async function ResetPasswordPage({
             Choose a secure password for your CoachOS account.
           </p>
         </div>
-
-        {params.error ? (
-          <p className="mt-5 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-            {params.error}
-          </p>
-        ) : null}
-
-        {params.message ? (
-          <p className="mt-5 rounded-md border border-border bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
-            {params.message}
-          </p>
-        ) : null}
 
         {hasResetSession ? (
           <form action={updatePassword} className="mt-6 grid gap-4">

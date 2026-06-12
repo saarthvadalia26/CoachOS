@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { errorToast, successToast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
 const formspreeEndpoint = process.env.NEXT_PUBLIC_FORMSPREE_ENDPOINT ?? "";
@@ -194,9 +195,11 @@ export function ContactForm() {
     }
 
     if (!formspreeEndpoint) {
-      setErrorMessage(
-        "The contact form is not configured yet. Please try again later.",
-      );
+      const message =
+        "The contact form is not configured yet. Please try again later.";
+
+      setErrorMessage(message);
+      errorToast(message);
       return;
     }
 
@@ -225,8 +228,12 @@ export function ContactForm() {
       }
 
       setIsSubmitted(true);
+      successToast("Demo request submitted. We'll contact you shortly.");
     } catch {
-      setErrorMessage("Your request could not be submitted. Please try again.");
+      const message = "Your request could not be submitted. Please try again.";
+
+      setErrorMessage(message);
+      errorToast(message);
     } finally {
       setIsSubmitting(false);
     }

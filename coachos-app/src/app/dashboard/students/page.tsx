@@ -221,12 +221,10 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
 
         <ActionMessage
           error={
-            params.error ??
-            (studentsError
+            studentsError
               ? "Student records are unavailable right now. Please try again."
-              : null)
+              : null
           }
-          success={params.success}
         />
 
         <div

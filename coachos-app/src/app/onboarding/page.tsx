@@ -14,17 +14,8 @@ export const metadata: Metadata = {
   title: "Institute Setup",
 };
 
-type OnboardingPageProps = {
-  searchParams: Promise<{
-    error?: string;
-  }>;
-};
-
-export default async function OnboardingPage({
-  searchParams,
-}: OnboardingPageProps) {
+export default async function OnboardingPage() {
   const { profile, staffLinkStatus } = await getCurrentUserContext();
-  const params = await searchParams;
   const staffLinkMessage = getStaffLinkStatusMessage(staffLinkStatus);
 
   // If this account matches a staff_members record, getCurrentUserContext()
@@ -33,8 +24,6 @@ export default async function OnboardingPage({
   if (profile?.institute_id) {
     redirect("/dashboard");
   }
-
-  const blockingMessage = staffLinkMessage || params.error;
 
   return (
     <main className="flex min-h-full items-center justify-center bg-background px-6 py-16 text-foreground">
@@ -50,9 +39,9 @@ export default async function OnboardingPage({
           </p>
         </div>
 
-        {blockingMessage ? (
+        {staffLinkMessage ? (
           <p className="mt-5 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-            {blockingMessage}
+            {staffLinkMessage}
           </p>
         ) : null}
 

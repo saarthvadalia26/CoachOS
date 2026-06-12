@@ -128,3 +128,15 @@
     @apply font-sans;
   }
 }
+
+@media (max-width: 640px) {
+  [data-sonner-toaster][data-position="top-right"] {
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%) !important;
+  }
+
+  [data-sonner-toast] {
+    max-width: calc(100vw - 2rem) !important;
+  }
+}

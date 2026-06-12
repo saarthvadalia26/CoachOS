@@ -25,13 +25,6 @@ import {
 import { canAccessPermission, requirePermission } from "@/lib/auth/permissions";
 import { formatDateRange } from "@/lib/formatters/date";
 
-type AcademicYearsPageProps = {
-  searchParams: Promise<{
-    error?: string;
-    success?: string;
-  }>;
-};
-
 export const metadata: Metadata = {
   title: "Academic Years",
 };
@@ -69,13 +62,10 @@ function getSupabaseErrorDetails(error: unknown) {
   };
 }
 
-export default async function AcademicYearsPage({
-  searchParams,
-}: AcademicYearsPageProps) {
+export default async function AcademicYearsPage() {
   const context = await requirePermission("academic_years.view");
   const { claims, currentMembership, institute, profile, role, supabase } =
     context;
-  const params = await searchParams;
   const canManageAcademicYears =
     role === "owner" &&
     canAccessPermission(context, "academic_years.create", {
@@ -132,12 +122,6 @@ export default async function AcademicYearsPage({
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ActionMessage
-                className="mb-4"
-                error={params.error}
-                success={params.success}
-              />
-
               <form action={createAcademicYear} className="grid gap-4">
                 <Label>
                   Name

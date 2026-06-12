@@ -193,5 +193,5 @@ export async function markFeeRecordPaid(formData: FormData) {
   }
 
   revalidatePath(FEES_PATH);
-  redirectWithSuccess("Fee record marked as paid.", feeRecord.branch_id);
+  redirectWithSuccess("Payment marked as paid.", feeRecord.branch_id);
 }

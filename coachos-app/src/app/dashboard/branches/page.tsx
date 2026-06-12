@@ -2,7 +2,6 @@ import { Building2, Plus, Save, Search } from "lucide-react";
 import Link from "next/link";
 import type { Metadata } from "next";
 
-import { ActionMessage } from "@/components/dashboard/ActionMessage";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { PaginationControls } from "@/components/dashboard/PaginationControls";
@@ -94,12 +93,6 @@ export default async function BranchesPage({
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ActionMessage
-                className="mb-4"
-                error={params.error}
-                success={params.success}
-              />
-
               <form action={createBranch} className="grid gap-4">
                 <Label>
                   Branch name
@@ -127,8 +120,6 @@ export default async function BranchesPage({
               </form>
             </CardContent>
           </Card>
-        ) : params.error ? (
-          <ActionMessage error={params.error} />
         ) : null}
 
         <div className="grid gap-4">

@@ -306,12 +306,10 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
 
         <ActionMessage
           error={
-            params.error ??
-            (staffError
+            staffError
               ? "Staff member records are unavailable right now. Please try again."
-              : null)
+              : null
           }
-          success={params.success}
         />
 
         {!canManageStaff ? (

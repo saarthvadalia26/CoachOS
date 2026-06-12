@@ -5,6 +5,7 @@ import {
   CalendarCheck,
   GraduationCap,
   LayoutDashboard,
+  MessageSquare,
   Receipt,
   Settings,
   Users,
@@ -19,6 +20,8 @@ import {
   type AppRole,
   type Permission,
 } from "@/lib/auth/permissions";
+import { getNotificationBellData } from "@/lib/communication/actions";
+import { NotificationBell } from "@/components/dashboard/NotificationBell";
 
 type DashboardPageKey =
   | "overview"
@@ -26,6 +29,7 @@ type DashboardPageKey =
   | "students"
   | "batches"
   | "attendance"
+  | "communication"
   | "fees"
   | "staff"
   | "settings";
@@ -105,6 +109,22 @@ const navItems: NavItem[] = [
     roles: ["owner", "branch_manager", "operations_staff", "accountant"],
   },
   {
+    label: "Communication",
+    href: "/dashboard/communication",
+    activeKey: "communication",
+    enabled: true,
+    icon: MessageSquare,
+    permission: "communications.view",
+    roles: [
+      "owner",
+      "branch_manager",
+      "operations_staff",
+      "accountant",
+      "academic_coordinator",
+      "teacher",
+    ],
+  },
+  {
     label: "Staff",
     href: "/dashboard/staff",
     activeKey: "staff",
@@ -134,7 +154,7 @@ type DashboardShellProps = {
   role: AppRole;
 };
 
-export function DashboardShell({
+export async function DashboardShell({
   activePage,
   instituteName,
   role,
@@ -145,6 +165,7 @@ export function DashboardShell({
 }: DashboardShellProps) {
   const displayName = userName?.trim() || userEmail || "your account";
   const roleLabel = role.replaceAll("_", " ");
+  const notificationData = await getNotificationBellData();
 
   return (
     <main className="min-h-full bg-background text-foreground">
@@ -234,6 +255,10 @@ export function DashboardShell({
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
+                <NotificationBell
+                  notifications={notificationData.notifications}
+                  unreadCount={notificationData.unreadCount}
+                />
                 <span className="rounded-md border border-border bg-card px-2.5 py-1 text-xs font-medium capitalize text-muted-foreground">
                   {roleLabel}
                 </span>

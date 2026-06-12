@@ -114,7 +114,7 @@ export async function createStudent(formData: FormData) {
 
   revalidatePath(STUDENTS_PATH);
   revalidatePath("/dashboard");
-  redirectWithSuccess("Student record created.", branchId);
+  redirectWithSuccess("Student added.", branchId);
 }
 
 export async function updateStudent(formData: FormData) {
@@ -171,7 +171,7 @@ export async function updateStudent(formData: FormData) {
   revalidatePath("/dashboard/batches");
   revalidatePath("/dashboard/attendance");
   revalidatePath("/dashboard/fees");
-  redirectWithSuccess("Student record updated.", existingStudent.branch_id);
+  redirectWithSuccess("Student updated.", existingStudent.branch_id);
 }
 
 export async function deleteStudent(formData: FormData) {
@@ -219,5 +219,5 @@ export async function deleteStudent(formData: FormData) {
   revalidatePath("/dashboard/batches");
   revalidatePath("/dashboard/attendance");
   revalidatePath("/dashboard/fees");
-  redirectWithSuccess("Student record deleted.", existingStudent.branch_id);
+  redirectWithSuccess("Student deleted.", existingStudent.branch_id);
 }
