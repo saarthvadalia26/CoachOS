@@ -2290,6 +2290,12 @@ as $$
         and public.role_has_permission(memberships.role, 'communications.view'::text)
         and (
           memberships.role = 'owner'
+          or announcements.created_by = auth.uid()
+          or (
+            announcements.branch_id is not null
+            and memberships.branch_id = announcements.branch_id
+            and public.role_has_permission(memberships.role, 'communications.update'::text)
+          )
           or (
             (announcements.branch_id is null or memberships.branch_id = announcements.branch_id)
             and public.communication_audience_matches(memberships.role, announcements.audience)
@@ -3526,7 +3532,13 @@ create policy announcements_insert_managers
   for insert
   to authenticated
   with check (
-    public.has_institute_permission(announcements.institute_id, 'communications.create'::text)
+    exists (
+      select 1
+      from public.institutes
+      where institutes.id = announcements.institute_id
+        and institutes.owner_id = auth.uid()
+    )
+    or public.has_institute_permission(announcements.institute_id, 'communications.create'::text)
     or (
       announcements.branch_id is not null
       and exists (
@@ -3585,7 +3597,13 @@ create policy notification_items_insert_managers
   for insert
   to authenticated
   with check (
-    public.has_institute_permission(notification_items.institute_id, 'communications.create'::text)
+    exists (
+      select 1
+      from public.institutes
+      where institutes.id = notification_items.institute_id
+        and institutes.owner_id = auth.uid()
+    )
+    or public.has_institute_permission(notification_items.institute_id, 'communications.create'::text)
     or (
       notification_items.branch_id is not null
       and exists (

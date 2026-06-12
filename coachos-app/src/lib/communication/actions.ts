@@ -72,7 +72,7 @@ function parseAudience(value: string): CommunicationAudience {
     return value as CommunicationAudience;
   }
 
-  return "all_staff";
+  throw new Error("Select a valid audience.");
 }
 
 function parsePriority(value: string): CommunicationPriority {
@@ -80,7 +80,40 @@ function parsePriority(value: string): CommunicationPriority {
     return value as CommunicationPriority;
   }
 
-  return "normal";
+  throw new Error("Select a valid priority.");
+}
+
+function logCommunicationSupabaseError({
+  announcementId,
+  branchId,
+  context,
+  error,
+  step,
+}: {
+  announcementId?: string;
+  branchId?: string | null;
+  context: DashboardContext;
+  error?: {
+    code?: string;
+    details?: string;
+    hint?: string;
+    message?: string;
+  } | null;
+  step: string;
+}) {
+  console.error("communication action failed", {
+    announcementId,
+    branchId,
+    code: error?.code,
+    details: error?.details,
+    hint: error?.hint,
+    instituteId: context.institute.id,
+    membershipId: context.currentMembership.id,
+    message: error?.message,
+    role: context.role,
+    step,
+    userId: context.claims.sub,
+  });
 }
 
 function getBranchName(
@@ -199,17 +232,16 @@ async function insertNotificationForAnnouncement({
     source_table: "announcements",
     title,
     type: "announcement",
+    user_id: null,
   });
 
   if (error) {
-    console.error("announcement notification insert failed", {
+    logCommunicationSupabaseError({
       announcementId,
       branchId,
-      code: error.code,
-      details: error.details,
-      hint: error.hint,
-      instituteId: context.institute.id,
-      message: error.message,
+      context,
+      error,
+      step: "announcement_notification_insert",
     });
     throw new Error("Announcement notification could not be created.");
   }
@@ -217,6 +249,8 @@ async function insertNotificationForAnnouncement({
 
 export async function createAnnouncement(formData: FormData) {
   const context = await requirePermission("communications.create");
+  let debugAnnouncementId: string | undefined;
+  let debugBranchId: string | null = null;
 
   try {
     const title = getRequiredString(formData, "title", "Title");
@@ -227,14 +261,18 @@ export async function createAnnouncement(formData: FormData) {
       context,
       getOptionalString(formData, "branchId"),
     );
+    debugBranchId = branchId;
 
     if (!canManageAnnouncementBranch(context, branchId, "communications.create")) {
       throw new Error("You do not have permission to perform this action.");
     }
 
-    const { data: announcement, error } = await context.supabase
+    const announcementId = crypto.randomUUID();
+    debugAnnouncementId = announcementId;
+    const { error } = await context.supabase
       .from("announcements")
       .insert({
+        id: announcementId,
         audience,
         body,
         branch_id: branchId,
@@ -242,26 +280,22 @@ export async function createAnnouncement(formData: FormData) {
         institute_id: context.institute.id,
         priority,
         title,
-      })
-      .select("id")
-      .single();
+      });
 
-    if (error || !announcement) {
-      console.error("createAnnouncement failed", {
+    if (error) {
+      logCommunicationSupabaseError({
+        announcementId,
         branchId,
-        code: error?.code,
-        details: error?.details,
-        hint: error?.hint,
-        instituteId: context.institute.id,
-        message: error?.message,
-        role: context.role,
+        context,
+        error,
+        step: "announcement_insert",
       });
       throw new Error("Could not publish announcement.");
     }
 
     try {
       await insertNotificationForAnnouncement({
-        announcementId: announcement.id,
+        announcementId,
         body,
         branchId,
         context,
@@ -269,10 +303,21 @@ export async function createAnnouncement(formData: FormData) {
         title,
       });
     } catch (notificationError) {
-      await context.supabase
+      const { error: rollbackError } = await context.supabase
         .from("announcements")
         .delete()
-        .eq("id", announcement.id);
+        .eq("id", announcementId);
+
+      if (rollbackError) {
+        logCommunicationSupabaseError({
+          announcementId,
+          branchId,
+          context,
+          error: rollbackError,
+          step: "announcement_rollback_after_notification_failure",
+        });
+      }
+
       throw notificationError;
     }
 
@@ -284,8 +329,11 @@ export async function createAnnouncement(formData: FormData) {
     }
 
     console.error("createAnnouncement action failed", {
+      announcementId: debugAnnouncementId,
+      branchId: debugBranchId,
       error: error instanceof Error ? error.message : "Unknown error",
       instituteId: context.institute.id,
+      membershipId: context.currentMembership.id,
       role: context.role,
       userId: context.claims.sub,
     });
@@ -704,7 +752,9 @@ export async function createFeeReminderNotification(formData: FormData) {
       branchId,
       context,
       permission: "fees.send_reminder",
-      priority: parsePriority(String(formData.get("priority") ?? "")),
+      priority: getOptionalString(formData, "priority")
+        ? parsePriority(String(formData.get("priority") ?? ""))
+        : "normal",
       title,
       type: "fee_reminder",
     });
@@ -737,7 +787,9 @@ export async function createAttendanceAlertNotification(formData: FormData) {
       branchId,
       context,
       permission: "attendance.alert",
-      priority: parsePriority(String(formData.get("priority") ?? "")),
+      priority: getOptionalString(formData, "priority")
+        ? parsePriority(String(formData.get("priority") ?? ""))
+        : "normal",
       title,
       type: "attendance_alert",
     });
