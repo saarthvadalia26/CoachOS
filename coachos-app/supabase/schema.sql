@@ -68,6 +68,8 @@ create table if not exists public.students (
   phone text,
   parent_phone text,
   status text default 'active',
+  archived_at timestamptz,
+  archived_by uuid references auth.users(id) on delete set null,
   created_at timestamptz default now()
 );
 
@@ -222,6 +224,12 @@ comment on column public.staff_members.role is
 -- Existing database compatibility: add Phase 1 columns if this is run over an
 -- MVP database.
 alter table public.students add column if not exists branch_id uuid;
+alter table public.students add column if not exists archived_at timestamptz;
+alter table public.students add column if not exists archived_by uuid references auth.users(id) on delete set null;
+comment on column public.students.archived_at is
+  'When set, the student is archived and hidden from the default active student list while history remains intact.';
+comment on column public.students.archived_by is
+  'Authenticated user who archived the student.';
 alter table public.batches add column if not exists branch_id uuid;
 alter table public.attendance_sessions add column if not exists branch_id uuid;
 alter table public.attendance_sessions add column if not exists academic_year_id uuid;
@@ -784,6 +792,12 @@ create index if not exists students_institute_id_idx
 
 create index if not exists students_branch_id_idx
   on public.students (branch_id);
+
+create index if not exists students_archived_at_idx
+  on public.students (archived_at);
+
+create index if not exists students_institute_archived_idx
+  on public.students (institute_id, archived_at);
 
 create index if not exists batches_institute_id_idx
   on public.batches (institute_id);

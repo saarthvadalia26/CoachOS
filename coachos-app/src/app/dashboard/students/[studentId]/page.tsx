@@ -2,6 +2,7 @@ import {
   ArrowLeft,
   CalendarCheck,
   Phone,
+  RotateCcw,
   UserRound,
   UsersRound,
 } from "lucide-react";
@@ -20,10 +21,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { canAccessPermission, requirePermission } from "@/lib/auth/permissions";
 import { getTodayDateValue } from "@/lib/attendance/date";
 import { getFeeStatus, type FeeStatus } from "@/lib/fees/status";
 import { formatDate } from "@/lib/formatters/date";
+import { reactivateStudent } from "@/lib/students/actions";
 
 export const metadata: Metadata = {
   title: "Student Profile",
@@ -36,6 +39,8 @@ type StudentProfilePageProps = {
 };
 
 type StudentProfile = {
+  archived_at: string | null;
+  archived_by: string | null;
   branch_id: string;
   full_name: string;
   id: string;
@@ -261,7 +266,7 @@ export default async function StudentProfilePage({
   const { data: studentRow, error: studentError } = await supabase
     .from("students")
     .select(
-      "id, institute_id, branch_id, full_name, phone, parent_phone, status",
+      "id, institute_id, branch_id, full_name, phone, parent_phone, status, archived_at, archived_by",
     )
     .eq("id", studentId)
     .eq("institute_id", institute.id)
@@ -332,6 +337,12 @@ async function StudentProfileContent({
   const canViewFeeDetails = canAccessPermission(context, "fees.view", {
     branchId: student.branch_id,
   });
+  const canReactivateStudent =
+    Boolean(student.archived_at) &&
+    (role === "owner" ||
+      canAccessPermission(context, "students.update", {
+        branchId: student.branch_id,
+      }));
   let queryError = false;
   let assignedBatches: Batch[] = [];
   let attendanceEntries: AttendanceEntry[] = [];
@@ -532,14 +543,37 @@ async function StudentProfileContent({
           </p>
         </div>
         <div className="flex flex-wrap gap-2 sm:justify-end">
+          {student.archived_at ? (
+            <Badge variant="outline">Archived</Badge>
+          ) : null}
           <Badge
             variant={student.status === "inactive" ? "outline" : "secondary"}
           >
             {getStudentStatusLabel(student.status)}
           </Badge>
           <Badge variant="outline">{branch?.name ?? "Branch"}</Badge>
+          {canReactivateStudent ? (
+            <form action={reactivateStudent}>
+              <input name="studentId" type="hidden" value={student.id} />
+              <SubmitButton
+                pendingLabel="Reactivating..."
+                size="sm"
+                variant="outline"
+              >
+                <RotateCcw aria-hidden="true" data-icon="inline-start" />
+                Reactivate
+              </SubmitButton>
+            </form>
+          ) : null}
         </div>
       </div>
+
+      {student.archived_at ? (
+        <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
+          This student is archived. Attendance and fee history remain available
+          for institute records.
+        </div>
+      ) : null}
 
       <ActionMessage
         error={
@@ -557,7 +591,9 @@ async function StudentProfileContent({
               Student status
             </p>
             <p className="mt-2 text-2xl font-semibold tracking-tight">
-              {getStudentStatusLabel(student.status)}
+              {student.archived_at
+                ? "Archived"
+                : getStudentStatusLabel(student.status)}
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
               {branch?.name ?? "Branch not available"}

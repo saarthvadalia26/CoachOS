@@ -15,6 +15,10 @@ import { needsExplicitBranchSelection } from "@/lib/dashboard/branch-scope";
 const STUDENTS_PATH = "/dashboard/students";
 const DELETE_STUDENT_ERROR =
   "This student record could not be deleted. Please try again.";
+const STUDENT_UPDATE_ERROR =
+  "This student record could not be updated. Please try again.";
+const HARD_DELETE_BLOCKED_ERROR =
+  "This student has locked historical records. Archive the student instead.";
 
 type SupabaseLikeError = {
   code?: string;
@@ -83,6 +87,10 @@ function logStudentDeleteFailure({
   step: string;
   studentId?: string;
 }) {
+  if (process.env.NODE_ENV !== "development") {
+    return;
+  }
+
   const errorDetails = getSupabaseErrorDetails(error);
 
   console.error("deleteStudent failed", {
@@ -104,11 +112,15 @@ function logStudentDeleteFailure({
 function logStudentDeleteInfo({
   branchId,
   context,
+  deletedRows,
+  rowFound,
   step,
   studentId,
 }: {
   branchId?: string | null;
   context: DashboardContext;
+  deletedRows?: number | null;
+  rowFound?: boolean;
   step: string;
   studentId?: string;
 }) {
@@ -118,9 +130,11 @@ function logStudentDeleteInfo({
 
   console.info("deleteStudent debug", {
     branchId: branchId ?? null,
+    deletedRows,
     instituteId: context.institute.id,
     membershipId: context.currentMembership.id,
     role: context.role,
+    rowFound,
     step,
     studentId,
     userId: context.claims.sub,
@@ -179,6 +193,106 @@ function requireBranchPermission(
   }
 }
 
+function canRemoveStudent(context: DashboardContext, branchId: string | null) {
+  return (
+    context.role === "owner" ||
+    (Boolean(branchId) &&
+      canAccessPermission(context, "students.delete", { branchId }))
+  );
+}
+
+function canUpdateStudentScope(
+  context: DashboardContext,
+  branchId: string | null,
+) {
+  return (
+    context.role === "owner" ||
+    (Boolean(branchId) &&
+      canAccessPermission(context, "students.update", { branchId }))
+  );
+}
+
+async function getStudentForRemoval(
+  context: DashboardContext,
+  studentId: string,
+) {
+  const { institute, supabase } = context;
+  const { data: student, error } = await supabase
+    .from("students")
+    .select("id, branch_id, archived_at")
+    .eq("id", studentId)
+    .eq("institute_id", institute.id)
+    .maybeSingle();
+
+  if (error) {
+    logStudentDeleteFailure({
+      context,
+      error,
+      step: "student_lookup",
+      studentId,
+    });
+    redirectWithError(STUDENT_UPDATE_ERROR);
+  }
+
+  if (!student) {
+    logStudentDeleteFailure({
+      context,
+      error: null,
+      reason: "No student row matched the submitted id and current institute.",
+      step: "student_lookup_empty",
+      studentId,
+    });
+    redirectWithError("Select a student from this institute.");
+  }
+
+  return student as { archived_at: string | null; branch_id: string | null; id: string };
+}
+
+async function hasStudentHistoricalRecords(
+  context: DashboardContext,
+  student: { branch_id: string | null; id: string },
+) {
+  const { institute, supabase } = context;
+  const [attendanceRecords, attendanceAuditLogs, feeRecords] =
+    await Promise.all([
+      supabase
+        .from("attendance_records")
+        .select("id", { count: "exact", head: true })
+        .eq("student_id", student.id),
+      supabase
+        .from("attendance_audit_logs")
+        .select("id", { count: "exact", head: true })
+        .eq("student_id", student.id),
+      supabase
+        .from("fee_records")
+        .select("id", { count: "exact", head: true })
+        .eq("student_id", student.id)
+        .eq("institute_id", institute.id),
+    ]);
+
+  const firstError =
+    attendanceRecords.error ?? attendanceAuditLogs.error ?? feeRecords.error;
+
+  if (firstError) {
+    logStudentDeleteFailure({
+      branchId: student.branch_id,
+      context,
+      error: firstError,
+      reason: "Could not verify whether the student has historical records.",
+      step: "student_history_check",
+      studentId: student.id,
+    });
+
+    return true;
+  }
+
+  return Boolean(
+    (attendanceRecords.count ?? 0) > 0 ||
+      (attendanceAuditLogs.count ?? 0) > 0 ||
+      (feeRecords.count ?? 0) > 0,
+  );
+}
+
 export async function createStudent(formData: FormData) {
   const context = await requireDashboardAccess();
   const { supabase, institute } = context;
@@ -219,7 +333,7 @@ export async function updateStudent(formData: FormData) {
 
   const { data: existingStudent, error: existingStudentError } = await supabase
     .from("students")
-    .select("id, branch_id")
+    .select("id, branch_id, archived_at")
     .eq("id", studentId)
     .eq("institute_id", institute.id)
     .maybeSingle();
@@ -231,6 +345,10 @@ export async function updateStudent(formData: FormData) {
 
   if (!existingStudent) {
     redirectWithError("Select a student from this institute.");
+  }
+
+  if (existingStudent.archived_at) {
+    redirectWithError("Reactivate this student before editing their details.");
   }
 
   requireBranchPermission(context, "students.update", existingStudent.branch_id);
@@ -276,44 +394,17 @@ export async function deleteStudent(formData: FormData) {
     studentId,
   });
 
-  const { data: existingStudent, error: existingStudentError } = await supabase
-    .from("students")
-    .select("id, branch_id")
-    .eq("id", studentId)
-    .eq("institute_id", institute.id)
-    .maybeSingle();
+  const existingStudent = await getStudentForRemoval(context, studentId);
 
-  if (existingStudentError) {
-    logStudentDeleteFailure({
-      context,
-      error: existingStudentError,
-      step: "student_lookup",
-      studentId,
-    });
-    redirectWithError(DELETE_STUDENT_ERROR);
-  }
+  logStudentDeleteInfo({
+    branchId: existingStudent.branch_id,
+    context,
+    rowFound: true,
+    step: "student_lookup_found",
+    studentId,
+  });
 
-  if (!existingStudent) {
-    logStudentDeleteFailure({
-      context,
-      error: null,
-      reason: "No student row matched the submitted id and current institute.",
-      step: "student_lookup_empty",
-      studentId,
-    });
-    redirectWithError("Select a student from this institute.");
-  }
-
-  const canDeleteStudent = existingStudent.branch_id
-    ? canAccessPermission(context, "students.delete", {
-        branchId: existingStudent.branch_id,
-      })
-    : context.role === "owner" &&
-      canAccessPermission(context, "students.delete", {
-        instituteId: institute.id,
-      });
-
-  if (!canDeleteStudent) {
+  if (!canRemoveStudent(context, existingStudent.branch_id)) {
     logStudentDeleteFailure({
       branchId: existingStudent.branch_id,
       context,
@@ -323,12 +414,18 @@ export async function deleteStudent(formData: FormData) {
       step: "permission_denied",
       studentId,
     });
-    redirectWithError("You do not have permission to perform this action.");
+    redirectWithError("You do not have permission to delete this student.");
   }
 
-  const { data: deletedStudent, error } = await supabase
+  const hasHistory = await hasStudentHistoricalRecords(context, existingStudent);
+
+  if (hasHistory) {
+    redirectWithError(HARD_DELETE_BLOCKED_ERROR);
+  }
+
+  const { data: deletedStudent, error, count } = await supabase
     .from("students")
-    .delete()
+    .delete({ count: "exact" })
     .eq("id", studentId)
     .eq("institute_id", institute.id)
     .select("id")
@@ -358,10 +455,111 @@ export async function deleteStudent(formData: FormData) {
     redirectWithError("Select a student from this institute.");
   }
 
+  logStudentDeleteInfo({
+    branchId: existingStudent.branch_id,
+    context,
+    deletedRows: count ?? (deletedStudent ? 1 : 0),
+    step: "student_delete_success",
+    studentId,
+  });
+
   revalidatePath(STUDENTS_PATH);
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/batches");
   revalidatePath("/dashboard/attendance");
   revalidatePath("/dashboard/fees");
   redirectWithSuccess("Student deleted.", existingStudent.branch_id);
+}
+
+export async function archiveStudent(formData: FormData) {
+  const context = await requireDashboardAccess();
+  const { institute, supabase } = context;
+  const studentId = getRequiredId(formData, "studentId", "Student");
+  const existingStudent = await getStudentForRemoval(context, studentId);
+
+  if (!canRemoveStudent(context, existingStudent.branch_id)) {
+    logStudentDeleteFailure({
+      branchId: existingStudent.branch_id,
+      context,
+      error: null,
+      reason:
+        "Current membership does not allow archiving this student scope.",
+      step: "archive_permission_denied",
+      studentId,
+    });
+    redirectWithError("You do not have permission to delete this student.");
+  }
+
+  const { data: archivedStudent, error } = await supabase
+    .from("students")
+    .update({
+      archived_at: new Date().toISOString(),
+      archived_by: context.claims.sub,
+    })
+    .eq("id", studentId)
+    .eq("institute_id", institute.id)
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    logStudentDeleteFailure({
+      branchId: existingStudent.branch_id,
+      context,
+      error,
+      step: "student_archive",
+      studentId,
+    });
+    redirectWithError(STUDENT_UPDATE_ERROR);
+  }
+
+  if (!archivedStudent) {
+    redirectWithError("Select a student from this institute.");
+  }
+
+  revalidatePath(STUDENTS_PATH);
+  revalidatePath(`/dashboard/students/${studentId}`);
+  revalidatePath("/dashboard");
+  redirectWithSuccess("Student archived.", existingStudent.branch_id);
+}
+
+export async function reactivateStudent(formData: FormData) {
+  const context = await requireDashboardAccess();
+  const { institute, supabase } = context;
+  const studentId = getRequiredId(formData, "studentId", "Student");
+  const existingStudent = await getStudentForRemoval(context, studentId);
+
+  if (!canUpdateStudentScope(context, existingStudent.branch_id)) {
+    redirectWithError("You do not have permission to perform this action.");
+  }
+
+  const { data: reactivatedStudent, error } = await supabase
+    .from("students")
+    .update({
+      archived_at: null,
+      archived_by: null,
+    })
+    .eq("id", studentId)
+    .eq("institute_id", institute.id)
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    logStudentDeleteFailure({
+      branchId: existingStudent.branch_id,
+      context,
+      error,
+      step: "student_reactivate",
+      studentId,
+    });
+    redirectWithError(STUDENT_UPDATE_ERROR);
+  }
+
+  if (!reactivatedStudent) {
+    redirectWithError("Select a student from this institute.");
+  }
+
+  revalidatePath(STUDENTS_PATH);
+  revalidatePath(`/dashboard/students/${studentId}`);
+  revalidatePath("/dashboard");
+  redirectWithSuccess("Student reactivated.", existingStudent.branch_id);
 }

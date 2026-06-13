@@ -1,4 +1,4 @@
-import { Eye, Save, Search, Trash2 } from "lucide-react";
+import { Archive, Eye, RotateCcw, Save, Search, Trash2 } from "lucide-react";
 import Link from "next/link";
 import type { Metadata } from "next";
 
@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SubmitButton } from "@/components/ui/submit-button";
 import {
+  canAccessPermission,
   hasAnyPermission,
   hasPermission,
   requirePermission,
@@ -33,8 +34,10 @@ import {
   getSearchTerm,
 } from "@/lib/dashboard/list-controls";
 import {
+  archiveStudent,
   createStudent,
   deleteStudent,
+  reactivateStudent,
   updateStudent,
 } from "@/lib/students/actions";
 
@@ -44,6 +47,7 @@ type StudentsPageProps = {
     error?: string;
     page?: string;
     q?: string;
+    recordState?: string;
     status?: string;
     success?: string;
   }>;
@@ -54,6 +58,7 @@ export const metadata: Metadata = {
 };
 
 type Student = {
+  archived_at: string | null;
   branch_id: string;
   id: string;
   full_name: string;
@@ -70,6 +75,10 @@ function getSelectedStatus(value: string | null | undefined) {
   return value === "active" || value === "inactive" ? value : "";
 }
 
+function getSelectedRecordState(value: string | null | undefined) {
+  return value === "archived" || value === "all" ? value : "active";
+}
+
 function getContactValue(value: string | null) {
   const trimmedValue = value?.trim();
 
@@ -78,12 +87,20 @@ function getContactValue(value: string | null) {
 
 export default async function StudentsPage({ searchParams }: StudentsPageProps) {
   const context = await requirePermission("students.view");
-  const { accessibleBranches, supabase, claims, institute, profile, role } =
+  const {
+    accessibleBranches,
+    supabase,
+    claims,
+    institute,
+    profile,
+    role,
+  } =
     context;
   const params = await searchParams;
   const branchScope = getBranchScope(context, params.branchId);
   const searchTerm = getSearchTerm(params.q);
   const selectedStatus = getSelectedStatus(params.status);
+  const selectedRecordState = getSelectedRecordState(params.recordState);
   const page = getPage(params.page);
   const paginationRange = getPaginationRange(page);
   const branchesById = new Map(
@@ -91,7 +108,6 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
   );
   const canCreateStudents = hasPermission(role, "students.create");
   const canUpdateStudents = hasPermission(role, "students.update");
-  const canDeleteStudents = hasPermission(role, "students.delete");
   const canManageStudents = hasAnyPermission(role, [
     "students.create",
     "students.update",
@@ -100,9 +116,12 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
 
   let studentsQuery = supabase
     .from("students")
-    .select("id, branch_id, full_name, phone, parent_phone, status", {
-      count: "exact",
-    })
+    .select(
+      "id, branch_id, full_name, phone, parent_phone, status, archived_at",
+      {
+        count: "exact",
+      },
+    )
     .eq("institute_id", institute.id)
     .order("created_at", { ascending: false });
 
@@ -125,17 +144,70 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
     studentsQuery = studentsQuery.or("status.eq.active,status.is.null");
   }
 
+  if (selectedRecordState === "archived") {
+    studentsQuery = studentsQuery.not("archived_at", "is", null);
+  } else if (selectedRecordState === "active") {
+    studentsQuery = studentsQuery.is("archived_at", null);
+  }
+
   const { data: studentRows, count: studentsCount, error: studentsError } =
     await studentsQuery.range(paginationRange.from, paginationRange.to);
   const students = (studentRows ?? []) as Student[];
   const totalStudents = studentsCount ?? 0;
+  const studentIds = students.map((student) => student.id);
+  const historicalStudentIds = new Set<string>();
+  let historyLookupFailed = false;
+
+  if (studentIds.length) {
+    const [attendanceRows, auditRows, feeRows] = await Promise.all([
+      supabase
+        .from("attendance_records")
+        .select("student_id")
+        .in("student_id", studentIds),
+      supabase
+        .from("attendance_audit_logs")
+        .select("student_id")
+        .in("student_id", studentIds),
+      supabase
+        .from("fee_records")
+        .select("student_id")
+        .in("student_id", studentIds)
+        .eq("institute_id", institute.id),
+    ]);
+
+    const firstHistoryError =
+      attendanceRows.error ?? auditRows.error ?? feeRows.error;
+
+    if (firstHistoryError) {
+      historyLookupFailed = true;
+      console.error("student history lookup failed", firstHistoryError);
+    } else {
+      for (const row of attendanceRows.data ?? []) {
+        historicalStudentIds.add(row.student_id);
+      }
+
+      for (const row of auditRows.data ?? []) {
+        historicalStudentIds.add(row.student_id);
+      }
+
+      for (const row of feeRows.data ?? []) {
+        historicalStudentIds.add(row.student_id);
+      }
+    }
+  }
+
   const filterParams = {
     branchId: branchScope.selectedBranchId,
     q: searchTerm,
+    recordState:
+      selectedRecordState === "active" ? undefined : selectedRecordState,
     status: selectedStatus,
   };
   const hasActiveFilters = Boolean(
-    searchTerm || selectedStatus || branchScope.selectedBranchId,
+    searchTerm ||
+      selectedStatus ||
+      selectedRecordState !== "active" ||
+      branchScope.selectedBranchId,
   );
 
   return (
@@ -160,8 +232,8 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
               <div
                 className={
                   branchScope.showOwnerBranchFilter
-                    ? "grid gap-3 md:grid-cols-3"
-                    : "grid gap-3 md:grid-cols-2"
+                    ? "grid gap-3 md:grid-cols-4"
+                    : "grid gap-3 md:grid-cols-3"
                 }
               >
                 <Label>
@@ -200,6 +272,18 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
                     <option value="">All statuses</option>
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
+                  </select>
+                </Label>
+                <Label>
+                  Records
+                  <select
+                    name="recordState"
+                    defaultValue={selectedRecordState}
+                    className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
+                  >
+                    <option value="active">Active students</option>
+                    <option value="archived">Archived students</option>
+                    <option value="all">All students</option>
                   </select>
                 </Label>
               </div>
@@ -322,153 +406,229 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
               {students.length ? (
                 <div className="grid gap-4">
                   <div className="divide-y divide-border rounded-md border border-border">
-                    {students.map((student) => (
-                      <article key={student.id} className="grid gap-4 p-4">
-                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                          <div className="min-w-0 flex-1">
-                            <h3 className="break-words text-base font-semibold tracking-tight">
-                              {student.full_name}
-                            </h3>
-                            <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
-                              <span className="whitespace-nowrap">
-                                Student:{" "}
-                                {getContactValue(student.phone) ?? "Not added"}
-                              </span>
-                              <span className="whitespace-nowrap">
-                                {getContactValue(student.phone) &&
-                                getContactValue(student.parent_phone) ? (
-                                  <span
+                    {students.map((student) => {
+                      const canDeleteStudent =
+                        role === "owner" ||
+                        (Boolean(student.branch_id) &&
+                          canAccessPermission(context, "students.delete", {
+                            branchId: student.branch_id,
+                          }));
+                      const canReactivateStudent =
+                        Boolean(student.archived_at) &&
+                        (role === "owner" ||
+                          (Boolean(student.branch_id) &&
+                            canAccessPermission(context, "students.update", {
+                              branchId: student.branch_id,
+                            })));
+                      const hasHistoricalRecords =
+                        historyLookupFailed ||
+                        historicalStudentIds.has(student.id);
+                      const canArchiveStudent =
+                        canDeleteStudent && !student.archived_at;
+                      const canHardDeleteStudent =
+                        canDeleteStudent &&
+                        !student.archived_at &&
+                        !hasHistoricalRecords;
+
+                      return (
+                        <article key={student.id} className="grid gap-4 p-4">
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                            <div className="min-w-0 flex-1">
+                              <h3 className="break-words text-base font-semibold tracking-tight">
+                                {student.full_name}
+                              </h3>
+                              <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+                                <span className="whitespace-nowrap">
+                                  Student:{" "}
+                                  {getContactValue(student.phone) ??
+                                    "Not added"}
+                                </span>
+                                <span className="whitespace-nowrap">
+                                  {getContactValue(student.phone) &&
+                                  getContactValue(student.parent_phone) ? (
+                                    <span
+                                      aria-hidden="true"
+                                      className="hidden text-muted-foreground/60 sm:inline"
+                                    >
+                                      |{" "}
+                                    </span>
+                                  ) : null}
+                                  Parent:{" "}
+                                  {getContactValue(student.parent_phone) ??
+                                    "Not added"}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex shrink-0 flex-wrap items-start justify-start gap-2 sm:justify-end">
+                              <Badge
+                                variant={
+                                  student.archived_at ||
+                                  student.status === "inactive"
+                                    ? "outline"
+                                    : "secondary"
+                                }
+                              >
+                                {student.archived_at
+                                  ? "Archived"
+                                  : getStatusLabel(student.status)}
+                              </Badge>
+                              <Badge variant="outline">
+                                {branchesById.get(student.branch_id)?.name ??
+                                  "Branch"}
+                              </Badge>
+                              <Button asChild size="sm" variant="outline">
+                                <Link
+                                  href={`/dashboard/students/${student.id}`}
+                                >
+                                  <Eye
                                     aria-hidden="true"
-                                    className="hidden text-muted-foreground/60 sm:inline"
+                                    data-icon="inline-start"
+                                  />
+                                  View profile
+                                </Link>
+                              </Button>
+                              {canReactivateStudent ? (
+                                <form action={reactivateStudent}>
+                                  <input
+                                    name="studentId"
+                                    type="hidden"
+                                    value={student.id}
+                                  />
+                                  <SubmitButton
+                                    pendingLabel="Reactivating..."
+                                    size="sm"
+                                    variant="outline"
                                   >
-                                    |{" "}
-                                  </span>
-                                ) : null}
-                                Parent:{" "}
-                                {getContactValue(student.parent_phone) ??
-                                  "Not added"}
-                              </span>
+                                    <RotateCcw
+                                      aria-hidden="true"
+                                      data-icon="inline-start"
+                                    />
+                                    Reactivate
+                                  </SubmitButton>
+                                </form>
+                              ) : null}
+                              {canArchiveStudent && hasHistoricalRecords ? (
+                                <form action={archiveStudent}>
+                                  <input
+                                    name="studentId"
+                                    type="hidden"
+                                    value={student.id}
+                                  />
+                                  <ConfirmSubmitButton
+                                    type="submit"
+                                    variant="outline"
+                                    size="sm"
+                                    confirmMessage={`Archive ${student.full_name}? This keeps attendance and fee history intact while removing the student from active lists.`}
+                                    confirmTitle="Archive student?"
+                                    confirmDescription="This student has historical records. Archiving keeps attendance and fee history intact while removing the student from active lists."
+                                    confirmLabel="Archive student"
+                                    pendingLabel="Archiving..."
+                                  >
+                                    <Archive
+                                      aria-hidden="true"
+                                      data-icon="inline-start"
+                                    />
+                                    Archive
+                                  </ConfirmSubmitButton>
+                                </form>
+                              ) : null}
+                              {canHardDeleteStudent ? (
+                                <form action={deleteStudent}>
+                                  <input
+                                    name="studentId"
+                                    type="hidden"
+                                    value={student.id}
+                                  />
+                                  <ConfirmSubmitButton
+                                    type="submit"
+                                    variant="destructive"
+                                    size="sm"
+                                    confirmMessage={`Delete ${student.full_name}? This permanently removes the student record.`}
+                                    confirmTitle="Delete student?"
+                                    confirmDescription="This will permanently delete this student. This action cannot be undone."
+                                    confirmLabel="Delete student"
+                                    pendingLabel="Deleting..."
+                                  >
+                                    <Trash2
+                                      aria-hidden="true"
+                                      data-icon="inline-start"
+                                    />
+                                    Delete
+                                  </ConfirmSubmitButton>
+                                </form>
+                              ) : null}
                             </div>
                           </div>
-                          <div className="flex shrink-0 flex-wrap items-start justify-start gap-2 sm:justify-end">
-                            <Badge
-                              variant={
-                                student.status === "inactive"
-                                  ? "outline"
-                                  : "secondary"
-                              }
-                            >
-                              {getStatusLabel(student.status)}
-                            </Badge>
-                            <Badge variant="outline">
-                              {branchesById.get(student.branch_id)?.name ??
-                                "Branch"}
-                            </Badge>
-                            <Button asChild size="sm" variant="outline">
-                              <Link href={`/dashboard/students/${student.id}`}>
-                                <Eye
-                                  aria-hidden="true"
-                                  data-icon="inline-start"
-                                />
-                                View profile
-                              </Link>
-                            </Button>
-                            {canDeleteStudents ? (
-                              <form action={deleteStudent}>
+
+                          {canUpdateStudents && !student.archived_at ? (
+                            <details className="rounded-md border border-border bg-muted/30 p-3">
+                              <summary className="cursor-pointer text-sm font-medium">
+                                Edit student
+                              </summary>
+                              <form
+                                action={updateStudent}
+                                className="mt-4 grid gap-3 sm:grid-cols-2"
+                              >
                                 <input
                                   name="studentId"
                                   type="hidden"
                                   value={student.id}
                                 />
-                                <ConfirmSubmitButton
-                                  type="submit"
-                                  variant="destructive"
-                                  size="sm"
-                                  confirmMessage={`Delete ${student.full_name}? This also removes batch relationships, attendance records, and fee records for this student.`}
-                                  confirmTitle="Delete student?"
-                                  confirmDescription={`This will remove ${student.full_name}, including related batch links, attendance records, and fee records. This action cannot be undone.`}
-                                  confirmLabel="Delete student"
-                                  pendingLabel="Deleting..."
+                                <Label>
+                                  Full name
+                                  <Input
+                                    required
+                                    name="fullName"
+                                    type="text"
+                                    defaultValue={student.full_name}
+                                    autoComplete="name"
+                                  />
+                                </Label>
+                                <Label>
+                                  Student phone
+                                  <Input
+                                    name="phone"
+                                    type="tel"
+                                    defaultValue={student.phone ?? ""}
+                                    autoComplete="tel"
+                                  />
+                                </Label>
+                                <Label>
+                                  Parent phone
+                                  <Input
+                                    name="parentPhone"
+                                    type="tel"
+                                    defaultValue={student.parent_phone ?? ""}
+                                    autoComplete="tel"
+                                  />
+                                </Label>
+                                <Label>
+                                  Status
+                                  <select
+                                    name="status"
+                                    defaultValue={student.status ?? "active"}
+                                    className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
+                                  >
+                                    <option value="active">Active</option>
+                                    <option value="inactive">Inactive</option>
+                                  </select>
+                                </Label>
+                                <SubmitButton
+                                  className="sm:col-span-2 sm:w-fit"
+                                  pendingLabel="Updating..."
                                 >
-                                  <Trash2
+                                  <Save
                                     aria-hidden="true"
                                     data-icon="inline-start"
                                   />
-                                  Delete
-                                </ConfirmSubmitButton>
+                                  Save changes
+                                </SubmitButton>
                               </form>
-                            ) : null}
-                          </div>
-                        </div>
-
-                        {canUpdateStudents ? (
-                          <details className="rounded-md border border-border bg-muted/30 p-3">
-                            <summary className="cursor-pointer text-sm font-medium">
-                              Edit student
-                            </summary>
-                            <form
-                              action={updateStudent}
-                              className="mt-4 grid gap-3 sm:grid-cols-2"
-                            >
-                              <input
-                                name="studentId"
-                                type="hidden"
-                                value={student.id}
-                              />
-                              <Label>
-                                Full name
-                                <Input
-                                  required
-                                  name="fullName"
-                                  type="text"
-                                  defaultValue={student.full_name}
-                                  autoComplete="name"
-                                />
-                              </Label>
-                              <Label>
-                                Student phone
-                                <Input
-                                  name="phone"
-                                  type="tel"
-                                  defaultValue={student.phone ?? ""}
-                                  autoComplete="tel"
-                                />
-                              </Label>
-                              <Label>
-                                Parent phone
-                                <Input
-                                  name="parentPhone"
-                                  type="tel"
-                                  defaultValue={student.parent_phone ?? ""}
-                                  autoComplete="tel"
-                                />
-                              </Label>
-                              <Label>
-                                Status
-                                <select
-                                  name="status"
-                                  defaultValue={student.status ?? "active"}
-                                  className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
-                                >
-                                  <option value="active">Active</option>
-                                  <option value="inactive">Inactive</option>
-                                </select>
-                              </Label>
-                              <SubmitButton
-                                className="sm:col-span-2 sm:w-fit"
-                                pendingLabel="Updating..."
-                              >
-                                <Save
-                                  aria-hidden="true"
-                                  data-icon="inline-start"
-                                />
-                                Save changes
-                              </SubmitButton>
-                            </form>
-                          </details>
-                        ) : null}
-                      </article>
-                    ))}
+                            </details>
+                          ) : null}
+                        </article>
+                      );
+                    })}
                   </div>
                   <PaginationControls
                     basePath="/dashboard/students"
