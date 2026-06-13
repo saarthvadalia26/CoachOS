@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import {
   Building2,
   CalendarCheck,
+  BookOpenCheck,
   GraduationCap,
   LayoutDashboard,
   MessageSquare,
@@ -28,6 +29,7 @@ type DashboardPageKey =
   | "branches"
   | "students"
   | "batches"
+  | "homework"
   | "attendance"
   | "communication"
   | "fees"
@@ -76,6 +78,21 @@ const navItems: NavItem[] = [
     enabled: true,
     icon: GraduationCap,
     permission: "batches.view",
+    roles: [
+      "owner",
+      "branch_manager",
+      "operations_staff",
+      "academic_coordinator",
+      "teacher",
+    ],
+  },
+  {
+    label: "Homework",
+    href: "/dashboard/homework",
+    activeKey: "homework",
+    enabled: true,
+    icon: BookOpenCheck,
+    permission: "homework.view",
     roles: [
       "owner",
       "branch_manager",

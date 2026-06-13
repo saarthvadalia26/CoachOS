@@ -35,6 +35,11 @@ export const permissions = [
   "batches.create",
   "batches.update",
   "batches.delete",
+  "homework.view",
+  "homework.create",
+  "homework.update",
+  "homework.archive",
+  "homework.delete",
   "attendance.view",
   "attendance.create",
   "attendance.update",
@@ -181,6 +186,11 @@ const rolePermissions = {
     "batches.create",
     "batches.update",
     "batches.delete",
+    "homework.view",
+    "homework.create",
+    "homework.update",
+    "homework.archive",
+    "homework.delete",
     "attendance.view",
     "attendance.create",
     "attendance.update",
@@ -209,6 +219,7 @@ const rolePermissions = {
     "students.create",
     "students.update",
     "batches.view",
+    "homework.view",
     "attendance.view",
     "attendance.create",
     "attendance.update",
@@ -237,6 +248,11 @@ const rolePermissions = {
     "batches.view",
     "batches.create",
     "batches.update",
+    "homework.view",
+    "homework.create",
+    "homework.update",
+    "homework.archive",
+    "homework.delete",
     "attendance.view",
     "attendance.alert",
     "communications.view",
@@ -246,6 +262,9 @@ const rolePermissions = {
   teacher: [
     "students.view",
     "batches.view",
+    "homework.view",
+    "homework.create",
+    "homework.update",
     "attendance.view",
     "communications.view",
     "notifications.view",
@@ -253,9 +272,12 @@ const rolePermissions = {
   ],
 } as const satisfies Record<AppRole, readonly Permission[]>;
 
-const viewOnlyTeacherPermissions: readonly Permission[] = [
+const teacherScopedPermissions: readonly Permission[] = [
   "students.view",
   "batches.view",
+  "homework.view",
+  "homework.create",
+  "homework.update",
   "attendance.view",
 ] as const;
 
@@ -547,7 +569,7 @@ export function canAccessPermission(
 
     if (
       membership.role === "teacher" &&
-      !viewOnlyTeacherPermissions.includes(permission)
+      !teacherScopedPermissions.includes(permission)
     ) {
       return false;
     }
