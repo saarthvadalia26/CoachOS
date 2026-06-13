@@ -610,9 +610,9 @@ export default async function BatchesPage({ searchParams }: BatchesPageProps) {
 
                   return (
                     <Card key={batch.id}>
-                    <CardHeader className="gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
-                      <div className="min-w-0">
-                        <CardTitle className="break-words text-lg">
+                    <CardHeader className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                      <div className="min-w-0 flex-1">
+                        <CardTitle className="whitespace-normal break-words text-lg">
                           {batch.name}
                         </CardTitle>
                         <CardDescription className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -632,7 +632,7 @@ export default async function BatchesPage({ searchParams }: BatchesPageProps) {
                           ) : null}
                         </CardDescription>
                       </div>
-                      <div className="flex shrink-0 flex-wrap items-start gap-2 sm:justify-end">
+                      <div className="flex shrink-0 flex-wrap items-start justify-start gap-2 lg:justify-end">
                         <Badge variant="secondary">
                           {batch.students.length}{" "}
                           {batch.students.length === 1

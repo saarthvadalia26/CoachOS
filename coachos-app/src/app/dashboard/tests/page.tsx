@@ -43,6 +43,8 @@ type TestsPageProps = {
     testDate?: string;
     page?: string;
     q?: string;
+    error?: string;
+    success?: string;
   }>;
 };
 
@@ -52,6 +54,9 @@ const statusLabels: Record<TestStatus, string> = {
   completed: "Completed",
   archived: "Archived",
 };
+
+const filterControlClass =
+  "box-border h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 py-1 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30";
 
 function getBranchName(
   context: Pick<DashboardContext, "accessibleBranches">,
@@ -148,7 +153,7 @@ function TestBatchSelect({
 }) {
   return (
     <select
-      className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
+      className={filterControlClass}
       defaultValue={defaultValue ?? ""}
       name={name}
       required={required}
@@ -175,7 +180,7 @@ function TestStatusSelect({
 }) {
   return (
     <select
-      className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
+      className={filterControlClass}
       defaultValue={defaultValue ?? "scheduled"}
       name={name}
     >
@@ -204,10 +209,10 @@ function TestBranchSelect({
   }
 
   return (
-    <Label>
+    <Label className="w-full min-w-0">
       Branch
       <select
-        className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
+        className={filterControlClass}
         defaultValue={defaultValue ?? ""}
         name={name}
       >
@@ -267,6 +272,7 @@ export default async function TestsPage({ searchParams }: TestsPageProps) {
                 <Label className="min-w-0">
                   Search
                   <Input
+                    className={filterControlClass}
                     defaultValue={filters.q}
                     name="q"
                     placeholder="Title or subject"
@@ -294,7 +300,7 @@ export default async function TestsPage({ searchParams }: TestsPageProps) {
                 <Label className="min-w-0">
                   Test date
                   <Input
-                    className="w-full min-w-0"
+                    className={filterControlClass}
                     defaultValue={filters.testDate}
                     name="testDate"
                     type="date"
@@ -317,7 +323,7 @@ export default async function TestsPage({ searchParams }: TestsPageProps) {
           </CardContent>
         </Card>
 
-        <ActionMessage error={null} />
+        <ActionMessage error={params.error} success={params.success} />
 
         <div
           className={

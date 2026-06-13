@@ -64,6 +64,9 @@ const submissionStatusLabels: Record<HomeworkSubmissionStatus, string> = {
   submitted: "Submitted",
 };
 
+const filterControlClass =
+  "box-border h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 py-1 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30";
+
 function getBranchName(
   context: Pick<DashboardContext, "accessibleBranches">,
   branchId: string,
@@ -169,7 +172,7 @@ function HomeworkBatchSelect({
 }) {
   return (
     <select
-      className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
+      className={filterControlClass}
       defaultValue={defaultValue ?? ""}
       name={name}
       required={required}
@@ -196,7 +199,7 @@ function HomeworkStatusSelect({
 }) {
   return (
     <select
-      className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
+      className={filterControlClass}
       defaultValue={defaultValue ?? "active"}
       name={name}
     >
@@ -215,7 +218,7 @@ function HomeworkSubmissionStatusSelect({
 }) {
   return (
     <select
-      className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
+      className={filterControlClass}
       defaultValue={defaultValue ?? ""}
       name="submissionStatus"
     >
@@ -246,10 +249,10 @@ function HomeworkBranchSelect({
   }
 
   return (
-    <Label>
+    <Label className="w-full min-w-0">
       Branch
       <select
-        className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
+        className={filterControlClass}
         defaultValue={defaultValue ?? ""}
         name={name}
       >
@@ -315,6 +318,7 @@ export default async function HomeworkPage({ searchParams }: HomeworkPageProps) 
                 <Label className="min-w-0">
                   Search
                   <Input
+                    className={filterControlClass}
                     defaultValue={filters.q}
                     name="q"
                     placeholder="Title or subject"
@@ -348,7 +352,7 @@ export default async function HomeworkPage({ searchParams }: HomeworkPageProps) 
                 <Label className="min-w-0">
                   Due date
                   <Input
-                    className="w-full min-w-0"
+                    className={filterControlClass}
                     defaultValue={filters.dueDate}
                     name="dueDate"
                     type="date"

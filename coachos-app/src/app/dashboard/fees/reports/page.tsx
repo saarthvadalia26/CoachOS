@@ -64,6 +64,9 @@ const reportRoles: readonly AppRole[] = [
 
 const feeStatusOptions = ["pending", "paid", "overdue"] as const;
 
+const filterControlClass =
+  "box-border h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 py-1 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30";
+
 function canViewFeeReports(role: AppRole) {
   return reportRoles.includes(role);
 }
@@ -323,17 +326,18 @@ export default async function FeeReportsPage({
               </p>
             ) : null}
 
-            <form className="grid gap-3">
+            <form className="grid min-w-0 gap-3">
               <div
                 className={
                   branchScope.showOwnerBranchFilter
-                    ? "grid gap-3 md:grid-cols-2 xl:grid-cols-6"
-                    : "grid gap-3 md:grid-cols-2 xl:grid-cols-5"
+                    ? "grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-6"
+                    : "grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-5"
                 }
               >
-                <Label>
+                <Label className="w-full min-w-0">
                   Search
                   <Input
+                    className={filterControlClass}
                     name="q"
                     type="search"
                     defaultValue={searchTerm}
@@ -341,12 +345,12 @@ export default async function FeeReportsPage({
                   />
                 </Label>
                 {branchScope.showOwnerBranchFilter ? (
-                  <Label>
+                  <Label className="w-full min-w-0">
                     Branch
                     <select
                       name="branchId"
                       defaultValue={branchScope.selectedBranchId ?? ""}
-                      className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
+                      className={filterControlClass}
                     >
                       <option value="">All branches</option>
                       {accessibleBranches.map((branch) => (
@@ -358,12 +362,12 @@ export default async function FeeReportsPage({
                   </Label>
                 ) : null}
 
-                <Label>
+                <Label className="w-full min-w-0">
                   Student
                   <select
                     name="studentId"
                     defaultValue={selectedStudentId}
-                    className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
+                    className={filterControlClass}
                   >
                     <option value="">All students</option>
                     {students.map((student) => (
@@ -375,26 +379,32 @@ export default async function FeeReportsPage({
                   </select>
                 </Label>
 
-                <Label>
+                <Label className="w-full min-w-0">
                   Due from
                   <Input
+                    className={filterControlClass}
                     name="startDate"
                     type="date"
                     defaultValue={startDate}
                   />
                 </Label>
 
-                <Label>
+                <Label className="w-full min-w-0">
                   Due to
-                  <Input name="endDate" type="date" defaultValue={endDate} />
+                  <Input
+                    className={filterControlClass}
+                    name="endDate"
+                    type="date"
+                    defaultValue={endDate}
+                  />
                 </Label>
 
-                <Label>
+                <Label className="w-full min-w-0">
                   Status
                   <select
                     name="status"
                     defaultValue={selectedStatus}
-                    className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
+                    className={filterControlClass}
                   >
                     <option value="">All statuses</option>
                     <option value="pending">Pending</option>
