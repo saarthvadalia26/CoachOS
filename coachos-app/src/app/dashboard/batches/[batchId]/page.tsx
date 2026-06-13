@@ -388,6 +388,79 @@ async function BatchDetailContent({
     }
   }
 
+  // Fetch tests for this batch
+  let recentTests: Array<{
+    id: string;
+    title: string;
+    subject: string | null;
+    test_date: string;
+    max_marks: number;
+    status: string;
+    entered_count: number;
+    total_count: number;
+    average_score: number | null;
+  }> = [];
+
+  const { data: testsData, error: testsError } = await supabase
+    .from("tests")
+    .select("id, title, subject, test_date, max_marks, status")
+    .eq("batch_id", batch.id)
+    .order("test_date", { ascending: false })
+    .limit(6);
+
+  if (testsError) {
+    queryError = logQueryError("batch_recent_tests", testsError) || queryError;
+  } else if (testsData && testsData.length > 0) {
+    const testIds = testsData.map((t) => t.id);
+    const { data: scoresData, error: scoresError } = await supabase
+      .from("test_scores")
+      .select("test_id, status, marks_obtained")
+      .in("test_id", testIds);
+
+    if (!scoresError && scoresData) {
+      const statsMap = new Map<string, { entered: number; total: number; totalMarks: number; presentCount: number }>();
+      for (const row of scoresData) {
+        const stats = statsMap.get(row.test_id) ?? { entered: 0, total: 0, totalMarks: 0, presentCount: 0 };
+        stats.total += 1;
+        if (row.status !== "not_entered") {
+          stats.entered += 1;
+        }
+        if (row.status === "present" && row.marks_obtained !== null) {
+          stats.totalMarks += Number(row.marks_obtained);
+          stats.presentCount += 1;
+        }
+        statsMap.set(row.test_id, stats);
+      }
+
+      recentTests = testsData.map((t) => {
+        const stats = statsMap.get(t.id) ?? { entered: 0, total: 0, totalMarks: 0, presentCount: 0 };
+        return {
+          id: t.id,
+          title: t.title,
+          subject: t.subject,
+          test_date: t.test_date,
+          max_marks: Number(t.max_marks),
+          status: t.status,
+          entered_count: stats.entered,
+          total_count: stats.total,
+          average_score: stats.presentCount > 0 ? stats.totalMarks / stats.presentCount : null,
+        };
+      });
+    } else {
+      recentTests = testsData.map((t) => ({
+        id: t.id,
+        title: t.title,
+        subject: t.subject,
+        test_date: t.test_date,
+        max_marks: Number(t.max_marks),
+        status: t.status,
+        entered_count: 0,
+        total_count: 0,
+        average_score: null,
+      }));
+    }
+  }
+
   if (canViewAttendance) {
     const { data: attendanceSessionRows, error: sessionsError } = await supabase
       .from("attendance_sessions")
@@ -654,6 +727,79 @@ async function BatchDetailContent({
                 <EmptyState
                   title="Attendance unavailable"
                   description="Attendance details are not available for your role."
+                />
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-xl">Tests & Exams</CardTitle>
+              <CardDescription>
+                Recent test performances and entry progress.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {recentTests.length ? (
+                <div className="divide-y divide-border rounded-md border border-border">
+                  {recentTests.map((test) => (
+                    <article
+                      key={test.id}
+                      className="grid gap-3 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start"
+                    >
+                      <div className="min-w-0">
+                        <h3 className="break-words text-sm font-medium">
+                          <Link href={`/dashboard/tests/${test.id}`} className="hover:underline text-foreground">
+                            {test.title}
+                          </Link>
+                        </h3>
+                        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                          <span className="whitespace-nowrap">
+                            Date: {formatDate(test.test_date)}
+                          </span>
+                          <span>&bull;</span>
+                          <span className="whitespace-nowrap">
+                            Max {test.max_marks} marks
+                          </span>
+                          <span>&bull;</span>
+                          <span className="whitespace-nowrap">
+                            Progress: {test.entered_count} / {test.total_count} entered
+                          </span>
+                          {test.average_score !== null ? (
+                            <>
+                              <span>&bull;</span>
+                              <span className="whitespace-nowrap font-medium text-foreground">
+                                Avg: {test.average_score.toFixed(1)}
+                              </span>
+                            </>
+                          ) : null}
+                        </div>
+                      </div>
+                      <div className="flex shrink-0 flex-wrap items-start gap-2 sm:justify-end">
+                        <Badge
+                          variant={
+                            test.status === "completed"
+                              ? "secondary"
+                              : test.status === "marks_entry"
+                                ? "default"
+                                : "outline"
+                          }
+                        >
+                          {test.status.replace("_", " ")}
+                        </Badge>
+                        <Button asChild size="sm" variant="outline">
+                          <Link href={`/dashboard/tests/${test.id}`}>
+                            View scores
+                          </Link>
+                        </Button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <EmptyState
+                  title="No tests created yet"
+                  description="No tests have been scheduled for this batch yet."
                 />
               )}
             </CardContent>

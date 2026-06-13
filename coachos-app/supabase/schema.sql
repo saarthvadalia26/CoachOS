@@ -121,6 +121,24 @@ create table if not exists public.homework_assignments (
 comment on table public.homework_assignments is
   'Homework assigned to batches. Access is branch-scoped, and teacher access is limited to assigned batches.';
 
+create table if not exists public.homework_submissions (
+  id uuid primary key default gen_random_uuid(),
+  institute_id uuid not null references public.institutes(id) on delete cascade,
+  branch_id uuid not null references public.branches(id) on delete cascade,
+  homework_id uuid not null references public.homework_assignments(id) on delete cascade,
+  student_id uuid not null references public.students(id) on delete cascade,
+  status text not null default 'assigned',
+  submitted_at timestamptz,
+  checked_at timestamptz,
+  checked_by uuid references auth.users(id) on delete set null,
+  remarks text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+comment on table public.homework_submissions is
+  'Student-level homework tracking. Existing rows are kept for history when students are archived.';
+
 create table if not exists public.attendance_sessions (
   id uuid primary key default gen_random_uuid(),
   institute_id uuid not null references public.institutes(id) on delete cascade,
@@ -193,7 +211,7 @@ create table if not exists public.announcements (
 );
 
 comment on table public.announcements is
-  'In-app institute and branch announcements for staff communication. External SMS, email, and WhatsApp delivery are intentionally not part of v1.';
+  'In-app institute and branch announcements for staff communication. External SMS, email, and WhatsApp delivery are intentionally not part of this feature.';
 
 create table if not exists public.notification_items (
   id uuid primary key default gen_random_uuid(),
@@ -698,6 +716,16 @@ alter table public.homework_assignments
   add constraint homework_assignments_status_check
   check (status in ('active', 'completed', 'archived'));
 
+alter table public.homework_submissions drop constraint if exists homework_submissions_status_check;
+alter table public.homework_submissions
+  add constraint homework_submissions_status_check
+  check (status in ('assigned', 'submitted', 'checked', 'late', 'missing', 'excused'));
+
+alter table public.homework_submissions drop constraint if exists homework_submissions_homework_student_unique;
+alter table public.homework_submissions
+  add constraint homework_submissions_homework_student_unique
+  unique (homework_id, student_id);
+
 alter table public.fee_records drop constraint if exists fee_records_amount_due_check;
 alter table public.fee_records
   add constraint fee_records_amount_due_check
@@ -860,6 +888,27 @@ create index if not exists homework_assignments_due_date_idx
 
 create index if not exists homework_assignments_status_idx
   on public.homework_assignments (status);
+
+create index if not exists homework_submissions_institute_id_idx
+  on public.homework_submissions (institute_id);
+
+create index if not exists homework_submissions_branch_id_idx
+  on public.homework_submissions (branch_id);
+
+create index if not exists homework_submissions_homework_id_idx
+  on public.homework_submissions (homework_id);
+
+create index if not exists homework_submissions_student_id_idx
+  on public.homework_submissions (student_id);
+
+create index if not exists homework_submissions_status_idx
+  on public.homework_submissions (status);
+
+create index if not exists homework_submissions_submitted_at_idx
+  on public.homework_submissions (submitted_at);
+
+create index if not exists homework_submissions_checked_at_idx
+  on public.homework_submissions (checked_at);
 
 create index if not exists attendance_sessions_institute_id_idx
   on public.attendance_sessions (institute_id);
@@ -1840,6 +1889,82 @@ create trigger set_homework_assignment_updated_at_trigger
   for each row
   execute function public.set_homework_assignment_updated_at();
 
+create or replace function public.validate_homework_submission_scope()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  target_homework public.homework_assignments%rowtype;
+  target_student public.students%rowtype;
+begin
+  select *
+  into target_homework
+  from public.homework_assignments
+  where homework_assignments.id = new.homework_id;
+
+  select *
+  into target_student
+  from public.students
+  where students.id = new.student_id;
+
+  if target_homework.id is null or target_student.id is null then
+    raise exception 'Homework submission requires an existing homework assignment and student.';
+  end if;
+
+  if tg_op = 'INSERT' and target_student.archived_at is not null then
+    raise exception 'Archived students cannot receive new homework submissions.';
+  end if;
+
+  if new.institute_id <> target_homework.institute_id
+    or new.branch_id <> target_homework.branch_id
+    or target_student.institute_id <> target_homework.institute_id
+    or target_student.branch_id <> target_homework.branch_id
+  then
+    raise exception 'Homework submission branch must match its homework assignment and student.';
+  end if;
+
+  if not exists (
+    select 1
+    from public.student_batches
+    where student_batches.batch_id = target_homework.batch_id
+      and student_batches.student_id = target_student.id
+  ) then
+    raise exception 'Homework submission student must belong to the homework batch.';
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists validate_homework_submission_scope_trigger
+  on public.homework_submissions;
+
+create trigger validate_homework_submission_scope_trigger
+  before insert or update on public.homework_submissions
+  for each row
+  execute function public.validate_homework_submission_scope();
+
+create or replace function public.set_homework_submission_updated_at()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  new.updated_at := now();
+  return new;
+end;
+$$;
+
+drop trigger if exists set_homework_submission_updated_at_trigger
+  on public.homework_submissions;
+
+create trigger set_homework_submission_updated_at_trigger
+  before update on public.homework_submissions
+  for each row
+  execute function public.set_homework_submission_updated_at();
+
 -- Staff account linking. Staff records start pending with auth_user_id = null.
 -- When an authenticated user signs in with the same email, this security
 -- definer function atomically claims exactly one pending staff row, creates the
@@ -2227,7 +2352,12 @@ as $$
       'communications.update',
       'communications.delete',
       'notifications.view',
-      'notifications.update'
+      'notifications.update',
+      'tests.view',
+      'tests.create',
+      'tests.update',
+      'tests.archive',
+      'tests.delete'
     )
     when member_role = 'operations_staff' then required_permission in (
       'dashboard.access',
@@ -2243,7 +2373,8 @@ as $$
       'fees.send_reminder',
       'communications.view',
       'notifications.view',
-      'notifications.update'
+      'notifications.update',
+      'tests.view'
     )
     when member_role = 'accountant' then required_permission in (
       'dashboard.access',
@@ -2277,7 +2408,12 @@ as $$
       'attendance.alert',
       'communications.view',
       'notifications.view',
-      'notifications.update'
+      'notifications.update',
+      'tests.view',
+      'tests.create',
+      'tests.update',
+      'tests.archive',
+      'tests.delete'
     )
     when member_role = 'teacher' then required_permission in (
       'dashboard.access',
@@ -2289,7 +2425,12 @@ as $$
       'attendance.view',
       'communications.view',
       'notifications.view',
-      'notifications.update'
+      'notifications.update',
+      'tests.view',
+      'tests.create',
+      'tests.update',
+      'tests.archive',
+      'tests.delete'
     )
     else false
   end
@@ -2701,6 +2842,37 @@ $$;
 comment on function public.current_user_can_access_homework_assignment(uuid, text) is
   'Checks Homework permissions for an assignment using branch scope and teacher batch assignment.';
 
+create or replace function public.current_user_can_access_homework_submission(
+  target_submission_id uuid,
+  required_permission text
+)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select auth.uid() is not null
+    and target_submission_id is not null
+    and required_permission is not null
+    and exists (
+      select 1
+      from public.homework_submissions
+      join public.homework_assignments
+        on homework_assignments.id = homework_submissions.homework_id
+      where homework_submissions.id = target_submission_id
+        and homework_submissions.institute_id = homework_assignments.institute_id
+        and homework_submissions.branch_id = homework_assignments.branch_id
+        and public.current_user_can_access_homework_assignment(
+          homework_assignments.id,
+          required_permission
+        )
+    )
+$$;
+
+comment on function public.current_user_can_access_homework_submission(uuid, text) is
+  'Checks Homework submission permissions through the parent assignment and batch.';
+
 create or replace function public.current_user_can_access_student(
   target_student_id uuid,
   required_permission text
@@ -2928,6 +3100,7 @@ alter table public.batches enable row level security;
 alter table public.student_batches enable row level security;
 alter table public.batch_teachers enable row level security;
 alter table public.homework_assignments enable row level security;
+alter table public.homework_submissions enable row level security;
 alter table public.attendance_sessions enable row level security;
 alter table public.attendance_records enable row level security;
 alter table public.attendance_audit_logs enable row level security;
@@ -2977,6 +3150,10 @@ drop policy if exists homework_assignments_select_members on public.homework_ass
 drop policy if exists homework_assignments_insert_members on public.homework_assignments;
 drop policy if exists homework_assignments_update_members on public.homework_assignments;
 drop policy if exists homework_assignments_delete_members on public.homework_assignments;
+drop policy if exists homework_submissions_select_members on public.homework_submissions;
+drop policy if exists homework_submissions_insert_members on public.homework_submissions;
+drop policy if exists homework_submissions_update_members on public.homework_submissions;
+drop policy if exists homework_submissions_delete_members on public.homework_submissions;
 drop policy if exists attendance_sessions_select_institute_members on public.attendance_sessions;
 drop policy if exists attendance_sessions_insert_institute_members on public.attendance_sessions;
 drop policy if exists attendance_sessions_update_institute_members on public.attendance_sessions;
@@ -3472,6 +3649,70 @@ create policy homework_assignments_delete_members
   using (
     public.current_user_can_access_homework_assignment(
       homework_assignments.id,
+      'homework.delete'::text
+    )
+  );
+
+create policy homework_submissions_select_members
+  on public.homework_submissions
+  for select
+  to authenticated
+  using (
+    public.current_user_can_access_homework_submission(
+      homework_submissions.id,
+      'homework.view'::text
+    )
+  );
+
+create policy homework_submissions_insert_members
+  on public.homework_submissions
+  for insert
+  to authenticated
+  with check (
+    exists (
+      select 1
+      from public.homework_assignments
+      where homework_assignments.id = homework_submissions.homework_id
+        and homework_assignments.institute_id = homework_submissions.institute_id
+        and homework_assignments.branch_id = homework_submissions.branch_id
+        and public.current_user_can_access_homework_assignment(
+          homework_assignments.id,
+          'homework.update'::text
+        )
+    )
+  );
+
+create policy homework_submissions_update_members
+  on public.homework_submissions
+  for update
+  to authenticated
+  using (
+    public.current_user_can_access_homework_submission(
+      homework_submissions.id,
+      'homework.update'::text
+    )
+  )
+  with check (
+    exists (
+      select 1
+      from public.homework_assignments
+      where homework_assignments.id = homework_submissions.homework_id
+        and homework_assignments.institute_id = homework_submissions.institute_id
+        and homework_assignments.branch_id = homework_submissions.branch_id
+        and public.current_user_can_access_homework_assignment(
+          homework_assignments.id,
+          'homework.update'::text
+        )
+    )
+  );
+
+create policy homework_submissions_delete_members
+  on public.homework_submissions
+  for delete
+  to authenticated
+  using (
+    public.current_user_can_access_homework_submission(
+      homework_submissions.id,
       'homework.delete'::text
     )
   );
@@ -3983,3 +4224,275 @@ create policy staff_members_delete_owner
   for delete
   to authenticated
   using (public.has_institute_permission(staff_members.institute_id, 'staff.manage'::text));
+
+-- =========================================================================
+-- TEST & EXAM MANAGEMENT
+-- =========================================================================
+
+create table if not exists public.tests (
+  id uuid primary key default gen_random_uuid(),
+  institute_id uuid not null references public.institutes(id) on delete cascade,
+  branch_id uuid not null references public.branches(id) on delete cascade,
+  batch_id uuid not null references public.batches(id) on delete cascade,
+  title text not null,
+  subject text,
+  test_date date not null,
+  max_marks numeric(8,2) not null check (max_marks > 0),
+  status text not null default 'scheduled' check (status in ('scheduled', 'marks_entry', 'completed', 'archived')),
+  description text,
+  created_by uuid references auth.users(id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.test_scores (
+  id uuid primary key default gen_random_uuid(),
+  institute_id uuid not null references public.institutes(id) on delete cascade,
+  branch_id uuid not null references public.branches(id) on delete cascade,
+  test_id uuid not null references public.tests(id) on delete cascade,
+  student_id uuid not null references public.students(id) on delete cascade,
+  marks_obtained numeric(8,2),
+  status text not null default 'not_entered' check (status in ('not_entered', 'present', 'absent', 'excused')),
+  remarks text,
+  checked_by uuid references auth.users(id) on delete set null,
+  checked_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint test_scores_marks_obtained_check check (marks_obtained >= 0),
+  constraint test_scores_test_student_unique unique (test_id, student_id)
+);
+
+create index if not exists tests_institute_id_idx on public.tests (institute_id);
+create index if not exists tests_branch_id_idx on public.tests (branch_id);
+create index if not exists tests_batch_id_idx on public.tests (batch_id);
+create index if not exists tests_test_date_idx on public.tests (test_date);
+create index if not exists tests_status_idx on public.tests (status);
+
+create index if not exists test_scores_institute_id_idx on public.test_scores (institute_id);
+create index if not exists test_scores_branch_id_idx on public.test_scores (branch_id);
+create index if not exists test_scores_test_id_idx on public.test_scores (test_id);
+create index if not exists test_scores_student_id_idx on public.test_scores (student_id);
+create index if not exists test_scores_status_idx on public.test_scores (status);
+
+alter table public.tests enable row level security;
+alter table public.test_scores enable row level security;
+
+create or replace function public.current_user_can_access_test_batch(
+  target_batch_id uuid,
+  required_permission text
+)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select auth.uid() is not null
+    and target_batch_id is not null
+    and required_permission is not null
+    and exists (
+      select 1
+      from public.batches
+      join public.memberships
+        on memberships.institute_id = batches.institute_id
+       and memberships.user_id = auth.uid()
+      where batches.id = target_batch_id
+        and public.role_has_permission(memberships.role, required_permission)
+        and (
+          memberships.role = 'owner'
+          or (
+            memberships.role = 'teacher'
+            and required_permission in ('tests.view', 'tests.create', 'tests.update', 'tests.archive', 'tests.delete')
+            and exists (
+              select 1
+              from public.batch_teachers
+              where batch_teachers.batch_id = batches.id
+                and batch_teachers.membership_id = memberships.id
+            )
+          )
+          or (
+            memberships.role <> 'teacher'
+            and (
+              memberships.role = 'branch_manager'
+              or memberships.role = 'academic_coordinator'
+              or memberships.role = 'operations_staff'
+            )
+            and memberships.branch_id = batches.branch_id
+          )
+        )
+    )
+$$;
+
+create or replace function public.current_user_can_access_test(
+  target_test_id uuid,
+  required_permission text
+)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select auth.uid() is not null
+    and target_test_id is not null
+    and required_permission is not null
+    and exists (
+      select 1
+      from public.tests
+      join public.batches
+        on batches.id = tests.batch_id
+      where tests.id = target_test_id
+        and tests.institute_id = batches.institute_id
+        and tests.branch_id = batches.branch_id
+        and public.current_user_can_access_test_batch(
+          batches.id,
+          required_permission
+        )
+    )
+$$;
+
+create policy tests_select_members
+  on public.tests
+  for select
+  to authenticated
+  using (
+    public.current_user_can_access_test(
+      tests.id,
+      'tests.view'::text
+    )
+  );
+
+create policy tests_insert_members
+  on public.tests
+  for insert
+  to authenticated
+  with check (
+    exists (
+      select 1
+      from public.batches
+      where batches.id = tests.batch_id
+        and batches.institute_id = tests.institute_id
+        and batches.branch_id = tests.branch_id
+        and public.current_user_can_access_test_batch(
+          batches.id,
+          'tests.create'::text
+        )
+    )
+  );
+
+create policy tests_update_members
+  on public.tests
+  for update
+  to authenticated
+  using (
+    public.current_user_can_access_test(
+      tests.id,
+      'tests.update'::text
+    )
+  )
+  with check (
+    exists (
+      select 1
+      from public.batches
+      where batches.id = tests.batch_id
+        and batches.institute_id = tests.institute_id
+        and batches.branch_id = tests.branch_id
+        and public.current_user_can_access_test_batch(
+          batches.id,
+          'tests.update'::text
+        )
+    )
+  );
+
+create policy tests_delete_members
+  on public.tests
+  for delete
+  to authenticated
+  using (
+    public.current_user_can_access_test(
+      tests.id,
+      'tests.delete'::text
+    )
+  );
+
+create policy test_scores_select_members
+  on public.test_scores
+  for select
+  to authenticated
+  using (
+    public.current_user_can_access_test(
+      test_scores.test_id,
+      'tests.view'::text
+    )
+  );
+
+create policy test_scores_insert_members
+  on public.test_scores
+  for insert
+  to authenticated
+  with check (
+    public.current_user_can_access_test(
+      test_scores.test_id,
+      'tests.create'::text
+    )
+  );
+
+create policy test_scores_update_members
+  on public.test_scores
+  for update
+  to authenticated
+  using (
+    public.current_user_can_access_test(
+      test_scores.test_id,
+      'tests.update'::text
+    )
+  )
+  with check (
+    public.current_user_can_access_test(
+      test_scores.test_id,
+      'tests.update'::text
+    )
+  );
+
+create policy test_scores_delete_members
+  on public.test_scores
+  for delete
+  to authenticated
+  using (
+    public.current_user_can_access_test(
+      test_scores.test_id,
+      'tests.delete'::text
+    )
+  );
+
+create or replace function public.set_tests_updated_at()
+returns trigger
+language plpgsql
+security definer
+as $$
+begin
+  new.updated_at := now();
+  return new;
+end;
+$$;
+
+create trigger set_tests_updated_at_trigger
+  before update on public.tests
+  for each row
+  execute function public.set_tests_updated_at();
+
+create or replace function public.set_test_scores_updated_at()
+returns trigger
+language plpgsql
+security definer
+as $$
+begin
+  new.updated_at := now();
+  return new;
+end;
+$$;
+
+create trigger set_test_scores_updated_at_trigger
+  before update on public.test_scores
+  for each row
+  execute function public.set_test_scores_updated_at();

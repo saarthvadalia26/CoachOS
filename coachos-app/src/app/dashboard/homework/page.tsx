@@ -3,6 +3,7 @@ import {
   Archive,
   BookOpenCheck,
   CalendarDays,
+  Eye,
   Save,
   Search,
   Trash2,
@@ -29,6 +30,7 @@ import {
   listHomeworkAssignments,
   type HomeworkAssignmentRow,
   type HomeworkBatchOption,
+  type HomeworkSubmissionStatus,
   type HomeworkStatus,
 } from "@/lib/homework/queries";
 import { canAccessPermission, hasPermission, type DashboardContext } from "@/lib/auth/permissions";
@@ -43,13 +45,23 @@ type HomeworkPageProps = {
     page?: string;
     q?: string;
     status?: string;
+    submissionStatus?: string;
   }>;
 };
 
-const statusLabels: Record<HomeworkStatus, string> = {
+const assignmentStatusLabels: Record<HomeworkStatus, string> = {
   active: "Active",
   archived: "Archived",
   completed: "Completed",
+};
+
+const submissionStatusLabels: Record<HomeworkSubmissionStatus, string> = {
+  assigned: "Assigned",
+  checked: "Checked",
+  excused: "Excused",
+  late: "Late",
+  missing: "Missing",
+  submitted: "Submitted",
 };
 
 function getBranchName(
@@ -71,7 +83,8 @@ function getCurrentPath(filters: {
   branchId: string | null;
   dueDate: string;
   q: string;
-  status: "" | HomeworkStatus;
+  status: string;
+  submissionStatus: string;
 }) {
   const params = new URLSearchParams();
 
@@ -91,6 +104,10 @@ function getCurrentPath(filters: {
     params.set("status", filters.status);
   }
 
+  if (filters.submissionStatus) {
+    params.set("submissionStatus", filters.submissionStatus);
+  }
+
   if (filters.dueDate) {
     params.set("dueDate", filters.dueDate);
   }
@@ -105,7 +122,8 @@ function getPaginationParams(filters: {
   branchId: string | null;
   dueDate: string;
   q: string;
-  status: "" | HomeworkStatus;
+  status: string;
+  submissionStatus: string;
 }) {
   return {
     batchId: filters.batchId,
@@ -113,6 +131,7 @@ function getPaginationParams(filters: {
     dueDate: filters.dueDate,
     q: filters.q,
     status: filters.status,
+    submissionStatus: filters.submissionStatus,
   };
 }
 
@@ -189,6 +208,28 @@ function HomeworkStatusSelect({
   );
 }
 
+function HomeworkSubmissionStatusSelect({
+  defaultValue,
+}: {
+  defaultValue?: "" | HomeworkSubmissionStatus;
+}) {
+  return (
+    <select
+      className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
+      defaultValue={defaultValue ?? ""}
+      name="submissionStatus"
+    >
+      <option value="">All submission statuses</option>
+      <option value="assigned">Assigned</option>
+      <option value="submitted">Submitted</option>
+      <option value="checked">Checked</option>
+      <option value="late">Late</option>
+      <option value="missing">Missing</option>
+      <option value="excused">Excused</option>
+    </select>
+  );
+}
+
 function HomeworkBranchSelect({
   context,
   defaultValue,
@@ -232,6 +273,7 @@ export default async function HomeworkPage({ searchParams }: HomeworkPageProps) 
     error,
     filters,
     page,
+    submissionSummaryByHomeworkId,
     totalCount,
   } = await listHomeworkAssignments(params);
   const { claims, institute, profile, role } = context;
@@ -245,6 +287,7 @@ export default async function HomeworkPage({ searchParams }: HomeworkPageProps) 
       filters.branchId ||
       filters.batchId ||
       filters.status ||
+      filters.submissionStatus ||
       filters.dueDate,
   );
 
@@ -294,6 +337,12 @@ export default async function HomeworkPage({ searchParams }: HomeworkPageProps) 
                   <HomeworkStatusSelect
                     defaultValue={filters.status}
                     includePlaceholder
+                  />
+                </Label>
+                <Label className="min-w-0">
+                  Submission status
+                  <HomeworkSubmissionStatusSelect
+                    defaultValue={filters.submissionStatus}
                   />
                 </Label>
                 <Label className="min-w-0">
@@ -437,7 +486,23 @@ export default async function HomeworkPage({ searchParams }: HomeworkPageProps) 
                           "homework.archive",
                           visibleBatchIds,
                         );
-                      const canDeleteHomework = canManageHomeworkBranch(
+                      const submissionSummary =
+                        submissionSummaryByHomeworkId.get(homework.id);
+                      const totalSubmissions = submissionSummary
+                        ? Object.values(submissionSummary).reduce(
+                            (total, count) => total + count,
+                            0,
+                          )
+                        : 0;
+                      const submittedCount = submissionSummary
+                        ? submissionSummary.submitted +
+                          submissionSummary.checked +
+                          submissionSummary.late
+                        : 0;
+                      const checkedCount = submissionSummary?.checked ?? 0;
+                      const canDeleteHomework =
+                        totalSubmissions === 0 &&
+                        canManageHomeworkBranch(
                         context,
                         homework,
                         "homework.delete",
@@ -483,11 +548,22 @@ export default async function HomeworkPage({ searchParams }: HomeworkPageProps) 
                                     : "secondary"
                                 }
                               >
-                                {statusLabels[homework.status]}
+                                {assignmentStatusLabels[homework.status]}
                               </Badge>
                               <Badge variant="outline">
                                 Due {formatDate(homework.due_date)}
                               </Badge>
+                              <Button asChild size="sm" variant="outline">
+                                <Link
+                                  href={`/dashboard/homework/${homework.id}`}
+                                >
+                                  <Eye
+                                    aria-hidden="true"
+                                    data-icon="inline-start"
+                                  />
+                                  View submissions
+                                </Link>
+                              </Button>
                               {canArchiveHomework ? (
                                 <form action={archiveHomeworkAssignment}>
                                   <input
@@ -550,6 +626,32 @@ export default async function HomeworkPage({ searchParams }: HomeworkPageProps) 
                           </div>
 
                           <div className="grid gap-2 text-sm text-muted-foreground">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Badge variant="outline">
+                                {submittedCount} / {totalSubmissions} submitted
+                              </Badge>
+                              <Badge variant="outline">
+                                {checkedCount} checked
+                              </Badge>
+                              {submissionSummary
+                                ? Object.entries(submissionSummary).map(
+                                    ([status, count]) =>
+                                      count > 0 ? (
+                                        <span
+                                          key={status}
+                                          className="text-xs text-muted-foreground"
+                                        >
+                                          {
+                                            submissionStatusLabels[
+                                              status as HomeworkSubmissionStatus
+                                            ]
+                                          }
+                                          : {count}
+                                        </span>
+                                      ) : null,
+                                  )
+                                : null}
+                            </div>
                             <p>
                               {homework.description ||
                                 "No description has been added."}

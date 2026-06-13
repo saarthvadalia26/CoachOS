@@ -479,6 +479,72 @@ async function StudentProfileContent({
     });
   }
 
+  // Fetch test scores for this student
+  let testScores: Array<{
+    id: string;
+    marks_obtained: number | null;
+    status: string;
+    remarks: string | null;
+    test_id: string;
+    test: {
+      title: string;
+      subject: string | null;
+      test_date: string;
+      max_marks: number;
+    } | null;
+  }> = [];
+
+  const { data: scoreRows, error: scoresError } = await supabase
+    .from("test_scores")
+    .select("id, marks_obtained, status, remarks, test_id, tests(title, subject, test_date, max_marks)")
+    .eq("student_id", student.id)
+    .order("created_at", { ascending: false });
+
+  if (scoresError) {
+    queryError = logQueryError("student_test_scores", scoresError) || queryError;
+  } else {
+    testScores = (scoreRows ?? []).map((row) => {
+      const testRelation = row.tests as
+        | Array<{
+            max_marks: number | string;
+            subject: string | null;
+            test_date: string;
+            title: string;
+          }>
+        | {
+            max_marks: number | string;
+            subject: string | null;
+            test_date: string;
+            title: string;
+          }
+        | null;
+      const testData = Array.isArray(testRelation)
+        ? testRelation[0] ?? null
+        : testRelation;
+      return {
+        id: row.id,
+        marks_obtained: row.marks_obtained !== null ? Number(row.marks_obtained) : null,
+        status: row.status,
+        remarks: row.remarks,
+        test_id: row.test_id,
+        test: testData ? {
+          title: testData.title,
+          subject: testData.subject,
+          test_date: testData.test_date,
+          max_marks: Number(testData.max_marks),
+        } : null,
+      };
+    });
+  }
+
+  const presentTestScores = testScores.filter((s) => s.status === "present" && s.marks_obtained !== null && s.test);
+  let averageTestPercentage = "-";
+  if (presentTestScores.length > 0) {
+    const percentages = presentTestScores.map((s) => (Number(s.marks_obtained!) / Number(s.test!.max_marks)) * 100);
+    const sum = percentages.reduce((total, p) => total + p, 0);
+    averageTestPercentage = `${Math.round(sum / presentTestScores.length)}%`;
+  }
+
   const attendanceCounts = attendanceEntries.reduce<
     Record<AttendanceStatus, number>
   >(
@@ -793,6 +859,87 @@ async function StudentProfileContent({
                   description="Attendance records are not available for your role."
                 />
               )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-xl">Test Performance</CardTitle>
+              <CardDescription>
+                Recent test scores and overall average performance.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4">
+                <div className="rounded-md border border-border p-3 bg-muted/20 flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-muted-foreground font-medium">Average Test Percentage</p>
+                    <p className="mt-1 text-2xl font-bold text-foreground">{averageTestPercentage}</p>
+                  </div>
+                  <Badge variant="secondary">
+                    {presentTestScores.length} tests present
+                  </Badge>
+                </div>
+
+                {testScores.length ? (
+                  <div className="divide-y divide-border rounded-md border border-border">
+                    {testScores.map((score) => {
+                      const scorePercentage =
+                        score.status === "present" && score.marks_obtained !== null && score.test
+                          ? (Number(score.marks_obtained) / Number(score.test.max_marks)) * 100
+                          : null;
+
+                      return (
+                        <article
+                          key={score.id}
+                          className="grid gap-2 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start"
+                        >
+                          <div className="min-w-0">
+                            <h3 className="text-sm font-medium text-foreground">
+                              {score.test?.title ?? "Test"}
+                            </h3>
+                            <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                              <span>{score.test?.subject ?? "No subject"}</span>
+                              {score.test?.test_date ? (
+                                <>
+                                  <span>&bull;</span>
+                                  <span>{formatDate(score.test.test_date)}</span>
+                                </>
+                              ) : null}
+                              {score.remarks ? (
+                                <>
+                                  <span>&bull;</span>
+                                  <span className="italic text-foreground/80">&ldquo;{score.remarks}&rdquo;</span>
+                                </>
+                              ) : null}
+                            </p>
+                          </div>
+                          <div className="flex shrink-0 flex-wrap items-start gap-2 sm:justify-end">
+                            <Badge
+                              variant={
+                                score.status === "present"
+                                  ? "secondary"
+                                  : score.status === "absent"
+                                    ? "destructive"
+                                    : "outline"
+                              }
+                            >
+                              {score.status === "present" && score.marks_obtained !== null && score.test
+                                ? `${score.marks_obtained} / ${score.test.max_marks} (${scorePercentage?.toFixed(0)}%)`
+                                : score.status.replace("_", " ")}
+                            </Badge>
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <EmptyState
+                    title="No test scores yet"
+                    description="This student has not participated in any tests yet."
+                  />
+                )}
+              </div>
             </CardContent>
           </Card>
         </div>

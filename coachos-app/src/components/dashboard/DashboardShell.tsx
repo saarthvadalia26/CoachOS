@@ -4,6 +4,7 @@ import {
   Building2,
   CalendarCheck,
   BookOpenCheck,
+  ClipboardCheck,
   GraduationCap,
   LayoutDashboard,
   MessageSquare,
@@ -31,6 +32,7 @@ type DashboardPageKey =
   | "batches"
   | "homework"
   | "attendance"
+  | "tests"
   | "communication"
   | "fees"
   | "staff"
@@ -108,6 +110,21 @@ const navItems: NavItem[] = [
     enabled: true,
     icon: CalendarCheck,
     permission: "attendance.view",
+    roles: [
+      "owner",
+      "branch_manager",
+      "operations_staff",
+      "academic_coordinator",
+      "teacher",
+    ],
+  },
+  {
+    label: "Tests",
+    href: "/dashboard/tests",
+    activeKey: "tests",
+    enabled: true,
+    icon: ClipboardCheck,
+    permission: "tests.view",
     roles: [
       "owner",
       "branch_manager",

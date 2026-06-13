@@ -1,4 +1,4 @@
--- CoachOS Homework Module v1.
+-- CoachOS Homework module.
 -- Adds branch-scoped homework assignments without student/parent portals,
 -- file uploads, external messaging, payment, PWA, or AI features.
 
@@ -95,7 +95,7 @@ create trigger set_homework_assignment_updated_at_trigger
   for each row
   execute function public.set_homework_assignment_updated_at();
 
--- Refresh the membership permission map with Homework v1 permissions.
+-- Refresh the membership permission map with Homework permissions.
 create or replace function public.role_has_permission(
   member_role text,
   required_permission text

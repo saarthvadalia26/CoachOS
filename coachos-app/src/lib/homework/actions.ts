@@ -14,8 +14,17 @@ import { isDateValue } from "@/lib/dashboard/list-controls";
 const HOMEWORK_PATH = "/dashboard/homework";
 
 const homeworkStatuses = ["active", "completed", "archived"] as const;
+const submissionStatuses = [
+  "assigned",
+  "submitted",
+  "checked",
+  "late",
+  "missing",
+  "excused",
+] as const;
 
 type HomeworkStatus = (typeof homeworkStatuses)[number];
+type HomeworkSubmissionStatus = (typeof submissionStatuses)[number];
 
 type HomeworkBatch = {
   branch_id: string;
@@ -23,6 +32,14 @@ type HomeworkBatch = {
   institute_id: string;
   name: string;
   subject: string | null;
+};
+
+type HomeworkForAction = {
+  batch_id: string;
+  branch_id: string;
+  id: string;
+  institute_id: string;
+  status: HomeworkStatus;
 };
 
 function getRequiredText(formData: FormData, key: string, label: string) {
@@ -77,6 +94,14 @@ function parseStatus(value: string | null, fallback: HomeworkStatus) {
   }
 
   redirectWithError("Select a valid homework status.");
+}
+
+function parseSubmissionStatus(value: string | null): HomeworkSubmissionStatus {
+  if (submissionStatuses.includes(value as HomeworkSubmissionStatus)) {
+    return value as HomeworkSubmissionStatus;
+  }
+
+  redirectWithError("Select a valid submission status.");
 }
 
 function canUseBranchPermission(
@@ -242,14 +267,155 @@ async function getHomeworkAssignmentForAction(
 
   return {
     batch: homeworkBatch,
-    homework: homework as {
-      batch_id: string;
+    homework: homework as HomeworkForAction,
+  };
+}
+
+async function getHomeworkSubmissionForAction(
+  context: DashboardContext,
+  submissionId: string,
+  permission: Permission,
+) {
+  const { data: submission, error } = await context.supabase
+    .from("homework_submissions")
+    .select("id, institute_id, branch_id, homework_id, student_id, status")
+    .eq("id", submissionId)
+    .eq("institute_id", context.institute.id)
+    .maybeSingle();
+
+  if (error) {
+    console.error("homework submission lookup failed", {
+      code: error.code,
+      details: error.details,
+      hint: error.hint,
+      instituteId: context.institute.id,
+      message: error.message,
+      role: context.role,
+      submissionId,
+      userId: context.claims.sub,
+    });
+    redirectWithSaveError();
+  }
+
+  if (!submission) {
+    redirectWithError("Select a homework submission from this institute.");
+  }
+
+  const { batch, homework } = await getHomeworkAssignmentForAction(
+    context,
+    submission.homework_id,
+    permission,
+  );
+
+  return {
+    batch,
+    homework,
+    submission: submission as {
       branch_id: string;
+      homework_id: string;
       id: string;
       institute_id: string;
-      status: HomeworkStatus;
+      status: HomeworkSubmissionStatus;
+      student_id: string;
     },
   };
+}
+
+async function createMissingSubmissionsForHomework(
+  context: DashboardContext,
+  homework: HomeworkForAction,
+) {
+  const { data: studentBatchRows, error: studentBatchError } =
+    await context.supabase
+      .from("student_batches")
+      .select("student_id")
+      .eq("batch_id", homework.batch_id);
+
+  if (studentBatchError) {
+    console.error("homework submission sync student batch lookup failed", {
+      code: studentBatchError.code,
+      details: studentBatchError.details,
+      hint: studentBatchError.hint,
+      homeworkId: homework.id,
+      instituteId: context.institute.id,
+      message: studentBatchError.message,
+      role: context.role,
+      userId: context.claims.sub,
+    });
+    redirectWithSaveError(`/dashboard/homework/${homework.id}`);
+  }
+
+  const studentIds = Array.from(
+    new Set(
+      (studentBatchRows ?? [])
+        .map((row) => row.student_id)
+        .filter(Boolean),
+    ),
+  ) as string[];
+
+  if (!studentIds.length) {
+    return 0;
+  }
+
+  const { data: studentRows, error: studentsError } = await context.supabase
+    .from("students")
+    .select("id")
+    .eq("institute_id", context.institute.id)
+    .eq("branch_id", homework.branch_id)
+    .in("id", studentIds)
+    .is("archived_at", null)
+    .or("status.eq.active,status.is.null");
+
+  if (studentsError) {
+    console.error("homework submission sync student lookup failed", {
+      code: studentsError.code,
+      details: studentsError.details,
+      hint: studentsError.hint,
+      homeworkId: homework.id,
+      instituteId: context.institute.id,
+      message: studentsError.message,
+      role: context.role,
+      userId: context.claims.sub,
+    });
+    redirectWithSaveError(`/dashboard/homework/${homework.id}`);
+  }
+
+  const activeStudentIds = (studentRows ?? []).map((student) => student.id);
+
+  if (!activeStudentIds.length) {
+    return 0;
+  }
+
+  const submissionRows = activeStudentIds.map((studentId) => ({
+    branch_id: homework.branch_id,
+    homework_id: homework.id,
+    institute_id: homework.institute_id,
+    status: "assigned",
+    student_id: studentId,
+  }));
+
+  const { error } = await context.supabase
+    .from("homework_submissions")
+    .upsert(submissionRows, {
+      ignoreDuplicates: true,
+      onConflict: "homework_id,student_id",
+    });
+
+  if (error) {
+    console.error("homework submission sync failed", {
+      code: error.code,
+      details: error.details,
+      hint: error.hint,
+      homeworkId: homework.id,
+      instituteId: context.institute.id,
+      message: error.message,
+      role: context.role,
+      userId: context.claims.sub,
+    });
+    redirectWithSaveError(`/dashboard/homework/${homework.id}`);
+  }
+
+  return submissionRows.length;
 }
 
 export async function createHomeworkAssignment(formData: FormData) {
@@ -273,17 +439,21 @@ export async function createHomeworkAssignment(formData: FormData) {
     redirectWith(next, "error", "Select a valid due date.");
   }
 
-  const { error } = await context.supabase.from("homework_assignments").insert({
-    batch_id: batch.id,
-    branch_id: batch.branch_id,
-    created_by: context.claims.sub,
-    description,
-    due_date: dueDate,
-    institute_id: context.institute.id,
-    status,
-    subject,
-    title,
-  });
+  const { data: homework, error } = await context.supabase
+    .from("homework_assignments")
+    .insert({
+      batch_id: batch.id,
+      branch_id: batch.branch_id,
+      created_by: context.claims.sub,
+      description,
+      due_date: dueDate,
+      institute_id: context.institute.id,
+      status,
+      subject,
+      title,
+    })
+    .select("id, institute_id, branch_id, batch_id, status")
+    .single();
 
   if (error) {
     console.error("createHomeworkAssignment failed", {
@@ -300,6 +470,11 @@ export async function createHomeworkAssignment(formData: FormData) {
     redirectWithSaveError(next);
   }
 
+  await createMissingSubmissionsForHomework(
+    context,
+    homework as HomeworkForAction,
+  );
+
   revalidatePath(HOMEWORK_PATH);
   revalidatePath("/dashboard");
   redirectWith(next, "success", "Homework assigned.");
@@ -309,7 +484,7 @@ export async function updateHomeworkAssignment(formData: FormData) {
   const context = await requireDashboardAccess();
   const next = getSafeNextPath(formData);
   const homeworkId = getRequiredText(formData, "homeworkId", "Homework");
-  const { batch: currentBatch } = await getHomeworkAssignmentForAction(
+  const { batch: currentBatch, homework } = await getHomeworkAssignmentForAction(
     context,
     homeworkId,
     "homework.update",
@@ -322,6 +497,36 @@ export async function updateHomeworkAssignment(formData: FormData) {
 
   if (requestedBranchId && requestedBranchId !== nextBatch.branch_id) {
     redirectWith(next, "error", "Select a batch from the selected branch.");
+  }
+
+  if (nextBatch.id !== currentBatch.id) {
+    const { count, error: submissionCountError } = await context.supabase
+      .from("homework_submissions")
+      .select("id", { count: "exact", head: true })
+      .eq("homework_id", homework.id)
+      .eq("institute_id", context.institute.id);
+
+    if (submissionCountError) {
+      console.error("updateHomeworkAssignment submission count failed", {
+        code: submissionCountError.code,
+        details: submissionCountError.details,
+        hint: submissionCountError.hint,
+        homeworkId,
+        instituteId: context.institute.id,
+        message: submissionCountError.message,
+        role: context.role,
+        userId: context.claims.sub,
+      });
+      redirectWithSaveError(next);
+    }
+
+    if ((count ?? 0) > 0) {
+      redirectWith(
+        next,
+        "error",
+        "This homework already has student submissions. Archive it and create a new assignment for a different batch.",
+      );
+    }
   }
 
   const title = getRequiredText(formData, "title", "Homework title");
@@ -426,6 +631,35 @@ export async function deleteHomeworkAssignment(formData: FormData) {
     homeworkId,
     "homework.delete",
   );
+  const { count: submissionCount, error: submissionCountError } =
+    await context.supabase
+      .from("homework_submissions")
+      .select("id", { count: "exact", head: true })
+      .eq("homework_id", homeworkId)
+      .eq("institute_id", context.institute.id);
+
+  if (submissionCountError) {
+    console.error("deleteHomeworkAssignment submission count failed", {
+      branchId: batch.branch_id,
+      code: submissionCountError.code,
+      details: submissionCountError.details,
+      hint: submissionCountError.hint,
+      homeworkId,
+      instituteId: context.institute.id,
+      message: submissionCountError.message,
+      role: context.role,
+      userId: context.claims.sub,
+    });
+    redirectWith(next, "error", "Could not delete homework. Please try again.");
+  }
+
+  if ((submissionCount ?? 0) > 0) {
+    redirectWith(
+      next,
+      "error",
+      "This homework has student submission history. Archive it instead.",
+    );
+  }
 
   const { data: deletedHomework, error } = await context.supabase
     .from("homework_assignments")
@@ -457,4 +691,204 @@ export async function deleteHomeworkAssignment(formData: FormData) {
   revalidatePath(HOMEWORK_PATH);
   revalidatePath("/dashboard");
   redirectWith(next, "success", "Homework deleted.");
+}
+
+export async function updateHomeworkSubmissionStatus(formData: FormData) {
+  const context = await requireDashboardAccess();
+  const next = getSafeNextPath(formData);
+  const submissionId = getRequiredText(
+    formData,
+    "submissionId",
+    "Submission",
+  );
+  const status = parseSubmissionStatus(getOptionalText(formData, "status"));
+  const remarks = getOptionalText(formData, "remarks");
+  const { homework } = await getHomeworkSubmissionForAction(
+    context,
+    submissionId,
+    "homework.update",
+  );
+  const now = new Date().toISOString();
+  const updatePayload: {
+    checked_at?: string | null;
+    checked_by?: string | null;
+    remarks?: string | null;
+    status: HomeworkSubmissionStatus;
+    submitted_at?: string | null;
+  } = {
+    status,
+  };
+
+  if (remarks !== null) {
+    updatePayload.remarks = remarks;
+  }
+
+  if (status === "submitted" || status === "late") {
+    updatePayload.submitted_at = now;
+  }
+
+  if (status === "checked") {
+    updatePayload.checked_at = now;
+    updatePayload.checked_by = context.claims.sub;
+  }
+
+  const { data: updatedSubmission, error } = await context.supabase
+    .from("homework_submissions")
+    .update(updatePayload)
+    .eq("id", submissionId)
+    .eq("institute_id", context.institute.id)
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    console.error("updateHomeworkSubmissionStatus failed", {
+      code: error.code,
+      details: error.details,
+      hint: error.hint,
+      homeworkId: homework.id,
+      instituteId: context.institute.id,
+      message: error.message,
+      role: context.role,
+      submissionId,
+      userId: context.claims.sub,
+    });
+    redirectWith(next, "error", "Could not update submission. Please try again.");
+  }
+
+  if (!updatedSubmission) {
+    redirectWith(next, "error", "Select a homework submission from this institute.");
+  }
+
+  revalidatePath(HOMEWORK_PATH);
+  revalidatePath(`/dashboard/homework/${homework.id}`);
+  redirectWith(next, "success", "Submission updated.");
+}
+
+export async function updateHomeworkSubmissionRemarks(formData: FormData) {
+  const context = await requireDashboardAccess();
+  const next = getSafeNextPath(formData);
+  const submissionId = getRequiredText(
+    formData,
+    "submissionId",
+    "Submission",
+  );
+  const remarks = getOptionalText(formData, "remarks");
+  const { homework } = await getHomeworkSubmissionForAction(
+    context,
+    submissionId,
+    "homework.update",
+  );
+
+  const { data: updatedSubmission, error } = await context.supabase
+    .from("homework_submissions")
+    .update({ remarks })
+    .eq("id", submissionId)
+    .eq("institute_id", context.institute.id)
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    console.error("updateHomeworkSubmissionRemarks failed", {
+      code: error.code,
+      details: error.details,
+      hint: error.hint,
+      homeworkId: homework.id,
+      instituteId: context.institute.id,
+      message: error.message,
+      role: context.role,
+      submissionId,
+      userId: context.claims.sub,
+    });
+    redirectWith(next, "error", "Could not update submission. Please try again.");
+  }
+
+  if (!updatedSubmission) {
+    redirectWith(next, "error", "Select a homework submission from this institute.");
+  }
+
+  revalidatePath(HOMEWORK_PATH);
+  revalidatePath(`/dashboard/homework/${homework.id}`);
+  redirectWith(next, "success", "Submission updated.");
+}
+
+export async function bulkUpdateHomeworkSubmissions(formData: FormData) {
+  const context = await requireDashboardAccess();
+  const next = getSafeNextPath(formData);
+  const homeworkId = getRequiredText(formData, "homeworkId", "Homework");
+  const status = parseSubmissionStatus(getOptionalText(formData, "status"));
+  const submissionIds = formData
+    .getAll("submissionId")
+    .map((value) => String(value).trim())
+    .filter(Boolean);
+
+  if (!submissionIds.length) {
+    redirectWith(next, "error", "Select at least one student submission.");
+  }
+
+  const { homework } = await getHomeworkAssignmentForAction(
+    context,
+    homeworkId,
+    "homework.update",
+  );
+  const now = new Date().toISOString();
+  const updatePayload: {
+    checked_at?: string | null;
+    checked_by?: string | null;
+    status: HomeworkSubmissionStatus;
+    submitted_at?: string | null;
+  } = {
+    status,
+  };
+
+  if (status === "submitted" || status === "late") {
+    updatePayload.submitted_at = now;
+  }
+
+  if (status === "checked") {
+    updatePayload.checked_at = now;
+    updatePayload.checked_by = context.claims.sub;
+  }
+
+  const { error } = await context.supabase
+    .from("homework_submissions")
+    .update(updatePayload)
+    .eq("homework_id", homework.id)
+    .eq("institute_id", context.institute.id)
+    .in("id", submissionIds);
+
+  if (error) {
+    console.error("bulkUpdateHomeworkSubmissions failed", {
+      code: error.code,
+      details: error.details,
+      hint: error.hint,
+      homeworkId: homework.id,
+      instituteId: context.institute.id,
+      message: error.message,
+      role: context.role,
+      submissionCount: submissionIds.length,
+      userId: context.claims.sub,
+    });
+    redirectWith(next, "error", "Could not update submission. Please try again.");
+  }
+
+  revalidatePath(HOMEWORK_PATH);
+  revalidatePath(`/dashboard/homework/${homework.id}`);
+  redirectWith(next, "success", "Submissions updated.");
+}
+
+export async function syncHomeworkSubmissionsForBatch(formData: FormData) {
+  const context = await requireDashboardAccess();
+  const next = getSafeNextPath(formData);
+  const homeworkId = getRequiredText(formData, "homeworkId", "Homework");
+  const { homework } = await getHomeworkAssignmentForAction(
+    context,
+    homeworkId,
+    "homework.update",
+  );
+
+  await createMissingSubmissionsForHomework(context, homework);
+
+  revalidatePath(HOMEWORK_PATH);
+  revalidatePath(`/dashboard/homework/${homework.id}`);
+  redirectWith(next, "success", "Students synced.");
 }

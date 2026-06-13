@@ -71,6 +71,11 @@ export const permissions = [
   "branches.update",
   "reports.view",
   "settings.manage",
+  "tests.view",
+  "tests.create",
+  "tests.update",
+  "tests.archive",
+  "tests.delete",
 ] as const;
 
 export type Permission = (typeof permissions)[number];
@@ -213,6 +218,11 @@ const rolePermissions = {
     "notifications.update",
     "branches.view",
     "reports.view",
+    "tests.view",
+    "tests.create",
+    "tests.update",
+    "tests.archive",
+    "tests.delete",
   ],
   operations_staff: [
     "students.view",
@@ -228,6 +238,7 @@ const rolePermissions = {
     "communications.view",
     "notifications.view",
     "notifications.update",
+    "tests.view",
   ],
   accountant: [
     "students.view",
@@ -258,6 +269,11 @@ const rolePermissions = {
     "communications.view",
     "notifications.view",
     "notifications.update",
+    "tests.view",
+    "tests.create",
+    "tests.update",
+    "tests.archive",
+    "tests.delete",
   ],
   teacher: [
     "students.view",
@@ -269,6 +285,11 @@ const rolePermissions = {
     "communications.view",
     "notifications.view",
     "notifications.update",
+    "tests.view",
+    "tests.create",
+    "tests.update",
+    "tests.archive",
+    "tests.delete",
   ],
 } as const satisfies Record<AppRole, readonly Permission[]>;
 
@@ -279,6 +300,11 @@ const teacherScopedPermissions: readonly Permission[] = [
   "homework.create",
   "homework.update",
   "attendance.view",
+  "tests.view",
+  "tests.create",
+  "tests.update",
+  "tests.archive",
+  "tests.delete",
 ] as const;
 
 export function normalizeRole(role: string | null | undefined) {
