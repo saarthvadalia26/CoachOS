@@ -312,6 +312,9 @@ export default async function AcademicYearsPage() {
                               variant="destructive"
                               className="w-full sm:w-auto"
                               confirmMessage={`Delete ${academicYear.name}? This is only allowed when no attendance records are linked.`}
+                              confirmTitle="Delete academic year?"
+                              confirmDescription={`This will remove ${academicYear.name}. Academic years with linked attendance records cannot be deleted. This action cannot be undone.`}
+                              confirmLabel="Delete academic year"
                               pendingLabel="Deleting..."
                             >
                               <Trash2

@@ -668,6 +668,9 @@ export default async function BatchesPage({ searchParams }: BatchesPageProps) {
                               variant="destructive"
                               size="sm"
                               confirmMessage={`Delete ${batch.name}? This also removes student assignments and attendance records for this batch.`}
+                              confirmTitle="Delete batch?"
+                              confirmDescription={`This will remove ${batch.name}, including student assignments and attendance records for this batch. This action cannot be undone.`}
+                              confirmLabel="Delete batch"
                               pendingLabel="Deleting..."
                             >
                               <Trash2
@@ -738,6 +741,10 @@ export default async function BatchesPage({ searchParams }: BatchesPageProps) {
                                       size="sm"
                                       pendingLabel="Removing..."
                                       confirmMessage={`Remove ${teacher.label} from ${batch.name}?`}
+                                      confirmTitle="Remove teacher?"
+                                      confirmDescription={`This will remove ${teacher.label} from ${batch.name}. The staff member and other batch assignments remain unchanged.`}
+                                      confirmLabel="Remove teacher"
+                                      destructive={false}
                                     >
                                       <UserMinus
                                         aria-hidden="true"

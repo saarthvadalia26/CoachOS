@@ -385,6 +385,9 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
                                   variant="destructive"
                                   size="sm"
                                   confirmMessage={`Delete ${student.full_name}? This also removes batch relationships, attendance records, and fee records for this student.`}
+                                  confirmTitle="Delete student?"
+                                  confirmDescription={`This will remove ${student.full_name}, including related batch links, attendance records, and fee records. This action cannot be undone.`}
+                                  confirmLabel="Delete student"
                                   pendingLabel="Deleting..."
                                 >
                                   <Trash2

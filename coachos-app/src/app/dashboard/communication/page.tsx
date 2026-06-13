@@ -415,6 +415,9 @@ function AnnouncementCard({
                 <ConfirmSubmitButton
                   className="w-full sm:w-auto"
                   confirmMessage={`Delete the announcement "${announcement.title}"?`}
+                  confirmTitle="Delete announcement?"
+                  confirmDescription={`This will remove "${announcement.title}" from the communication hub. This action cannot be undone.`}
+                  confirmLabel="Delete announcement"
                   pendingLabel="Deleting..."
                   variant="destructive"
                 >

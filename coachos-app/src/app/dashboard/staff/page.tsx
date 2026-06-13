@@ -509,6 +509,9 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
                             variant="destructive"
                             size="sm"
                             confirmMessage={`Delete ${staffMember.full_name} from staff?`}
+                            confirmTitle="Delete staff member?"
+                            confirmDescription={`This will remove ${staffMember.full_name} from the staff list. Linked access will be removed according to the current account rules. This action cannot be undone.`}
+                            confirmLabel="Delete staff member"
                             pendingLabel="Deleting..."
                           >
                             <Trash2

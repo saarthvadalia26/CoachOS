@@ -1,46 +1,69 @@
 "use client";
 
 import type { ComponentProps, MouseEvent } from "react";
+import { useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 type ConfirmSubmitButtonProps = ComponentProps<typeof Button> & {
+  cancelLabel?: string;
+  confirmDescription?: string;
+  confirmLabel?: string;
   confirmMessage: string;
+  confirmTitle?: string;
+  destructive?: boolean;
   pendingLabel?: string;
 };
 
 export function ConfirmSubmitButton({
-  confirmMessage,
+  cancelLabel = "Cancel",
   children,
+  confirmDescription,
+  confirmLabel,
+  confirmMessage,
+  confirmTitle = "Confirm action",
+  destructive,
   disabled,
   onClick,
   pendingLabel = "Deleting...",
+  variant,
   ...props
 }: ConfirmSubmitButtonProps) {
   const { pending } = useFormStatus();
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const isPending = pending || isSubmitting;
+  const isDestructive = destructive ?? variant === "destructive";
 
-  function handleClick(event: MouseEvent<HTMLButtonElement>) {
+  function handleTriggerClick(event: MouseEvent<HTMLButtonElement>) {
     onClick?.(event);
+  }
 
-    if (event.defaultPrevented) {
+  function submitParentForm() {
+    const form = triggerRef.current?.form;
+
+    if (!form) {
       return;
     }
 
-    if (!window.confirm(confirmMessage)) {
-      event.preventDefault();
-    }
+    setIsSubmitting(true);
+    form.requestSubmit();
   }
 
-  return (
+  const trigger = (
     <Button
       {...props}
-      aria-busy={pending}
-      disabled={disabled || pending}
-      onClick={handleClick}
+      aria-busy={isPending}
+      disabled={disabled || isPending}
+      onClick={handleTriggerClick}
+      ref={triggerRef}
+      type="button"
+      variant={variant}
     >
-      {pending ? (
+      {isPending ? (
         <>
           <Loader2
             aria-hidden="true"
@@ -53,5 +76,21 @@ export function ConfirmSubmitButton({
         children
       )}
     </Button>
+  );
+
+  return (
+    <ConfirmDialog
+      cancelLabel={cancelLabel}
+      confirmLabel={
+        confirmLabel ?? (isDestructive ? "Confirm delete" : "Confirm")
+      }
+      description={confirmDescription ?? confirmMessage}
+      destructive={isDestructive}
+      onConfirm={submitParentForm}
+      pending={isPending}
+      pendingLabel={pendingLabel}
+      title={confirmTitle}
+      trigger={trigger}
+    />
   );
 }
