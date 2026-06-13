@@ -40,18 +40,36 @@ export default function Image() {
             <div
               style={{
                 alignItems: "center",
-                background: "#4f46e5",
+                background: "#1e1b4b",
                 borderRadius: 18,
                 color: "#ffffff",
                 display: "flex",
-                fontSize: 34,
-                fontWeight: 800,
                 height: 72,
                 justifyContent: "center",
                 width: 72,
               }}
             >
-              C
+              <svg
+                width="44"
+                height="38"
+                viewBox="0 0 28 24"
+                fill="none"
+              >
+                <path
+                  d="M4 4L12 12L4 20"
+                  stroke="white"
+                  strokeWidth="3.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M15 4L23 12L15 20"
+                  stroke="white"
+                  strokeWidth="3.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
             </div>
             <div style={{ display: "flex", flexDirection: "column" }}>
               <div style={{ fontSize: 42, fontWeight: 800 }}>CoachOS</div>

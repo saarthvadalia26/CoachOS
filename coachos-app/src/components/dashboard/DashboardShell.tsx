@@ -182,8 +182,19 @@ export async function DashboardShell({
               href="/dashboard"
               className="flex items-center gap-2 text-lg font-semibold tracking-tight transition-colors hover:text-sidebar-primary"
             >
-              <span className="grid size-8 place-items-center rounded-lg bg-sidebar-primary text-sm font-bold text-sidebar-primary-foreground shadow-sm">
-                C
+              <span className="grid size-8 place-items-center rounded-lg bg-[#1e1b4b] text-white shadow-sm">
+                <svg
+                  className="size-4"
+                  viewBox="0 0 28 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="3.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M4 4L12 12L4 20" />
+                  <path d="M15 4L23 12L15 20" />
+                </svg>
               </span>
               CoachOS
             </Link>

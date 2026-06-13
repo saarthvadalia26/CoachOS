@@ -16,8 +16,19 @@ export function Footer() {
       <div className="mx-auto grid w-full max-w-6xl gap-8 px-6 py-10 md:grid-cols-[1.4fr_0.8fr_0.8fr_0.8fr]">
         <div>
           <Link href="/" className="flex items-center gap-2 text-lg font-semibold tracking-tight">
-            <span className="grid size-8 place-items-center rounded-lg bg-primary text-sm font-bold text-primary-foreground">
-              C
+            <span className="grid size-8 place-items-center rounded-lg bg-[#1e1b4b] text-white shadow-sm">
+              <svg
+                className="size-4"
+                viewBox="0 0 28 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="3.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M4 4L12 12L4 20" />
+                <path d="M15 4L23 12L15 20" />
+              </svg>
             </span>
             CoachOS
           </Link>
