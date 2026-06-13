@@ -610,11 +610,11 @@ export default async function BatchesPage({ searchParams }: BatchesPageProps) {
 
                   return (
                     <Card key={batch.id}>
-                    <CardHeader className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                    <CardHeader className="flex flex-col gap-3 2xl:flex-row 2xl:items-start 2xl:justify-between">
                       <div className="min-w-0 flex-1">
-                        <CardTitle className="whitespace-normal break-words text-lg">
+                        <h3 className="text-lg font-semibold leading-tight text-foreground">
                           {batch.name}
-                        </CardTitle>
+                        </h3>
                         <CardDescription className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
                           <span className="whitespace-nowrap">
                             {batch.subject ?? "Subject not specified"}
@@ -632,7 +632,7 @@ export default async function BatchesPage({ searchParams }: BatchesPageProps) {
                           ) : null}
                         </CardDescription>
                       </div>
-                      <div className="flex shrink-0 flex-wrap items-start justify-start gap-2 lg:justify-end">
+                      <div className="flex w-full flex-wrap items-start justify-start gap-2 sm:justify-end 2xl:w-auto 2xl:shrink-0">
                         <Badge variant="secondary">
                           {batch.students.length}{" "}
                           {batch.students.length === 1
