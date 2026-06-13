@@ -104,6 +104,7 @@ export async function signup(formData: FormData) {
   const supabase = await createClient();
   const origin = await getAppOrigin();
   const authData = getAuthData(formData);
+  const nextPath = getNextPath(formData);
 
   if (authData.password.length < 8) {
     redirect(
@@ -114,7 +115,7 @@ export async function signup(formData: FormData) {
   const { data, error } = await supabase.auth.signUp({
     ...authData,
     options: {
-      emailRedirectTo: getAuthRedirectUrl(origin),
+      emailRedirectTo: getAuthRedirectUrl(origin, nextPath),
     },
   });
 
@@ -128,11 +129,19 @@ export async function signup(formData: FormData) {
   revalidatePath("/", "layout");
 
   if (data.session) {
-    redirect("/dashboard");
+    redirect(nextPath);
+  }
+
+  const loginParams = new URLSearchParams({
+    message: "Check your email to confirm your account, then sign in.",
+  });
+
+  if (nextPath !== "/dashboard") {
+    loginParams.set("next", nextPath);
   }
 
   redirect(
-    "/login?message=Check%20your%20email%20to%20confirm%20your%20account%2C%20then%20sign%20in.",
+    `/login?${loginParams.toString()}`,
   );
 }
 

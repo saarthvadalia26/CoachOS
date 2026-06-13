@@ -13,13 +13,25 @@ export const metadata: Metadata = {
   title: "Create Account",
 };
 
-export default async function SignupPage() {
+type SignupPageProps = {
+  searchParams: Promise<{
+    next?: string;
+  }>;
+};
+
+export default async function SignupPage({ searchParams }: SignupPageProps) {
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
   const claims = data?.claims;
+  const params = await searchParams;
+  const nextPath =
+    params.next && params.next.startsWith("/") && !params.next.startsWith("//")
+      ? params.next
+      : "/dashboard";
+  const isPortalSignup = nextPath.startsWith("/portal/");
 
   if (claims) {
-    redirect("/dashboard");
+    redirect(nextPath);
   }
 
   return (
@@ -30,14 +42,19 @@ export default async function SignupPage() {
             CoachOS
           </Link>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight">
-            Create your institute account
+            {isPortalSignup
+              ? "Create your portal account"
+              : "Create your institute account"}
           </h1>
           <p className="mt-3 text-sm leading-6 text-muted-foreground">
-            Create the owner account for your coaching institute and complete setup in the dashboard.
+            {isPortalSignup
+              ? "Use the email your institute has linked for portal access."
+              : "Create the owner account for your coaching institute and complete setup in the dashboard."}
           </p>
         </div>
 
         <form action={signup} className="mt-6 grid gap-4">
+          <input type="hidden" name="next" value={nextPath} />
           <Label>
             Email
             <Input
@@ -64,7 +81,10 @@ export default async function SignupPage() {
 
         <p className="mt-6 text-center text-sm text-muted-foreground">
           Already have an account?{" "}
-          <Link href="/login" className="font-medium text-foreground underline">
+          <Link
+            href={`/login?next=${encodeURIComponent(nextPath)}`}
+            className="font-medium text-foreground underline"
+          >
             Log in
           </Link>
         </p>

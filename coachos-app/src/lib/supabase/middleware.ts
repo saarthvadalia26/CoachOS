@@ -4,7 +4,11 @@ import { NextResponse, type NextRequest } from "next/server";
 const authRoutes = ["/login", "/signup"];
 
 function isProtectedRoute(pathname: string) {
-  return pathname.startsWith("/dashboard") || pathname.startsWith("/onboarding");
+  return (
+    pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/onboarding") ||
+    pathname.startsWith("/portal")
+  );
 }
 
 function isAuthRoute(pathname: string) {
@@ -15,10 +19,11 @@ function redirectWithCookies(
   request: NextRequest,
   response: NextResponse,
   pathname: string,
+  search?: string,
 ) {
   const redirectUrl = request.nextUrl.clone();
   redirectUrl.pathname = pathname;
-  redirectUrl.search = "";
+  redirectUrl.search = search ?? "";
 
   const redirectResponse = NextResponse.redirect(redirectUrl);
 
@@ -72,11 +77,26 @@ export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   if (!isLoggedIn && isProtectedRoute(pathname)) {
-    return redirectWithCookies(request, response, "/login");
+    const params = new URLSearchParams({
+      next: `${request.nextUrl.pathname}${request.nextUrl.search}`,
+    });
+
+    return redirectWithCookies(
+      request,
+      response,
+      "/login",
+      `?${params.toString()}`,
+    );
   }
 
   if (isLoggedIn && isAuthRoute(pathname)) {
-    return redirectWithCookies(request, response, "/dashboard");
+    const next = request.nextUrl.searchParams.get("next");
+    const safeNext =
+      next && next.startsWith("/") && !next.startsWith("//")
+        ? next
+        : "/dashboard";
+
+    return redirectWithCookies(request, response, safeNext);
   }
 
   return response;

@@ -43,6 +43,16 @@ function redirectWithSuccess(message: string, branchId?: string | null): never {
   redirect(`${STUDENTS_PATH}?${params.toString()}`);
 }
 
+function redirectToStudentProfile(
+  studentId: string,
+  key: "error" | "success",
+  message: string,
+): never {
+  redirect(
+    `/dashboard/students/${studentId}?${key}=${encodeURIComponent(message)}`,
+  );
+}
+
 function redirectWithSaveError(): never {
   redirectWithError(
     "This student record could not be saved. Please review the details and try again.",
@@ -246,6 +256,58 @@ async function getStudentForRemoval(
   }
 
   return student as { archived_at: string | null; branch_id: string | null; id: string };
+}
+
+async function getStudentForPortalManagement(
+  context: DashboardContext,
+  studentId: string,
+) {
+  const { institute, supabase } = context;
+  const { data: student, error } = await supabase
+    .from("students")
+    .select("id, institute_id, branch_id, student_email, parent_email")
+    .eq("id", studentId)
+    .eq("institute_id", institute.id)
+    .maybeSingle();
+
+  if (error) {
+    console.error("student portal access lookup failed", error);
+    redirectToStudentProfile(
+      studentId,
+      "error",
+      "Portal access could not be updated. Please try again.",
+    );
+  }
+
+  if (!student) {
+    redirectToStudentProfile(
+      studentId,
+      "error",
+      "Select a student from this institute.",
+    );
+  }
+
+  if (!canUpdateStudentScope(context, student.branch_id)) {
+    redirectToStudentProfile(
+      studentId,
+      "error",
+      "You do not have permission to manage portal access for this student.",
+    );
+  }
+
+  return student as {
+    branch_id: string;
+    id: string;
+    institute_id: string;
+    parent_email: string | null;
+    student_email: string | null;
+  };
+}
+
+function getRequiredEmail(formData: FormData, key: string) {
+  const value = String(formData.get(key) ?? "").trim().toLowerCase();
+
+  return value && value.includes("@") ? value : null;
 }
 
 async function hasStudentHistoricalRecords(
@@ -562,4 +624,260 @@ export async function reactivateStudent(formData: FormData) {
   revalidatePath(`/dashboard/students/${studentId}`);
   revalidatePath("/dashboard");
   redirectWithSuccess("Student reactivated.", existingStudent.branch_id);
+}
+
+export async function saveStudentPortalAccess(formData: FormData) {
+  const context = await requireDashboardAccess();
+  const { supabase } = context;
+  const studentId = getRequiredId(formData, "studentId", "Student");
+  const email = getRequiredEmail(formData, "studentEmail");
+
+  if (!email) {
+    redirectToStudentProfile(studentId, "error", "Enter a valid student email.");
+  }
+
+  const student = await getStudentForPortalManagement(context, studentId);
+
+  const { data: existingLink, error: existingError } = await supabase
+    .from("student_portal_links")
+    .select("id, email, status, auth_user_id")
+    .eq("student_id", student.id)
+    .neq("status", "disabled")
+    .maybeSingle();
+
+  if (existingError) {
+    console.error("student portal link lookup failed", existingError);
+    redirectToStudentProfile(
+      student.id,
+      "error",
+      "Portal access could not be updated. Please try again.",
+    );
+  }
+
+  if (
+    existingLink?.status === "linked" &&
+    existingLink.email.toLowerCase() !== email
+  ) {
+    redirectToStudentProfile(
+      student.id,
+      "error",
+      "Disable the existing student portal access before changing the linked email.",
+    );
+  }
+
+  const { error: studentUpdateError } = await supabase
+    .from("students")
+    .update({ student_email: email })
+    .eq("id", student.id)
+    .eq("institute_id", student.institute_id);
+
+  if (studentUpdateError) {
+    console.error("student portal email update failed", studentUpdateError);
+    redirectToStudentProfile(
+      student.id,
+      "error",
+      "Portal access could not be updated. Please try again.",
+    );
+  }
+
+  const linkPayload = {
+    branch_id: student.branch_id,
+    created_by: context.claims.sub,
+    email,
+    institute_id: student.institute_id,
+    status: "pending",
+    student_id: student.id,
+  };
+  const { error: linkError } = existingLink
+    ? await supabase
+        .from("student_portal_links")
+        .update({
+          email,
+          status: existingLink.status === "linked" ? "linked" : "pending",
+        })
+        .eq("id", existingLink.id)
+    : await supabase.from("student_portal_links").insert(linkPayload);
+
+  if (linkError) {
+    console.error("student portal link save failed", linkError);
+    redirectToStudentProfile(
+      student.id,
+      "error",
+      "Portal access could not be updated. Please try again.",
+    );
+  }
+
+  revalidatePath(`/dashboard/students/${student.id}`);
+  redirectToStudentProfile(student.id, "success", "Student portal access saved.");
+}
+
+export async function disableStudentPortalAccess(formData: FormData) {
+  const context = await requireDashboardAccess();
+  const { supabase } = context;
+  const studentId = getRequiredId(formData, "studentId", "Student");
+  const linkId = getRequiredId(formData, "linkId", "Portal access");
+  const student = await getStudentForPortalManagement(context, studentId);
+
+  const { error } = await supabase
+    .from("student_portal_links")
+    .update({
+      auth_user_id: null,
+      status: "disabled",
+    })
+    .eq("id", linkId)
+    .eq("student_id", student.id);
+
+  if (error) {
+    console.error("student portal link disable failed", error);
+    redirectToStudentProfile(
+      student.id,
+      "error",
+      "Portal access could not be disabled. Please try again.",
+    );
+  }
+
+  revalidatePath(`/dashboard/students/${student.id}`);
+  redirectToStudentProfile(
+    student.id,
+    "success",
+    "Student portal access disabled.",
+  );
+}
+
+export async function saveParentPortalAccess(formData: FormData) {
+  const context = await requireDashboardAccess();
+  const { supabase } = context;
+  const studentId = getRequiredId(formData, "studentId", "Student");
+  const email = getRequiredEmail(formData, "parentEmail");
+  const parentName = getOptionalText(formData, "parentName");
+  const parentPhone = getOptionalText(formData, "parentPhone");
+  const relationship = getOptionalText(formData, "relationship");
+
+  if (!email) {
+    redirectToStudentProfile(studentId, "error", "Enter a valid parent email.");
+  }
+
+  const student = await getStudentForPortalManagement(context, studentId);
+
+  const { data: existingLink, error: existingError } = await supabase
+    .from("parent_portal_links")
+    .select("id, email, status, auth_user_id")
+    .eq("student_id", student.id)
+    .neq("status", "disabled")
+    .maybeSingle();
+
+  if (existingError) {
+    console.error("parent portal link lookup failed", existingError);
+    redirectToStudentProfile(
+      student.id,
+      "error",
+      "Parent portal access could not be updated. Please try again.",
+    );
+  }
+
+  if (
+    existingLink?.status === "linked" &&
+    existingLink.email.toLowerCase() !== email
+  ) {
+    redirectToStudentProfile(
+      student.id,
+      "error",
+      "Disable the existing parent portal access before changing the linked email.",
+    );
+  }
+
+  const studentUpdatePayload: {
+    parent_email: string;
+    parent_phone?: string | null;
+  } = {
+    parent_email: email,
+  };
+
+  if (parentPhone !== null) {
+    studentUpdatePayload.parent_phone = parentPhone;
+  }
+
+  const { error: studentUpdateError } = await supabase
+    .from("students")
+    .update(studentUpdatePayload)
+    .eq("id", student.id)
+    .eq("institute_id", student.institute_id);
+
+  if (studentUpdateError) {
+    console.error("parent portal email update failed", studentUpdateError);
+    redirectToStudentProfile(
+      student.id,
+      "error",
+      "Parent portal access could not be updated. Please try again.",
+    );
+  }
+
+  const linkPayload = {
+    branch_id: student.branch_id,
+    created_by: context.claims.sub,
+    email,
+    institute_id: student.institute_id,
+    parent_name: parentName,
+    phone: parentPhone,
+    relationship,
+    status: "pending",
+    student_id: student.id,
+  };
+  const { error: linkError } = existingLink
+    ? await supabase
+        .from("parent_portal_links")
+        .update({
+          email,
+          parent_name: parentName,
+          phone: parentPhone,
+          relationship,
+          status: existingLink.status === "linked" ? "linked" : "pending",
+        })
+        .eq("id", existingLink.id)
+    : await supabase.from("parent_portal_links").insert(linkPayload);
+
+  if (linkError) {
+    console.error("parent portal link save failed", linkError);
+    redirectToStudentProfile(
+      student.id,
+      "error",
+      "Parent portal access could not be updated. Please try again.",
+    );
+  }
+
+  revalidatePath(`/dashboard/students/${student.id}`);
+  redirectToStudentProfile(student.id, "success", "Parent portal access saved.");
+}
+
+export async function disableParentPortalAccess(formData: FormData) {
+  const context = await requireDashboardAccess();
+  const { supabase } = context;
+  const studentId = getRequiredId(formData, "studentId", "Student");
+  const linkId = getRequiredId(formData, "linkId", "Portal access");
+  const student = await getStudentForPortalManagement(context, studentId);
+
+  const { error } = await supabase
+    .from("parent_portal_links")
+    .update({
+      auth_user_id: null,
+      status: "disabled",
+    })
+    .eq("id", linkId)
+    .eq("student_id", student.id);
+
+  if (error) {
+    console.error("parent portal link disable failed", error);
+    redirectToStudentProfile(
+      student.id,
+      "error",
+      "Parent portal access could not be disabled. Please try again.",
+    );
+  }
+
+  revalidatePath(`/dashboard/students/${student.id}`);
+  redirectToStudentProfile(
+    student.id,
+    "success",
+    "Parent portal access disabled.",
+  );
 }

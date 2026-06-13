@@ -1,15 +1,19 @@
 import {
   ArrowLeft,
   CalendarCheck,
+  Mail,
   Phone,
   RotateCcw,
+  ShieldCheck,
   UserRound,
   UsersRound,
+  XCircle,
 } from "lucide-react";
 import Link from "next/link";
 import type { Metadata } from "next";
 
 import { ActionMessage } from "@/components/dashboard/ActionMessage";
+import { ConfirmSubmitButton } from "@/components/dashboard/ConfirmSubmitButton";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { Badge } from "@/components/ui/badge";
@@ -21,12 +25,20 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { canAccessPermission, requirePermission } from "@/lib/auth/permissions";
 import { getTodayDateValue } from "@/lib/attendance/date";
 import { getFeeStatus, type FeeStatus } from "@/lib/fees/status";
 import { formatDate } from "@/lib/formatters/date";
-import { reactivateStudent } from "@/lib/students/actions";
+import {
+  disableParentPortalAccess,
+  disableStudentPortalAccess,
+  reactivateStudent,
+  saveParentPortalAccess,
+  saveStudentPortalAccess,
+} from "@/lib/students/actions";
 
 export const metadata: Metadata = {
   title: "Student Profile",
@@ -35,6 +47,10 @@ export const metadata: Metadata = {
 type StudentProfilePageProps = {
   params: Promise<{
     studentId: string;
+  }>;
+  searchParams: Promise<{
+    error?: string;
+    success?: string;
   }>;
 };
 
@@ -45,9 +61,11 @@ type StudentProfile = {
   full_name: string;
   id: string;
   institute_id: string;
+  parent_email: string | null;
   parent_phone: string | null;
   phone: string | null;
   status: string | null;
+  student_email: string | null;
 };
 
 type StudentBatch = {
@@ -94,6 +112,20 @@ type FeeRecord = {
   id: string;
   notes: string | null;
   status: string | null;
+};
+
+type StudentPortalLink = {
+  auth_user_id: string | null;
+  email: string;
+  id: string;
+  status: string;
+  updated_at: string | null;
+};
+
+type ParentPortalLink = StudentPortalLink & {
+  parent_name: string | null;
+  phone: string | null;
+  relationship: string | null;
 };
 
 type SupabaseErrorLike = {
@@ -245,10 +277,38 @@ function getBatchProfileHref(batch: Batch) {
   return `/dashboard/batches?${search.toString()}`;
 }
 
+function getPortalStatusVariant(
+  status: string,
+): "outline" | "secondary" | "destructive" {
+  if (status === "linked") {
+    return "secondary";
+  }
+
+  if (status === "disabled") {
+    return "destructive";
+  }
+
+  return "outline";
+}
+
+function getPortalStatusLabel(status: string) {
+  if (status === "linked") {
+    return "Linked";
+  }
+
+  if (status === "disabled") {
+    return "Disabled";
+  }
+
+  return "Pending";
+}
+
 export default async function StudentProfilePage({
   params,
+  searchParams,
 }: StudentProfilePageProps) {
   const { studentId } = await params;
+  const pageMessages = await searchParams;
   const context = await requirePermission("students.view");
   const { accessibleBranches, claims, institute, profile, role, supabase } =
     context;
@@ -266,7 +326,7 @@ export default async function StudentProfilePage({
   const { data: studentRow, error: studentError } = await supabase
     .from("students")
     .select(
-      "id, institute_id, branch_id, full_name, phone, parent_phone, status, archived_at, archived_by",
+      "id, institute_id, branch_id, full_name, student_email, phone, parent_email, parent_phone, status, archived_at, archived_by",
     )
     .eq("id", studentId)
     .eq("institute_id", institute.id)
@@ -291,6 +351,8 @@ export default async function StudentProfilePage({
         <StudentProfileContent
           context={context}
           logQueryError={logQueryError}
+          pageError={pageMessages.error}
+          pageSuccess={pageMessages.success}
           student={student}
         />
       ) : (
@@ -314,10 +376,14 @@ export default async function StudentProfilePage({
 async function StudentProfileContent({
   context,
   logQueryError,
+  pageError,
+  pageSuccess,
   student,
 }: {
   context: Awaited<ReturnType<typeof requirePermission>>;
   logQueryError: (queryName: string, error: unknown) => boolean;
+  pageError?: string;
+  pageSuccess?: string;
   student: StudentProfile;
 }) {
   const { accessibleBranches, role, supabase } = context;
@@ -343,9 +409,17 @@ async function StudentProfileContent({
       canAccessPermission(context, "students.update", {
         branchId: student.branch_id,
       }));
+  const canManagePortalAccess =
+    !student.archived_at &&
+    (role === "owner" ||
+      canAccessPermission(context, "students.update", {
+        branchId: student.branch_id,
+      }));
   let queryError = false;
   let assignedBatches: Batch[] = [];
   let attendanceEntries: AttendanceEntry[] = [];
+  let studentPortalLinks: StudentPortalLink[] = [];
+  let parentPortalLinks: ParentPortalLink[] = [];
   let feeRecords: Array<
     FeeRecord & {
       amountDue: number;
@@ -477,6 +551,34 @@ async function StudentProfileContent({
         pendingAmount: Math.max(amountDue - amountPaid, 0),
       };
     });
+  }
+
+  if (canManagePortalAccess) {
+    const [studentLinksResult, parentLinksResult] = await Promise.all([
+      supabase
+        .from("student_portal_links")
+        .select("id, email, status, auth_user_id, updated_at")
+        .eq("student_id", student.id)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("parent_portal_links")
+        .select(
+          "id, email, status, auth_user_id, parent_name, phone, relationship, updated_at",
+        )
+        .eq("student_id", student.id)
+        .order("created_at", { ascending: false }),
+    ]);
+
+    queryError =
+      logQueryError("student_portal_links", studentLinksResult.error) ||
+      queryError;
+    queryError =
+      logQueryError("parent_portal_links", parentLinksResult.error) ||
+      queryError;
+
+    studentPortalLinks =
+      (studentLinksResult.data ?? []) as StudentPortalLink[];
+    parentPortalLinks = (parentLinksResult.data ?? []) as ParentPortalLink[];
   }
 
   // Fetch test scores for this student
@@ -642,10 +744,12 @@ async function StudentProfileContent({
       ) : null}
 
       <ActionMessage
+        success={pageSuccess ?? null}
         error={
-          queryError
+          pageError ??
+          (queryError
             ? "Some student profile details are unavailable right now. Please try again."
-            : null
+            : null)
         }
       />
 
@@ -721,11 +825,29 @@ async function StudentProfileContent({
               </div>
               <div className="rounded-md border border-border p-3">
                 <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Mail aria-hidden="true" className="size-3.5" />
+                  Student email
+                </p>
+                <p className="mt-1 break-words text-sm font-medium">
+                  {student.student_email ?? "Not added"}
+                </p>
+              </div>
+              <div className="rounded-md border border-border p-3">
+                <p className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Phone aria-hidden="true" className="size-3.5" />
                   Parent phone
                 </p>
                 <p className="mt-1 text-sm font-medium">
                   {student.parent_phone ?? "Not added"}
+                </p>
+              </div>
+              <div className="rounded-md border border-border p-3">
+                <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Mail aria-hidden="true" className="size-3.5" />
+                  Parent email
+                </p>
+                <p className="mt-1 break-words text-sm font-medium">
+                  {student.parent_email ?? "Not added"}
                 </p>
               </div>
               <div className="rounded-md border border-border p-3">
@@ -736,6 +858,239 @@ async function StudentProfileContent({
               </div>
             </CardContent>
           </Card>
+
+          {canManagePortalAccess ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-xl">
+                  <ShieldCheck aria-hidden="true" className="size-5" />
+                  Portal access
+                </CardTitle>
+                <CardDescription>
+                  Create student and parent portal access. Staff should share
+                  signup instructions manually.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="grid gap-6 lg:grid-cols-2">
+                <div className="grid gap-4 rounded-md border border-border p-4">
+                  <div>
+                    <h3 className="text-sm font-semibold">Student portal</h3>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Students can view academic information only.
+                    </p>
+                  </div>
+                  <form action={saveStudentPortalAccess} className="grid gap-3">
+                    <input name="studentId" type="hidden" value={student.id} />
+                    <Label>
+                      Student email
+                      <Input
+                        required
+                        name="studentEmail"
+                        type="email"
+                        defaultValue={
+                          studentPortalLinks.find(
+                            (link) => link.status !== "disabled",
+                          )?.email ??
+                          student.student_email ??
+                          ""
+                        }
+                        placeholder="student@example.com"
+                      />
+                    </Label>
+                    <SubmitButton pendingLabel="Saving...">
+                      Save student access
+                    </SubmitButton>
+                  </form>
+                  <div className="grid gap-2">
+                    {studentPortalLinks.length ? (
+                      studentPortalLinks.map((link) => (
+                        <div
+                          key={link.id}
+                          className="flex flex-col gap-2 rounded-md bg-muted/40 p-3 sm:flex-row sm:items-start sm:justify-between"
+                        >
+                          <div className="min-w-0">
+                            <p className="break-words text-sm font-medium">
+                              {link.email}
+                            </p>
+                            <Badge
+                              className="mt-2"
+                              variant={getPortalStatusVariant(link.status)}
+                            >
+                              {getPortalStatusLabel(link.status)}
+                            </Badge>
+                          </div>
+                          {link.status !== "disabled" ? (
+                            <form action={disableStudentPortalAccess}>
+                              <input
+                                name="studentId"
+                                type="hidden"
+                                value={student.id}
+                              />
+                              <input
+                                name="linkId"
+                                type="hidden"
+                                value={link.id}
+                              />
+                              <ConfirmSubmitButton
+                                confirmDescription="This removes portal access for the linked student account. Historical records remain unchanged."
+                                confirmLabel="Disable access"
+                                confirmMessage="Disable student portal access?"
+                                confirmTitle="Disable student portal access?"
+                                pendingLabel="Disabling..."
+                                size="sm"
+                                variant="outline"
+                              >
+                                <XCircle
+                                  aria-hidden="true"
+                                  data-icon="inline-start"
+                                />
+                                Disable
+                              </ConfirmSubmitButton>
+                            </form>
+                          ) : null}
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        No student portal access has been created.
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid gap-4 rounded-md border border-border p-4">
+                  <div>
+                    <h3 className="text-sm font-semibold">Parent portal</h3>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Parents can view academics and fee records for linked
+                      children.
+                    </p>
+                  </div>
+                  <form action={saveParentPortalAccess} className="grid gap-3">
+                    <input name="studentId" type="hidden" value={student.id} />
+                    <Label>
+                      Parent email
+                      <Input
+                        required
+                        name="parentEmail"
+                        type="email"
+                        defaultValue={
+                          parentPortalLinks.find(
+                            (link) => link.status !== "disabled",
+                          )?.email ??
+                          student.parent_email ??
+                          ""
+                        }
+                        placeholder="parent@example.com"
+                      />
+                    </Label>
+                    <Label>
+                      Parent name
+                      <Input
+                        name="parentName"
+                        type="text"
+                        defaultValue={
+                          parentPortalLinks.find(
+                            (link) => link.status !== "disabled",
+                          )?.parent_name ?? ""
+                        }
+                        placeholder="Parent or guardian name"
+                      />
+                    </Label>
+                    <Label>
+                      Parent phone
+                      <Input
+                        name="parentPhone"
+                        type="tel"
+                        defaultValue={
+                          parentPortalLinks.find(
+                            (link) => link.status !== "disabled",
+                          )?.phone ??
+                          student.parent_phone ??
+                          ""
+                        }
+                        placeholder="Optional phone number"
+                      />
+                    </Label>
+                    <Label>
+                      Relationship
+                      <Input
+                        name="relationship"
+                        type="text"
+                        defaultValue={
+                          parentPortalLinks.find(
+                            (link) => link.status !== "disabled",
+                          )?.relationship ?? ""
+                        }
+                        placeholder="Parent, guardian, or other"
+                      />
+                    </Label>
+                    <SubmitButton pendingLabel="Saving...">
+                      Save parent access
+                    </SubmitButton>
+                  </form>
+                  <div className="grid gap-2">
+                    {parentPortalLinks.length ? (
+                      parentPortalLinks.map((link) => (
+                        <div
+                          key={link.id}
+                          className="flex flex-col gap-2 rounded-md bg-muted/40 p-3 sm:flex-row sm:items-start sm:justify-between"
+                        >
+                          <div className="min-w-0">
+                            <p className="break-words text-sm font-medium">
+                              {link.email}
+                            </p>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {link.parent_name ?? "Parent name not added"}
+                            </p>
+                            <Badge
+                              className="mt-2"
+                              variant={getPortalStatusVariant(link.status)}
+                            >
+                              {getPortalStatusLabel(link.status)}
+                            </Badge>
+                          </div>
+                          {link.status !== "disabled" ? (
+                            <form action={disableParentPortalAccess}>
+                              <input
+                                name="studentId"
+                                type="hidden"
+                                value={student.id}
+                              />
+                              <input
+                                name="linkId"
+                                type="hidden"
+                                value={link.id}
+                              />
+                              <ConfirmSubmitButton
+                                confirmDescription="This removes portal access for the linked parent account. Historical records remain unchanged."
+                                confirmLabel="Disable access"
+                                confirmMessage="Disable parent portal access?"
+                                confirmTitle="Disable parent portal access?"
+                                pendingLabel="Disabling..."
+                                size="sm"
+                                variant="outline"
+                              >
+                                <XCircle
+                                  aria-hidden="true"
+                                  data-icon="inline-start"
+                                />
+                                Disable
+                              </ConfirmSubmitButton>
+                            </form>
+                          ) : null}
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        No parent portal access has been created.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ) : null}
 
           <Card>
             <CardHeader>

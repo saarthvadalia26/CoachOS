@@ -21,14 +21,17 @@ type LoginPageProps = {
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const supabase = await createClient();
+  const params = await searchParams;
+  const nextPath =
+    params.next && params.next.startsWith("/") && !params.next.startsWith("//")
+      ? params.next
+      : "/dashboard";
   const { data } = await supabase.auth.getClaims();
   const claims = data?.claims;
 
   if (claims) {
-    redirect("/dashboard");
+    redirect(nextPath);
   }
-
-  const params = await searchParams;
 
   return (
     <main className="flex min-h-full items-center justify-center bg-background px-6 py-16 text-foreground">
@@ -46,7 +49,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         </div>
 
         <form action={login} className="mt-6 grid gap-4">
-          <input type="hidden" name="next" value={params.next ?? "/dashboard"} />
+          <input type="hidden" name="next" value={nextPath} />
           <Label>
             Email
             <Input
@@ -76,7 +79,10 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
         <p className="mt-6 text-center text-sm text-muted-foreground">
           New to CoachOS?{" "}
-          <Link href="/signup" className="font-medium text-foreground underline">
+          <Link
+            href={`/signup?next=${encodeURIComponent(nextPath)}`}
+            className="font-medium text-foreground underline"
+          >
             Create an account
           </Link>
         </p>

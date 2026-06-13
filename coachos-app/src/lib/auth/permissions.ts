@@ -432,6 +432,42 @@ async function getProfileForUser(
   return (profile as Profile | null) ?? null;
 }
 
+async function getPortalRedirectForUser(
+  supabase: SupabaseServerClient,
+  userId: string,
+) {
+  const { data: studentLinks, error: studentLinksError } = await supabase
+    .from("student_portal_links")
+    .select("id")
+    .eq("auth_user_id", userId)
+    .eq("status", "linked")
+    .limit(1);
+
+  if (!studentLinksError && studentLinks?.length) {
+    return "/portal/student";
+  }
+
+  const { data: parentLinks, error: parentLinksError } = await supabase
+    .from("parent_portal_links")
+    .select("id")
+    .eq("auth_user_id", userId)
+    .eq("status", "linked")
+    .limit(1);
+
+  if (!parentLinksError && parentLinks?.length) {
+    return "/portal/parent";
+  }
+
+  if (studentLinksError || parentLinksError) {
+    console.error("portal redirect lookup failed", {
+      parentError: parentLinksError,
+      studentError: studentLinksError,
+    });
+  }
+
+  return null;
+}
+
 async function linkMatchingStaffProfile(
   supabase: SupabaseServerClient,
   userId: string,
@@ -703,6 +739,15 @@ export async function requireDashboardAccess(): Promise<DashboardContext> {
   const context = await getCurrentMembershipContext();
 
   if (!context.profile?.institute_id && !context.currentMembership) {
+    const portalRedirect = await getPortalRedirectForUser(
+      context.supabase,
+      context.claims.sub,
+    );
+
+    if (portalRedirect) {
+      redirect(portalRedirect);
+    }
+
     const staffLinkMessage = getStaffLinkStatusMessage(
       context.staffLinkStatus,
     );
