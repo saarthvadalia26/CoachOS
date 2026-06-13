@@ -13,6 +13,15 @@ import {
 import { needsExplicitBranchSelection } from "@/lib/dashboard/branch-scope";
 
 const STUDENTS_PATH = "/dashboard/students";
+const DELETE_STUDENT_ERROR =
+  "This student record could not be deleted. Please try again.";
+
+type SupabaseLikeError = {
+  code?: string;
+  details?: string;
+  hint?: string;
+  message?: string;
+};
 
 function redirectWithError(message: string): never {
   redirect(`${STUDENTS_PATH}?error=${encodeURIComponent(message)}`);
@@ -34,6 +43,88 @@ function redirectWithSaveError(): never {
   redirectWithError(
     "This student record could not be saved. Please review the details and try again.",
   );
+}
+
+function getSupabaseErrorDetails(error: unknown): SupabaseLikeError {
+  if (!error || typeof error !== "object") {
+    return {};
+  }
+
+  const errorRecord = error as Record<string, unknown>;
+
+  return {
+    code:
+      typeof errorRecord.code === "string" ? errorRecord.code : undefined,
+    details:
+      typeof errorRecord.details === "string"
+        ? errorRecord.details
+        : undefined,
+    hint:
+      typeof errorRecord.hint === "string" ? errorRecord.hint : undefined,
+    message:
+      typeof errorRecord.message === "string"
+        ? errorRecord.message
+        : undefined,
+  };
+}
+
+function logStudentDeleteFailure({
+  branchId,
+  context,
+  error,
+  reason,
+  step,
+  studentId,
+}: {
+  branchId?: string | null;
+  context: DashboardContext;
+  error: unknown;
+  reason?: string;
+  step: string;
+  studentId?: string;
+}) {
+  const errorDetails = getSupabaseErrorDetails(error);
+
+  console.error("deleteStudent failed", {
+    branchId: branchId ?? null,
+    errorCode: errorDetails.code,
+    errorDetails: errorDetails.details,
+    errorHint: errorDetails.hint,
+    errorMessage: errorDetails.message,
+    instituteId: context.institute.id,
+    membershipId: context.currentMembership.id,
+    reason,
+    role: context.role,
+    step,
+    studentId,
+    userId: context.claims.sub,
+  });
+}
+
+function logStudentDeleteInfo({
+  branchId,
+  context,
+  step,
+  studentId,
+}: {
+  branchId?: string | null;
+  context: DashboardContext;
+  step: string;
+  studentId?: string;
+}) {
+  if (process.env.NODE_ENV !== "development") {
+    return;
+  }
+
+  console.info("deleteStudent debug", {
+    branchId: branchId ?? null,
+    instituteId: context.institute.id,
+    membershipId: context.currentMembership.id,
+    role: context.role,
+    step,
+    studentId,
+    userId: context.claims.sub,
+  });
 }
 
 function getRequiredText(formData: FormData, key: string) {
@@ -179,6 +270,12 @@ export async function deleteStudent(formData: FormData) {
   const { supabase, institute } = context;
   const studentId = getRequiredId(formData, "studentId", "Student");
 
+  logStudentDeleteInfo({
+    context,
+    step: "received_student_id",
+    studentId,
+  });
+
   const { data: existingStudent, error: existingStudentError } = await supabase
     .from("students")
     .select("id, branch_id")
@@ -187,15 +284,47 @@ export async function deleteStudent(formData: FormData) {
     .maybeSingle();
 
   if (existingStudentError) {
-    console.error("deleteStudent lookup failed", existingStudentError);
-    redirectWithError("This student record could not be deleted. Please try again.");
+    logStudentDeleteFailure({
+      context,
+      error: existingStudentError,
+      step: "student_lookup",
+      studentId,
+    });
+    redirectWithError(DELETE_STUDENT_ERROR);
   }
 
   if (!existingStudent) {
+    logStudentDeleteFailure({
+      context,
+      error: null,
+      reason: "No student row matched the submitted id and current institute.",
+      step: "student_lookup_empty",
+      studentId,
+    });
     redirectWithError("Select a student from this institute.");
   }
 
-  requireBranchPermission(context, "students.delete", existingStudent.branch_id);
+  const canDeleteStudent = existingStudent.branch_id
+    ? canAccessPermission(context, "students.delete", {
+        branchId: existingStudent.branch_id,
+      })
+    : context.role === "owner" &&
+      canAccessPermission(context, "students.delete", {
+        instituteId: institute.id,
+      });
+
+  if (!canDeleteStudent) {
+    logStudentDeleteFailure({
+      branchId: existingStudent.branch_id,
+      context,
+      error: null,
+      reason:
+        "Current membership does not allow students.delete for this student scope.",
+      step: "permission_denied",
+      studentId,
+    });
+    redirectWithError("You do not have permission to perform this action.");
+  }
 
   const { data: deletedStudent, error } = await supabase
     .from("students")
@@ -206,11 +335,26 @@ export async function deleteStudent(formData: FormData) {
     .maybeSingle();
 
   if (error) {
-    console.error("deleteStudent failed", error);
-    redirectWithError("This student record could not be deleted. Please try again.");
+    logStudentDeleteFailure({
+      branchId: existingStudent.branch_id,
+      context,
+      error,
+      step: "student_delete",
+      studentId,
+    });
+    redirectWithError(DELETE_STUDENT_ERROR);
   }
 
   if (!deletedStudent) {
+    logStudentDeleteFailure({
+      branchId: existingStudent.branch_id,
+      context,
+      error: null,
+      reason:
+        "Supabase delete returned no row. This usually means RLS filtered the delete or the row was already removed.",
+      step: "student_delete_empty",
+      studentId,
+    });
     redirectWithError("Select a student from this institute.");
   }
 

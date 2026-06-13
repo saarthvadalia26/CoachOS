@@ -34,16 +34,18 @@ export function ConfirmSubmitButton({
 }: ConfirmSubmitButtonProps) {
   const { pending } = useFormStatus();
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const formRef = useRef<HTMLFormElement | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isPending = pending || isSubmitting;
   const isDestructive = destructive ?? variant === "destructive";
 
   function handleTriggerClick(event: MouseEvent<HTMLButtonElement>) {
+    formRef.current = event.currentTarget.form;
     onClick?.(event);
   }
 
   function submitParentForm() {
-    const form = triggerRef.current?.form;
+    const form = formRef.current ?? triggerRef.current?.form;
 
     if (!form) {
       return;
