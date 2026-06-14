@@ -16,7 +16,6 @@ const timestampFormatter = new Intl.DateTimeFormat("en-US", {
   hour: "numeric",
   minute: "2-digit",
   month: "short",
-  timeZone: "UTC",
   year: "numeric",
 });
 
