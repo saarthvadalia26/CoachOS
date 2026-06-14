@@ -1,22 +1,23 @@
-const dayFormatter = new Intl.DateTimeFormat("en-US", {
-  day: "numeric",
+const dayFormatter = new Intl.DateTimeFormat("en-IN", {
+  dateStyle: "medium",
+  timeZone: "UTC",
+});
+
+const monthYearFormatter = new Intl.DateTimeFormat("en-IN", {
   month: "short",
   timeZone: "UTC",
   year: "numeric",
 });
 
-const monthYearFormatter = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  timeZone: "UTC",
-  year: "numeric",
+const timestampFormatter = new Intl.DateTimeFormat("en-IN", {
+  dateStyle: "medium",
+  timeStyle: "short",
+  timeZone: "Asia/Kolkata",
 });
 
-const timestampFormatter = new Intl.DateTimeFormat("en-US", {
-  day: "numeric",
-  hour: "numeric",
-  minute: "2-digit",
-  month: "short",
-  year: "numeric",
+const timeFormatter = new Intl.DateTimeFormat("en-IN", {
+  timeStyle: "short",
+  timeZone: "Asia/Kolkata",
 });
 
 function parseDateValue(value: string | null | undefined) {
@@ -53,7 +54,7 @@ export function formatDateRange(
   return `${monthYearFormatter.format(start)} – ${monthYearFormatter.format(end)}`;
 }
 
-export function formatTimestamp(value: string | null | undefined) {
+export function formatDateTime(value: string | null | undefined) {
   if (!value) {
     return "Not recorded";
   }
@@ -66,3 +67,19 @@ export function formatTimestamp(value: string | null | undefined) {
 
   return timestampFormatter.format(date);
 }
+
+export function formatTime(value: string | null | undefined) {
+  if (!value) {
+    return "Not recorded";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Not recorded";
+  }
+
+  return timeFormatter.format(date);
+}
+
+export const formatTimestamp = formatDateTime;
