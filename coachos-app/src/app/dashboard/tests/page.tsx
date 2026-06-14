@@ -268,7 +268,7 @@ export default async function TestsPage({ searchParams }: TestsPageProps) {
           </CardHeader>
           <CardContent>
             <form className="grid gap-4">
-              <div className="grid gap-4 lg:grid-cols-2">
+              <div className="grid min-w-0 gap-4 lg:grid-cols-2">
                 <Label className="min-w-0">
                   Search
                   <Input
@@ -451,9 +451,9 @@ export default async function TestsPage({ searchParams }: TestsPageProps) {
 
                       return (
                         <article key={test.id} className="grid gap-4 p-5">
-                          <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
-                            <div className="min-w-0">
-                              <h3 className="break-words text-base font-semibold text-foreground">
+                          <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+                            <div className="min-w-0 flex-1">
+                              <h3 className="break-words text-lg font-semibold leading-tight text-foreground">
                                 <Link
                                   href={`/dashboard/tests/${test.id}`}
                                   className="hover:underline"
@@ -462,16 +462,32 @@ export default async function TestsPage({ searchParams }: TestsPageProps) {
                                 </Link>
                               </h3>
                               <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-                                <span className="font-medium">
+                                <span className="whitespace-nowrap font-medium">
                                   {test.batches?.name ?? "Batch"}
                                 </span>
-                                <span>|</span>
-                                <span>{test.subject ?? "No subject"}</span>
-                                <span>|</span>
-                                <span>{getBranchName(context, test.branch_id)}</span>
+                                <span className="inline-flex items-center gap-x-2 whitespace-nowrap">
+                                  <span
+                                    aria-hidden="true"
+                                    className="hidden text-muted-foreground/60 sm:inline"
+                                  >
+                                    |
+                                  </span>
+                                  <span>{test.subject ?? "No subject"}</span>
+                                </span>
+                                <span className="inline-flex items-center gap-x-2 whitespace-nowrap">
+                                  <span
+                                    aria-hidden="true"
+                                    className="hidden text-muted-foreground/60 sm:inline"
+                                  >
+                                    |
+                                  </span>
+                                  <span>
+                                    {getBranchName(context, test.branch_id)}
+                                  </span>
+                                </span>
                               </p>
                             </div>
-                            <div className="flex shrink-0 flex-wrap items-center gap-2">
+                            <div className="flex shrink-0 flex-wrap items-start gap-2 xl:justify-end">
                               <Badge
                                 variant={
                                   test.status === "completed"

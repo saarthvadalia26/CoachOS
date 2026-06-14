@@ -384,13 +384,14 @@ export default async function BatchesPage({ searchParams }: BatchesPageProps) {
               <div
                 className={
                   branchScope.showOwnerBranchFilter
-                    ? "grid gap-3 md:grid-cols-3"
-                    : "grid gap-3 md:grid-cols-2"
+                    ? "grid min-w-0 gap-4 lg:grid-cols-2 xl:grid-cols-3"
+                    : "grid min-w-0 gap-4 lg:grid-cols-2"
                 }
               >
-                <Label>
+                <Label className="min-w-0">
                   Search
                   <Input
+                    className="box-border h-10 w-full min-w-0"
                     name="q"
                     type="search"
                     defaultValue={searchTerm}
@@ -398,12 +399,12 @@ export default async function BatchesPage({ searchParams }: BatchesPageProps) {
                   />
                 </Label>
                 {branchScope.showOwnerBranchFilter ? (
-                  <Label>
+                  <Label className="min-w-0">
                     Branch
                     <select
                       name="branchId"
                       defaultValue={branchScope.selectedBranchId ?? ""}
-                      className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
+                      className="box-border h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
                     >
                       <option value="">All branches</option>
                       {accessibleBranches.map((branch) => (
@@ -414,12 +415,12 @@ export default async function BatchesPage({ searchParams }: BatchesPageProps) {
                     </select>
                   </Label>
                 ) : null}
-                <Label>
+                <Label className="min-w-0">
                   Subject
                   <select
                     name="subject"
                     defaultValue={selectedSubject}
-                    className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
+                    className="box-border h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
                   >
                     <option value="">All subjects</option>
                     {subjectOptions.map((subject) => (

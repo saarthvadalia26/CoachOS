@@ -334,8 +334,8 @@ function AnnouncementCard({
 }) {
   return (
     <Card>
-      <CardHeader className="gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
-        <div className="min-w-0">
+      <CardHeader className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+        <div className="min-w-0 flex-1">
           <CardTitle className="flex items-start gap-2 text-lg">
             <Megaphone
               aria-hidden="true"
@@ -347,7 +347,7 @@ function AnnouncementCard({
             {announcement.body}
           </CardDescription>
         </div>
-        <div className="flex shrink-0 flex-wrap items-start gap-2 sm:justify-end">
+        <div className="flex shrink-0 flex-wrap items-start gap-2 xl:justify-end">
           <Badge variant={getPriorityVariant(announcement.priority)}>
             {getPriorityLabel(announcement.priority)}
           </Badge>
@@ -364,8 +364,15 @@ function AnnouncementCard({
           <span className="whitespace-nowrap">
             Published {formatTimestamp(announcement.created_at)}
           </span>
-          <span className="hidden sm:inline text-muted-foreground/50">|</span>
-          <span className="whitespace-nowrap">By {creatorName}</span>
+          <span className="inline-flex items-center gap-x-3 whitespace-nowrap">
+            <span
+              aria-hidden="true"
+              className="hidden text-muted-foreground/50 sm:inline"
+            >
+              |
+            </span>
+            <span>By {creatorName}</span>
+          </span>
         </div>
 
         {canManage ? (

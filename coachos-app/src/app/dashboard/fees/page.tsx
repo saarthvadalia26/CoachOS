@@ -554,8 +554,8 @@ export default async function FeesPage({ searchParams }: FeesPageProps) {
           </div>
 
           <Card>
-            <CardHeader className="gap-3 sm:grid-cols-[1fr_auto] sm:items-start">
-              <div>
+            <CardHeader className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+              <div className="min-w-0 flex-1">
                 <CardTitle className="text-xl">Fee records</CardTitle>
                 <CardDescription>
                   {getPageSummary({
@@ -566,7 +566,7 @@ export default async function FeesPage({ searchParams }: FeesPageProps) {
                   in {institute.name}
                 </CardDescription>
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex shrink-0 flex-wrap items-start gap-2 xl:justify-end">
                 <Badge variant="secondary">Paid {totals.paidRecords}</Badge>
                 <Badge variant="outline">Pending {totals.pendingRecords}</Badge>
                 <Badge variant="destructive">
@@ -584,14 +584,12 @@ export default async function FeesPage({ searchParams }: FeesPageProps) {
                     return (
                       <article
                         key={record.id}
-                        className="grid gap-4 p-4 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-start"
+                        className="flex flex-col gap-4 p-4 xl:flex-row xl:items-start xl:justify-between"
                       >
-                        <div className="min-w-0">
-                          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                            <h3 className="break-words font-medium">
-                              {student?.full_name ?? "Student not available"}
-                            </h3>
-                          </div>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="break-words text-lg font-semibold leading-tight text-foreground">
+                            {student?.full_name ?? "Student not available"}
+                          </h3>
                           <div className="mt-2 flex flex-wrap items-center gap-2">
                             <Badge
                               variant={getStatusBadgeVariant(record.status)}
@@ -607,23 +605,25 @@ export default async function FeesPage({ searchParams }: FeesPageProps) {
                             <span className="whitespace-nowrap">
                               Due {formatCurrency(record.amountDue)}
                             </span>
-                            <span className="whitespace-nowrap">
+                            <span className="inline-flex items-center gap-x-2 whitespace-nowrap">
                               <span
                                 aria-hidden="true"
                                 className="hidden text-muted-foreground/60 sm:inline"
                               >
-                                |{" "}
+                                |
                               </span>
-                              Paid {formatCurrency(record.amountPaid)}
+                              <span>Paid {formatCurrency(record.amountPaid)}</span>
                             </span>
-                            <span className="whitespace-nowrap">
+                            <span className="inline-flex items-center gap-x-2 whitespace-nowrap">
                               <span
                                 aria-hidden="true"
                                 className="hidden text-muted-foreground/60 sm:inline"
                               >
-                                |{" "}
+                                |
                               </span>
-                              Balance {formatCurrency(record.remainingAmount)}
+                              <span>
+                                Balance {formatCurrency(record.remainingAmount)}
+                              </span>
                             </span>
                           </div>
                           <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
@@ -631,14 +631,16 @@ export default async function FeesPage({ searchParams }: FeesPageProps) {
                               Due date: {formatDate(record.due_date)}
                             </span>
                             {record.notes ? (
-                              <span className="break-words">
+                              <span className="inline-flex min-w-0 items-start gap-x-2">
                                 <span
                                   aria-hidden="true"
-                                  className="hidden text-muted-foreground/60 sm:inline"
+                                  className="hidden shrink-0 text-muted-foreground/60 sm:inline"
                                 >
-                                  |{" "}
+                                  |
                                 </span>
-                                {record.notes}
+                                <span className="break-words">
+                                  {record.notes}
+                                </span>
                               </span>
                             ) : null}
                           </div>

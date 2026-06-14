@@ -232,13 +232,14 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
               <div
                 className={
                   branchScope.showOwnerBranchFilter
-                    ? "grid gap-3 md:grid-cols-4"
-                    : "grid gap-3 md:grid-cols-3"
+                    ? "grid min-w-0 gap-4 lg:grid-cols-2 xl:grid-cols-4"
+                    : "grid min-w-0 gap-4 lg:grid-cols-3"
                 }
               >
-                <Label>
+                <Label className="min-w-0">
                   Search
                   <Input
+                    className="box-border h-10 w-full min-w-0"
                     name="q"
                     type="search"
                     defaultValue={searchTerm}
@@ -246,12 +247,12 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
                   />
                 </Label>
                 {branchScope.showOwnerBranchFilter ? (
-                  <Label>
+                  <Label className="min-w-0">
                     Branch
                     <select
                       name="branchId"
                       defaultValue={branchScope.selectedBranchId ?? ""}
-                      className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
+                      className="box-border h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
                     >
                       <option value="">All branches</option>
                       {accessibleBranches.map((branch) => (
@@ -262,24 +263,24 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
                     </select>
                   </Label>
                 ) : null}
-                <Label>
+                <Label className="min-w-0">
                   Status
                   <select
                     name="status"
                     defaultValue={selectedStatus}
-                    className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
+                    className="box-border h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
                   >
                     <option value="">All statuses</option>
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
                   </select>
                 </Label>
-                <Label>
+                <Label className="min-w-0">
                   Records
                   <select
                     name="recordState"
                     defaultValue={selectedRecordState}
-                    className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
+                    className="box-border h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
                   >
                     <option value="active">Active students</option>
                     <option value="archived">Archived students</option>
@@ -432,9 +433,9 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
 
                       return (
                         <article key={student.id} className="grid gap-4 p-4">
-                          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
                             <div className="min-w-0 flex-1">
-                              <h3 className="break-words text-base font-semibold tracking-tight">
+                              <h3 className="break-words text-lg font-semibold leading-tight text-foreground">
                                 {student.full_name}
                               </h3>
                               <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
@@ -459,7 +460,7 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
                                 </span>
                               </div>
                             </div>
-                            <div className="flex shrink-0 flex-wrap items-start justify-start gap-2 sm:justify-end">
+                            <div className="flex shrink-0 flex-wrap items-start justify-start gap-2 xl:justify-end">
                               <Badge
                                 variant={
                                   student.archived_at ||

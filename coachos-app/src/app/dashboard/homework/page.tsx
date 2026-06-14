@@ -57,15 +57,6 @@ const assignmentStatusLabels: Record<HomeworkStatus, string> = {
   completed: "Completed",
 };
 
-const submissionStatusLabels: Record<HomeworkSubmissionStatus, string> = {
-  assigned: "Assigned",
-  checked: "Checked",
-  excused: "Excused",
-  late: "Late",
-  missing: "Missing",
-  submitted: "Submitted",
-};
-
 const filterControlClass =
   "box-border h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 py-1 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30";
 
@@ -316,7 +307,7 @@ export default async function HomeworkPage({ searchParams }: HomeworkPageProps) 
           </CardHeader>
           <CardContent>
             <form className="grid gap-4">
-              <div className="grid gap-4 lg:grid-cols-2">
+              <div className="grid min-w-0 gap-4 lg:grid-cols-2">
                 <Label className="min-w-0">
                   Search
                   <Input
@@ -509,44 +500,51 @@ export default async function HomeworkPage({ searchParams }: HomeworkPageProps) 
                       const canDeleteHomework =
                         totalSubmissions === 0 &&
                         canManageHomeworkBranch(
-                        context,
-                        homework,
-                        "homework.delete",
-                        visibleBatchIds,
-                      );
+                          context,
+                          homework,
+                          "homework.delete",
+                          visibleBatchIds,
+                        );
 
                       return (
-                        <article key={homework.id} className="grid gap-4 p-4">
-                          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <article key={homework.id} className="grid gap-4 p-5">
+                          <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
                             <div className="min-w-0 flex-1">
-                              <h3 className="break-words text-base font-semibold tracking-tight">
+                              <h3 className="break-words text-lg font-semibold leading-tight text-foreground">
                                 {homework.title}
                               </h3>
                               <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
                                 <span className="whitespace-nowrap">
-                                  {homework.subject ?? batch?.subject ?? "No subject"}
+                                  {homework.subject ??
+                                    batch?.subject ??
+                                    "No subject"}
                                 </span>
-                                <span
-                                  aria-hidden="true"
-                                  className="hidden text-muted-foreground/60 sm:inline"
-                                >
-                                  |
+                                <span className="inline-flex items-center gap-x-2 whitespace-nowrap">
+                                  <span
+                                    aria-hidden="true"
+                                    className="hidden text-muted-foreground/60 sm:inline"
+                                  >
+                                    |
+                                  </span>
+                                  <span>
+                                    {getBatchName(
+                                      batchesById,
+                                      homework.batch_id,
+                                    )}
+                                  </span>
                                 </span>
-                                <span className="whitespace-nowrap">
-                                  {getBatchName(batchesById, homework.batch_id)}
-                                </span>
-                                <span
-                                  aria-hidden="true"
-                                  className="hidden text-muted-foreground/60 sm:inline"
-                                >
-                                  |
-                                </span>
-                                <span className="whitespace-nowrap">
-                                  {branchName}
+                                <span className="inline-flex items-center gap-x-2 whitespace-nowrap">
+                                  <span
+                                    aria-hidden="true"
+                                    className="hidden text-muted-foreground/60 sm:inline"
+                                  >
+                                    |
+                                  </span>
+                                  <span>{branchName}</span>
                                 </span>
                               </div>
                             </div>
-                            <div className="flex shrink-0 flex-wrap items-start justify-start gap-2 sm:justify-end">
+                            <div className="flex shrink-0 flex-wrap items-start justify-start gap-2 xl:justify-end">
                               <Badge
                                 variant={
                                   homework.status === "archived"
@@ -639,24 +637,6 @@ export default async function HomeworkPage({ searchParams }: HomeworkPageProps) 
                               <Badge variant="outline">
                                 {checkedCount} checked
                               </Badge>
-                              {submissionSummary
-                                ? Object.entries(submissionSummary).map(
-                                    ([status, count]) =>
-                                      count > 0 ? (
-                                        <span
-                                          key={status}
-                                          className="text-xs text-muted-foreground"
-                                        >
-                                          {
-                                            submissionStatusLabels[
-                                              status as HomeworkSubmissionStatus
-                                            ]
-                                          }
-                                          : {count}
-                                        </span>
-                                      ) : null,
-                                  )
-                                : null}
                             </div>
                             <p>
                               {homework.description ||

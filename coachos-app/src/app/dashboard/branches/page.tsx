@@ -131,10 +131,11 @@ export default async function BranchesPage({
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form className="grid gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-end">
-                <Label>
+              <form className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-end">
+                <Label className="min-w-0">
                   Search
                   <Input
+                    className="box-border h-10 w-full min-w-0"
                     name="q"
                     type="search"
                     defaultValue={searchTerm}
@@ -180,22 +181,24 @@ export default async function BranchesPage({
             <div className="grid gap-4">
               {paginatedBranches.map((branch) => (
                 <Card key={branch.id}>
-                  <CardHeader className="gap-3 sm:grid-cols-[1fr_auto] sm:items-start">
-                    <div>
-                      <CardTitle className="flex items-center gap-2 text-lg">
+                  <CardHeader className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+                    <div className="min-w-0 flex-1">
+                      <CardTitle className="flex items-start gap-2 text-lg leading-tight">
                         <Building2
                           aria-hidden="true"
-                          className="size-4 text-muted-foreground"
+                          className="mt-1 size-4 shrink-0 text-muted-foreground"
                         />
-                        {branch.name}
+                        <span className="break-words">{branch.name}</span>
                       </CardTitle>
                       <CardDescription className="mt-1">
                         {branch.address ?? "Address not added"}
                       </CardDescription>
                     </div>
-                    <Badge variant="secondary">
-                      {canManageBranches ? "Institute branch" : "Assigned"}
-                    </Badge>
+                    <div className="flex shrink-0 flex-wrap items-start gap-2 xl:justify-end">
+                      <Badge variant="secondary">
+                        {canManageBranches ? "Institute branch" : "Assigned"}
+                      </Badge>
+                    </div>
                   </CardHeader>
 
                   {canManageBranches ? (

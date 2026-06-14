@@ -1166,13 +1166,13 @@ export default async function AttendancePage({
                 <input name="batchId" type="hidden" value={selectedBatchId} />
               ) : null}
 
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-                <Label>
+              <div className="grid min-w-0 gap-4 lg:grid-cols-2 xl:grid-cols-5">
+                <Label className="min-w-0">
                   Academic year
                   <select
                     name="academicYearId"
                     defaultValue={selectedAcademicYearId}
-                    className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
+                    className="box-border h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
                   >
                     <option value="">Any year</option>
                     {academicYears.map((academicYear) => (
@@ -1184,12 +1184,12 @@ export default async function AttendancePage({
                   </select>
                 </Label>
 
-                <Label>
+                <Label className="min-w-0">
                   Batch
                   <select
                     name="historyBatchId"
                     defaultValue={selectedHistoryBatchId}
-                    className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
+                    className="box-border h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
                   >
                     <option value="">All batches</option>
                     {batches.map((batch) => (
@@ -1201,12 +1201,12 @@ export default async function AttendancePage({
                   </select>
                 </Label>
 
-                <Label>
+                <Label className="min-w-0">
                   Student
                   <select
                     name="studentId"
                     defaultValue={selectedStudentId}
-                    className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
+                    className="box-border h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
                   >
                     <option value="">All students</option>
                     {historyStudents.map((student) => (
@@ -1217,9 +1217,10 @@ export default async function AttendancePage({
                   </select>
                 </Label>
 
-                <Label>
+                <Label className="min-w-0">
                   From
                   <Input
+                    className="box-border h-10 w-full min-w-0"
                     name="startDate"
                     type="date"
                     defaultValue={
@@ -1228,9 +1229,10 @@ export default async function AttendancePage({
                   />
                 </Label>
 
-                <Label>
+                <Label className="min-w-0">
                   To
                   <Input
+                    className="box-border h-10 w-full min-w-0"
                     name="endDate"
                     type="date"
                     defaultValue={
@@ -1262,19 +1264,21 @@ export default async function AttendancePage({
 
             <div className="grid gap-4 xl:grid-cols-[1fr_320px]">
               <Card>
-                <CardHeader className="gap-3 sm:grid-cols-[1fr_auto] sm:items-start">
-                  <div>
+                <CardHeader className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+                  <div className="min-w-0 flex-1">
                     <CardTitle className="text-lg">Attendance records</CardTitle>
                     <CardDescription>
                       {filteredHistorySessions.length} matching{" "}
                       {filteredHistorySessions.length === 1
                         ? "record"
-                        : "records"}
+                      : "records"}
                     </CardDescription>
                   </div>
-                  <Badge variant="outline">
-                    {branchScope.selectedBranchName}
-                  </Badge>
+                  <div className="flex shrink-0 flex-wrap items-start gap-2 xl:justify-end">
+                    <Badge variant="outline">
+                      {branchScope.selectedBranchName}
+                    </Badge>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   {filteredHistorySessions.length ? (
@@ -1302,21 +1306,23 @@ export default async function AttendancePage({
                         return (
                           <article
                             key={session.id}
-                            className="grid gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start"
+                            className="flex flex-col gap-4 p-4 xl:flex-row xl:items-start xl:justify-between"
                           >
-                            <div className="min-w-0">
+                            <div className="min-w-0 flex-1">
                               <h3 className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium">
                                 <span className="whitespace-nowrap">
                                   {formatDate(session.session_date)}
                                 </span>
-                                <span className="break-words">
+                                <span className="inline-flex min-w-0 items-start gap-x-2">
                                   <span
                                     aria-hidden="true"
-                                    className="hidden text-muted-foreground/60 sm:inline"
+                                    className="hidden shrink-0 text-muted-foreground/60 sm:inline"
                                   >
-                                    |{" "}
+                                    |
                                   </span>
-                                  {batch?.name ?? "Batch not available"}
+                                  <span className="break-words">
+                                    {batch?.name ?? "Batch not available"}
+                                  </span>
                                 </span>
                               </h3>
                               <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
@@ -1325,19 +1331,21 @@ export default async function AttendancePage({
                                     "Academic year not set"}
                                 </span>
                                 {session.notes ? (
-                                  <span className="break-words">
+                                  <span className="inline-flex min-w-0 items-start gap-x-2">
                                     <span
                                       aria-hidden="true"
-                                      className="hidden text-muted-foreground/60 sm:inline"
+                                      className="hidden shrink-0 text-muted-foreground/60 sm:inline"
                                     >
-                                      |{" "}
+                                      |
                                     </span>
-                                    {session.notes}
+                                    <span className="break-words">
+                                      {session.notes}
+                                    </span>
                                   </span>
                                 ) : null}
                               </div>
                             </div>
-                            <div className="flex shrink-0 flex-wrap items-start gap-2 lg:justify-end">
+                            <div className="flex shrink-0 flex-wrap items-start gap-2 xl:justify-end">
                               <Badge variant={getSessionStatusVariant(session)}>
                                 {getSessionStatusLabel(session)}
                               </Badge>

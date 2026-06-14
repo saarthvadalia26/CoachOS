@@ -230,13 +230,14 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
               <div
                 className={
                   branchScope.showOwnerBranchFilter
-                    ? "grid gap-3 md:grid-cols-2 xl:grid-cols-4"
-                    : "grid gap-3 md:grid-cols-3"
+                    ? "grid min-w-0 gap-4 lg:grid-cols-2 xl:grid-cols-4"
+                    : "grid min-w-0 gap-4 lg:grid-cols-3"
                 }
               >
-                <Label>
+                <Label className="min-w-0">
                   Search
                   <Input
+                    className="box-border h-10 w-full min-w-0"
                     name="q"
                     type="search"
                     defaultValue={searchTerm}
@@ -244,12 +245,12 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
                   />
                 </Label>
                 {branchScope.showOwnerBranchFilter ? (
-                  <Label>
+                  <Label className="min-w-0">
                     Branch
                     <select
                       name="branchId"
                       defaultValue={branchScope.selectedBranchId ?? ""}
-                      className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
+                      className="box-border h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
                     >
                       <option value="">All branches</option>
                       {accessibleBranches.map((branch) => (
@@ -260,12 +261,12 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
                     </select>
                   </Label>
                 ) : null}
-                <Label>
+                <Label className="min-w-0">
                   Role
                   <select
                     name="role"
                     defaultValue={selectedRole}
-                    className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
+                    className="box-border h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
                   >
                     <option value="">All roles</option>
                     {staffRoles.map((staffRole) => (
@@ -275,12 +276,12 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
                     ))}
                   </select>
                 </Label>
-                <Label>
+                <Label className="min-w-0">
                   Account status
                   <select
                     name="linkStatus"
                     defaultValue={selectedLinkStatus}
-                    className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
+                    className="box-border h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
                   >
                     <option value="">All statuses</option>
                     <option value="linked">Linked</option>
@@ -327,16 +328,16 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
                   <div className="divide-y divide-border rounded-md border border-border">
                     {staffMembers.map((staffMember) => (
                       <article key={staffMember.id} className="grid gap-3 p-4">
-                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                          <div className="min-w-0">
-                            <h2 className="break-words font-medium">
+                        <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+                          <div className="min-w-0 flex-1">
+                            <h2 className="break-words text-lg font-semibold leading-tight text-foreground">
                               {staffMember.full_name}
                             </h2>
-                            <p className="mt-1 break-all text-sm text-muted-foreground sm:break-normal">
+                            <p className="mt-1 break-words text-sm text-muted-foreground">
                               {staffMember.email}
                             </p>
                           </div>
-                          <div className="flex shrink-0 flex-wrap items-start gap-2 sm:justify-end">
+                          <div className="flex shrink-0 flex-wrap items-start gap-2 xl:justify-end">
                             <Badge
                               variant={getRoleBadgeVariant(staffMember.role)}
                             >
@@ -468,24 +469,25 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
                   <div className="divide-y divide-border rounded-lg border border-border bg-card shadow-sm">
                     {staffMembers.map((staffMember) => (
                       <article key={staffMember.id} className="grid gap-4 p-5">
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                        <div className="min-w-0">
-                          <h3 className="break-words font-medium">
+                        <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+                          <div className="min-w-0 flex-1">
+                            <h3 className="break-words text-lg font-semibold leading-tight text-foreground">
                               {staffMember.full_name}
-                          </h3>
-                          <p className="mt-1 break-all text-sm text-muted-foreground sm:break-normal">
-                            {staffMember.email}
-                          </p>
-                          <div className="mt-2 flex flex-wrap items-center gap-2">
+                            </h3>
+                            <p className="mt-1 break-words text-sm text-muted-foreground">
+                              {staffMember.email}
+                            </p>
+                          </div>
+                          <div className="flex shrink-0 flex-wrap items-start gap-2 xl:justify-end">
                             <Badge
                               variant={getRoleBadgeVariant(staffMember.role)}
                             >
                               {getRoleLabel(staffMember.role)}
                             </Badge>
                             <Badge variant="outline">
-                            {staffMember.branch_id
-                              ? branchesById.get(staffMember.branch_id)?.name
-                              : "Institute-wide"}
+                              {staffMember.branch_id
+                                ? branchesById.get(staffMember.branch_id)?.name
+                                : "Institute-wide"}
                             </Badge>
                             <Badge
                               variant={
@@ -496,32 +498,31 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
                             >
                               {getLinkStatusLabel(staffMember)}
                             </Badge>
+                            <form action={deleteStaffMember}>
+                              <input
+                                name="staffMemberId"
+                                type="hidden"
+                                value={staffMember.id}
+                              />
+                              <ConfirmSubmitButton
+                                type="submit"
+                                variant="destructive"
+                                size="sm"
+                                confirmMessage={`Delete ${staffMember.full_name} from staff?`}
+                                confirmTitle="Delete staff member?"
+                                confirmDescription={`This will remove ${staffMember.full_name} from the staff list. Linked access will be removed according to the current account rules. This action cannot be undone.`}
+                                confirmLabel="Delete staff member"
+                                pendingLabel="Deleting..."
+                              >
+                                <Trash2
+                                  aria-hidden="true"
+                                  data-icon="inline-start"
+                                />
+                                Delete
+                              </ConfirmSubmitButton>
+                            </form>
                           </div>
                         </div>
-                        <form action={deleteStaffMember} className="shrink-0">
-                          <input
-                            name="staffMemberId"
-                            type="hidden"
-                            value={staffMember.id}
-                          />
-                          <ConfirmSubmitButton
-                            type="submit"
-                            variant="destructive"
-                            size="sm"
-                            confirmMessage={`Delete ${staffMember.full_name} from staff?`}
-                            confirmTitle="Delete staff member?"
-                            confirmDescription={`This will remove ${staffMember.full_name} from the staff list. Linked access will be removed according to the current account rules. This action cannot be undone.`}
-                            confirmLabel="Delete staff member"
-                            pendingLabel="Deleting..."
-                          >
-                            <Trash2
-                              aria-hidden="true"
-                              data-icon="inline-start"
-                            />
-                            Delete
-                          </ConfirmSubmitButton>
-                        </form>
-                      </div>
 
                       <details className="rounded-md border border-border bg-muted/30 p-3">
                         <summary className="cursor-pointer text-sm font-medium">
