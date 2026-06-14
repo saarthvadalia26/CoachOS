@@ -3077,6 +3077,98 @@ $$;
 comment on function public.current_user_can_access_portal_student(uuid) is
   'Shared read helper for student and parent portal visibility.';
 
+create or replace function public.current_user_can_access_portal_batch(
+  target_batch_id uuid
+)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select auth.uid() is not null
+    and target_batch_id is not null
+    and exists (
+      select 1
+      from public.student_batches
+      where student_batches.batch_id = target_batch_id
+        and public.current_user_can_access_portal_student(student_batches.student_id)
+    )
+$$;
+
+comment on function public.current_user_can_access_portal_batch(uuid) is
+  'Security-definer portal batch read helper. Keeps portal RLS additive without policy recursion through student_batches.';
+
+create or replace function public.current_user_can_access_portal_attendance_session(
+  target_session_id uuid
+)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select auth.uid() is not null
+    and target_session_id is not null
+    and exists (
+      select 1
+      from public.attendance_records
+      where attendance_records.session_id = target_session_id
+        and public.current_user_can_access_portal_student(attendance_records.student_id)
+    )
+$$;
+
+comment on function public.current_user_can_access_portal_attendance_session(uuid) is
+  'Security-definer portal attendance-session read helper. Avoids RLS recursion between attendance_sessions and attendance_records.';
+
+create or replace function public.current_user_can_access_portal_homework_assignment(
+  target_homework_id uuid
+)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select auth.uid() is not null
+    and target_homework_id is not null
+    and exists (
+      select 1
+      from public.homework_assignments
+      join public.student_batches
+        on student_batches.batch_id = homework_assignments.batch_id
+      where homework_assignments.id = target_homework_id
+        and public.current_user_can_access_portal_student(student_batches.student_id)
+    )
+$$;
+
+comment on function public.current_user_can_access_portal_homework_assignment(uuid) is
+  'Security-definer portal homework read helper. Portal users can read homework for linked student batches only.';
+
+create or replace function public.current_user_can_access_portal_test(
+  target_test_id uuid
+)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select auth.uid() is not null
+    and target_test_id is not null
+    and exists (
+      select 1
+      from public.tests
+      join public.student_batches
+        on student_batches.batch_id = tests.batch_id
+      where tests.id = target_test_id
+        and public.current_user_can_access_portal_student(student_batches.student_id)
+    )
+$$;
+
+comment on function public.current_user_can_access_portal_test(uuid) is
+  'Security-definer portal test read helper. Portal users can read tests for linked student batches only.';
+
 create or replace function public.claim_student_portal_link_result()
 returns text
 language plpgsql
@@ -4604,45 +4696,48 @@ create or replace function public.current_user_can_access_test_batch(
   required_permission text
 )
 returns boolean
-language sql
+language plpgsql
 stable
 security definer
 set search_path = public
 as $$
-  select auth.uid() is not null
-    and target_batch_id is not null
-    and required_permission is not null
-    and exists (
-      select 1
-      from public.batches
-      join public.memberships
-        on memberships.institute_id = batches.institute_id
-       and memberships.user_id = auth.uid()
-      where batches.id = target_batch_id
-        and public.role_has_permission(memberships.role, required_permission)
-        and (
-          memberships.role = 'owner'
-          or (
-            memberships.role = 'teacher'
-            and required_permission in ('tests.view', 'tests.create', 'tests.update', 'tests.archive', 'tests.delete')
-            and exists (
-              select 1
-              from public.batch_teachers
-              where batch_teachers.batch_id = batches.id
-                and batch_teachers.membership_id = memberships.id
-            )
-          )
-          or (
-            memberships.role <> 'teacher'
-            and (
-              memberships.role = 'branch_manager'
-              or memberships.role = 'academic_coordinator'
-              or memberships.role = 'operations_staff'
-            )
-            and memberships.branch_id = batches.branch_id
+declare
+  has_access boolean;
+begin
+  select exists (
+    select 1
+    from public.batches
+    join public.memberships
+      on memberships.institute_id = batches.institute_id
+     and memberships.user_id = auth.uid()
+    where batches.id = target_batch_id
+      and public.role_has_permission(memberships.role, required_permission)
+      and (
+        memberships.role = 'owner'
+        or (
+          memberships.role = 'teacher'
+          and required_permission in ('tests.view', 'tests.create', 'tests.update', 'tests.archive', 'tests.delete')
+          and exists (
+            select 1
+            from public.batch_teachers
+            where batch_teachers.batch_id = batches.id
+              and batch_teachers.membership_id = memberships.id
           )
         )
-    )
+        or (
+          memberships.role <> 'teacher'
+          and (
+            memberships.role = 'branch_manager'
+            or memberships.role = 'academic_coordinator'
+            or memberships.role = 'operations_staff'
+          )
+          and memberships.branch_id = batches.branch_id
+        )
+      )
+  ) into has_access;
+
+  return coalesce(has_access, false);
+end;
 $$;
 
 create or replace function public.current_user_can_access_test(
@@ -4650,27 +4745,30 @@ create or replace function public.current_user_can_access_test(
   required_permission text
 )
 returns boolean
-language sql
+language plpgsql
 stable
 security definer
 set search_path = public
 as $$
-  select auth.uid() is not null
-    and target_test_id is not null
-    and required_permission is not null
-    and exists (
-      select 1
-      from public.tests
-      join public.batches
-        on batches.id = tests.batch_id
-      where tests.id = target_test_id
-        and tests.institute_id = batches.institute_id
-        and tests.branch_id = batches.branch_id
-        and public.current_user_can_access_test_batch(
-          batches.id,
-          required_permission
-        )
-    )
+declare
+  has_access boolean;
+begin
+  select exists (
+    select 1
+    from public.tests
+    join public.batches
+      on batches.id = tests.batch_id
+    where tests.id = target_test_id
+      and tests.institute_id = batches.institute_id
+      and tests.branch_id = batches.branch_id
+      and public.current_user_can_access_test_batch(
+        batches.id,
+        required_permission
+      )
+  ) into has_access;
+
+  return coalesce(has_access, false);
+end;
 $$;
 
 create policy tests_select_members
@@ -4678,8 +4776,8 @@ create policy tests_select_members
   for select
   to authenticated
   using (
-    public.current_user_can_access_test(
-      tests.id,
+    public.current_user_can_access_test_batch(
+      tests.batch_id,
       'tests.view'::text
     )
   );
@@ -4689,16 +4787,16 @@ create policy tests_insert_members
   for insert
   to authenticated
   with check (
-    exists (
+    public.current_user_can_access_test_batch(
+      tests.batch_id,
+      'tests.create'::text
+    )
+    and exists (
       select 1
       from public.batches
       where batches.id = tests.batch_id
         and batches.institute_id = tests.institute_id
         and batches.branch_id = tests.branch_id
-        and public.current_user_can_access_test_batch(
-          batches.id,
-          'tests.create'::text
-        )
     )
   );
 
@@ -4707,22 +4805,22 @@ create policy tests_update_members
   for update
   to authenticated
   using (
-    public.current_user_can_access_test(
-      tests.id,
+    public.current_user_can_access_test_batch(
+      tests.batch_id,
       'tests.update'::text
     )
   )
   with check (
-    exists (
+    public.current_user_can_access_test_batch(
+      tests.batch_id,
+      'tests.update'::text
+    )
+    and exists (
       select 1
       from public.batches
       where batches.id = tests.batch_id
         and batches.institute_id = tests.institute_id
         and batches.branch_id = tests.branch_id
-        and public.current_user_can_access_test_batch(
-          batches.id,
-          'tests.update'::text
-        )
     )
   );
 
@@ -4731,19 +4829,20 @@ create policy tests_delete_members
   for delete
   to authenticated
   using (
-    public.current_user_can_access_test(
-      tests.id,
+    public.current_user_can_access_test_batch(
+      tests.batch_id,
       'tests.delete'::text
     )
   );
 
+-- 8. Define RLS Policies for test_scores
 create policy test_scores_select_members
   on public.test_scores
   for select
   to authenticated
   using (
-    public.current_user_can_access_test(
-      test_scores.test_id,
+    public.current_user_can_access_test_batch(
+      (select batch_id from public.tests where id = test_scores.test_id),
       'tests.view'::text
     )
   );
@@ -4753,9 +4852,16 @@ create policy test_scores_insert_members
   for insert
   to authenticated
   with check (
-    public.current_user_can_access_test(
-      test_scores.test_id,
+    public.current_user_can_access_test_batch(
+      (select batch_id from public.tests where id = test_scores.test_id),
       'tests.create'::text
+    )
+    and exists (
+      select 1
+      from public.tests
+      where tests.id = test_scores.test_id
+        and tests.institute_id = test_scores.institute_id
+        and tests.branch_id = test_scores.branch_id
     )
   );
 
@@ -4764,15 +4870,22 @@ create policy test_scores_update_members
   for update
   to authenticated
   using (
-    public.current_user_can_access_test(
-      test_scores.test_id,
+    public.current_user_can_access_test_batch(
+      (select batch_id from public.tests where id = test_scores.test_id),
       'tests.update'::text
     )
   )
   with check (
-    public.current_user_can_access_test(
-      test_scores.test_id,
+    public.current_user_can_access_test_batch(
+      (select batch_id from public.tests where id = test_scores.test_id),
       'tests.update'::text
+    )
+    and exists (
+      select 1
+      from public.tests
+      where tests.id = test_scores.test_id
+        and tests.institute_id = test_scores.institute_id
+        and tests.branch_id = test_scores.branch_id
     )
   );
 
@@ -4781,8 +4894,8 @@ create policy test_scores_delete_members
   for delete
   to authenticated
   using (
-    public.current_user_can_access_test(
-      test_scores.test_id,
+    public.current_user_can_access_test_batch(
+      (select batch_id from public.tests where id = test_scores.test_id),
       'tests.delete'::text
     )
   );
@@ -5016,25 +5129,15 @@ create policy batches_select_portal_users
   on public.batches
   for select
   to authenticated
-  using (
-    exists (
-      select 1
-      from public.student_batches
-      where student_batches.batch_id = batches.id
-        and public.current_user_can_access_portal_student(student_batches.student_id)
-    )
-  );
+  using (public.current_user_can_access_portal_batch(batches.id));
 
 create policy attendance_sessions_select_portal_users
   on public.attendance_sessions
   for select
   to authenticated
   using (
-    exists (
-      select 1
-      from public.attendance_records
-      where attendance_records.session_id = attendance_sessions.id
-        and public.current_user_can_access_portal_student(attendance_records.student_id)
+    public.current_user_can_access_portal_attendance_session(
+      attendance_sessions.id
     )
   );
 
@@ -5049,11 +5152,8 @@ create policy homework_assignments_select_portal_users
   for select
   to authenticated
   using (
-    exists (
-      select 1
-      from public.student_batches
-      where student_batches.batch_id = homework_assignments.batch_id
-        and public.current_user_can_access_portal_student(student_batches.student_id)
+    public.current_user_can_access_portal_homework_assignment(
+      homework_assignments.id
     )
   );
 
@@ -5067,14 +5167,7 @@ create policy tests_select_portal_users
   on public.tests
   for select
   to authenticated
-  using (
-    exists (
-      select 1
-      from public.student_batches
-      where student_batches.batch_id = tests.batch_id
-        and public.current_user_can_access_portal_student(student_batches.student_id)
-    )
-  );
+  using (public.current_user_can_access_portal_test(tests.id));
 
 create policy test_scores_select_portal_users
   on public.test_scores
