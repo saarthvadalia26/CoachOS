@@ -324,6 +324,7 @@ async function getHomeworkSubmissionForAction(
 async function createMissingSubmissionsForHomework(
   context: DashboardContext,
   homework: HomeworkForAction,
+  redirectPath = `/dashboard/homework/${homework.id}`,
 ) {
   const { data: studentBatchRows, error: studentBatchError } =
     await context.supabase
@@ -342,7 +343,7 @@ async function createMissingSubmissionsForHomework(
       role: context.role,
       userId: context.claims.sub,
     });
-    redirectWithSaveError(`/dashboard/homework/${homework.id}`);
+    redirectWithSaveError(redirectPath);
   }
 
   const studentIds = Array.from(
@@ -354,17 +355,16 @@ async function createMissingSubmissionsForHomework(
   ) as string[];
 
   if (!studentIds.length) {
+    console.log("[createHomeworkAssignment DEBUG] active batch students query count (from student_batches)", 0);
     return 0;
   }
 
   const { data: studentRows, error: studentsError } = await context.supabase
     .from("students")
-    .select("id")
-    .eq("institute_id", context.institute.id)
+    .select("id, archived_at, status")
+    .eq("institute_id", homework.institute_id)
     .eq("branch_id", homework.branch_id)
-    .in("id", studentIds)
-    .is("archived_at", null)
-    .or("status.eq.active,status.is.null");
+    .in("id", studentIds);
 
   if (studentsError) {
     console.error("homework submission sync student lookup failed", {
@@ -377,10 +377,14 @@ async function createMissingSubmissionsForHomework(
       role: context.role,
       userId: context.claims.sub,
     });
-    redirectWithSaveError(`/dashboard/homework/${homework.id}`);
+    redirectWithSaveError(redirectPath);
   }
 
-  const activeStudentIds = (studentRows ?? []).map((student) => student.id);
+  const activeStudentIds = (studentRows ?? [])
+    .filter((student) => student.archived_at === null && student.status !== "archived")
+    .map((student) => student.id);
+
+  console.log("[createHomeworkAssignment DEBUG] active batch students query count", activeStudentIds.length);
 
   if (!activeStudentIds.length) {
     return 0;
@@ -412,7 +416,12 @@ async function createMissingSubmissionsForHomework(
       role: context.role,
       userId: context.claims.sub,
     });
-    redirectWithSaveError(`/dashboard/homework/${homework.id}`);
+    console.log("[createHomeworkAssignment DEBUG] homework_submissions insert error", {
+      code: error.code,
+      message: error.message,
+      details: error.details,
+    });
+    redirectWithSaveError(redirectPath);
   }
 
   return submissionRows.length;
@@ -435,6 +444,19 @@ export async function createHomeworkAssignment(formData: FormData) {
   const dueDate = getOptionalText(formData, "dueDate");
   const status = parseStatus(getOptionalText(formData, "status"), "active");
 
+  console.log("[createHomeworkAssignment DEBUG]", {
+    userId: context.claims.sub,
+    resolvedRole: context.role,
+    selectedBatchId: batchId,
+    selectedBranchId: requestedBranchId,
+    derivedBranchId: batch.branch_id,
+    derivedInstituteId: batch.institute_id,
+    title,
+    subject,
+    dueDate,
+    status,
+  });
+
   if (dueDate && !isDateValue(dueDate)) {
     redirectWith(next, "error", "Select a valid due date.");
   }
@@ -447,7 +469,7 @@ export async function createHomeworkAssignment(formData: FormData) {
       created_by: context.claims.sub,
       description,
       due_date: dueDate,
-      institute_id: context.institute.id,
+      institute_id: batch.institute_id,
       status,
       subject,
       title,
@@ -462,22 +484,44 @@ export async function createHomeworkAssignment(formData: FormData) {
       code: error.code,
       details: error.details,
       hint: error.hint,
-      instituteId: context.institute.id,
+      instituteId: batch.institute_id,
       message: error.message,
       role: context.role,
       userId: context.claims.sub,
     });
+    console.log("[createHomeworkAssignment DEBUG] homework_assignments insert error", {
+      code: error.code,
+      message: error.message,
+      details: error.details,
+    });
     redirectWithSaveError(next);
   }
 
-  await createMissingSubmissionsForHomework(
+  console.log("[createHomeworkAssignment DEBUG] created homework id", homework.id);
+
+  const submissionCount = await createMissingSubmissionsForHomework(
     context,
     homework as HomeworkForAction,
+    next,
   );
+
+  console.log("[createHomeworkAssignment DEBUG] final returned action state", {
+    success: true,
+    submissionCount,
+  });
 
   revalidatePath(HOMEWORK_PATH);
   revalidatePath("/dashboard");
-  redirectWith(next, "success", "Homework assigned.");
+
+  if (submissionCount === 0) {
+    redirectWith(
+      next,
+      "success",
+      "Homework created. No active students are assigned to this batch yet."
+    );
+  } else {
+    redirectWith(next, "success", "Homework assigned.");
+  }
 }
 
 export async function updateHomeworkAssignment(formData: FormData) {

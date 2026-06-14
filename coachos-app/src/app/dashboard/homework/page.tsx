@@ -46,6 +46,8 @@ type HomeworkPageProps = {
     q?: string;
     status?: string;
     submissionStatus?: string;
+    error?: string;
+    success?: string;
   }>;
 };
 
@@ -375,7 +377,7 @@ export default async function HomeworkPage({ searchParams }: HomeworkPageProps) 
           </CardContent>
         </Card>
 
-        <ActionMessage error={error} />
+        <ActionMessage error={error || params.error} success={params.success} />
 
         <div
           className={
