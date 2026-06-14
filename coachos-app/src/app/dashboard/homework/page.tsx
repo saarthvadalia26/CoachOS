@@ -507,44 +507,63 @@ export default async function HomeworkPage({ searchParams }: HomeworkPageProps) 
                         );
 
                       return (
-                        <article key={homework.id} className="grid gap-4 p-5">
-                          <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-                            <div className="min-w-0 flex-1">
-                              <h3 className="break-words text-lg font-semibold leading-tight text-foreground">
+                        <article key={homework.id} className="p-5">
+                          <div className="space-y-4">
+                            <div className="min-w-0">
+                              <h3 className="text-lg font-semibold leading-tight text-foreground whitespace-normal break-words">
                                 {homework.title}
                               </h3>
-                              <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
-                                <span className="whitespace-nowrap">
+                              <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+                                <span>
                                   {homework.subject ??
                                     batch?.subject ??
                                     "No subject"}
                                 </span>
-                                <span className="inline-flex items-center gap-x-2 whitespace-nowrap">
-                                  <span
-                                    aria-hidden="true"
-                                    className="hidden text-muted-foreground/60 sm:inline"
-                                  >
-                                    |
-                                  </span>
-                                  <span>
-                                    {getBatchName(
-                                      batchesById,
-                                      homework.batch_id,
-                                    )}
-                                  </span>
+                                <span
+                                  aria-hidden="true"
+                                  className="hidden text-muted-foreground/60 sm:inline"
+                                >
+                                  |
                                 </span>
-                                <span className="inline-flex items-center gap-x-2 whitespace-nowrap">
-                                  <span
-                                    aria-hidden="true"
-                                    className="hidden text-muted-foreground/60 sm:inline"
-                                  >
-                                    |
-                                  </span>
-                                  <span>{branchName}</span>
+                                <span>
+                                  {getBatchName(
+                                    batchesById,
+                                    homework.batch_id,
+                                  )}
                                 </span>
+                                <span
+                                  aria-hidden="true"
+                                  className="hidden text-muted-foreground/60 sm:inline"
+                                >
+                                  |
+                                </span>
+                                <span>{branchName}</span>
                               </div>
+
+                              <div className="mt-3 flex flex-wrap gap-2">
+                                <Badge variant="outline">
+                                  {submittedCount} / {totalSubmissions} submitted
+                                </Badge>
+                                <Badge variant="outline">
+                                  {checkedCount} checked
+                                </Badge>
+                              </div>
+
+                              <p className="mt-3 text-sm text-muted-foreground">
+                                {homework.description ||
+                                  "No description has been added."}
+                              </p>
+
+                              <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+                                <CalendarDays
+                                  aria-hidden="true"
+                                  className="size-4"
+                                />
+                                Created {formatTimestamp(homework.created_at)}
+                              </p>
                             </div>
-                            <div className="flex shrink-0 flex-wrap items-start justify-start gap-2 xl:justify-end">
+
+                            <div className="flex flex-wrap items-center gap-2">
                               <Badge
                                 variant={
                                   homework.status === "archived"
@@ -569,7 +588,7 @@ export default async function HomeworkPage({ searchParams }: HomeworkPageProps) 
                                 </Link>
                               </Button>
                               {canArchiveHomework ? (
-                                <form action={archiveHomeworkAssignment}>
+                                <form action={archiveHomeworkAssignment} className="inline">
                                   <input
                                     name="homeworkId"
                                     type="hidden"
@@ -598,7 +617,7 @@ export default async function HomeworkPage({ searchParams }: HomeworkPageProps) 
                                 </form>
                               ) : null}
                               {canDeleteHomework ? (
-                                <form action={deleteHomeworkAssignment}>
+                                <form action={deleteHomeworkAssignment} className="inline">
                                   <input
                                     name="homeworkId"
                                     type="hidden"
@@ -627,28 +646,6 @@ export default async function HomeworkPage({ searchParams }: HomeworkPageProps) 
                                 </form>
                               ) : null}
                             </div>
-                          </div>
-
-                          <div className="grid gap-2 text-sm text-muted-foreground">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <Badge variant="outline">
-                                {submittedCount} / {totalSubmissions} submitted
-                              </Badge>
-                              <Badge variant="outline">
-                                {checkedCount} checked
-                              </Badge>
-                            </div>
-                            <p>
-                              {homework.description ||
-                                "No description has been added."}
-                            </p>
-                            <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                              <CalendarDays
-                                aria-hidden="true"
-                                className="size-4"
-                              />
-                              Created {formatTimestamp(homework.created_at)}
-                            </p>
                           </div>
 
                           {canUpdateHomework ? (
