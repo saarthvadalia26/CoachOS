@@ -208,9 +208,9 @@ export async function DashboardShell({
   ].join("|");
 
   return (
-    <main className="min-h-full bg-background text-foreground">
-      <div className="flex min-h-full flex-col xl:flex-row">
-        <aside className="border-b border-sidebar-border bg-sidebar px-4 py-4 text-sidebar-foreground xl:flex xl:min-h-screen xl:w-64 xl:flex-col xl:border-b-0 xl:border-r xl:px-5">
+    <main className="min-h-screen bg-background text-foreground">
+      <div className="flex min-h-screen flex-col lg:flex-row">
+        <aside className="border-b border-sidebar-border bg-sidebar px-4 py-4 text-sidebar-foreground lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-64 lg:shrink-0 lg:flex-col lg:overflow-y-auto lg:border-b-0 lg:border-r lg:px-5">
           <div className="mb-5">
             <Link
               href="/dashboard"
@@ -239,7 +239,7 @@ export async function DashboardShell({
               Institute operations
             </p>
           </div>
-          <nav className="flex gap-2 overflow-x-auto pb-1 xl:grid xl:flex-1 xl:content-start xl:overflow-visible xl:pb-0">
+          <nav className="flex gap-2 overflow-x-auto pb-1 lg:grid lg:flex-1 lg:content-start lg:overflow-visible lg:pb-0">
             {navItems.map((item) => {
               const isActive = item.activeKey === activePage;
               const Icon = item.icon;
@@ -283,7 +283,7 @@ export async function DashboardShell({
               );
             })}
           </nav>
-          <div className="mt-5 hidden rounded-lg border border-sidebar-border bg-sidebar-accent/40 p-3 xl:block">
+          <div className="mt-5 hidden rounded-lg border border-sidebar-border bg-sidebar-accent/40 p-3 lg:block">
             <p className="truncate text-sm font-medium">{displayName}</p>
             <p className="mt-1 text-xs capitalize text-muted-foreground">
               {roleLabel}
@@ -291,7 +291,7 @@ export async function DashboardShell({
           </div>
         </aside>
 
-        <section className="flex-1 px-4 py-6 sm:px-6 lg:px-8 xl:px-10">
+        <section className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8 xl:px-10">
           <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
             <header className="flex flex-col gap-4 border-b border-border pb-6 sm:flex-row sm:items-center sm:justify-between">
               <div>
