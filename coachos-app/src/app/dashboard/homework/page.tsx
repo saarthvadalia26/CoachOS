@@ -646,10 +646,9 @@ export default async function HomeworkPage({ searchParams }: HomeworkPageProps) 
                                 </form>
                               ) : null}
                             </div>
-                          </div>
 
-                          {canUpdateHomework ? (
-                            <details className="rounded-md border border-border bg-muted/30 p-3">
+                            {canUpdateHomework ? (
+                              <details className="rounded-md border border-border bg-muted/30 p-3">
                               <summary className="cursor-pointer text-sm font-medium">
                                 Edit homework
                               </summary>
@@ -742,7 +741,8 @@ export default async function HomeworkPage({ searchParams }: HomeworkPageProps) 
                               </form>
                             </details>
                           ) : null}
-                        </article>
+                        </div>
+                      </article>
                       );
                     })}
                   </div>
