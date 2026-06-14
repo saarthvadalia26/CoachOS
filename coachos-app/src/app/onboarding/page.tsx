@@ -7,6 +7,7 @@ import { SubmitButton } from "@/components/ui/submit-button";
 import {
   getCurrentUserContext,
   getStaffLinkStatusMessage,
+  resolvePostAuthRedirect,
 } from "@/lib/auth/permissions";
 import { createInstituteAndProfile } from "@/lib/onboarding/actions";
 
@@ -15,14 +16,18 @@ export const metadata: Metadata = {
 };
 
 export default async function OnboardingPage() {
-  const { profile, staffLinkStatus } = await getCurrentUserContext();
+  const context = await getCurrentUserContext();
+  const { staffLinkStatus } = context;
   const staffLinkMessage = getStaffLinkStatusMessage(staffLinkStatus);
+  const postAuthRedirect = await resolvePostAuthRedirect(
+    context.supabase,
+    "/dashboard",
+  );
 
-  // If this account matches a staff_members record, getCurrentUserContext()
-  // has already created the staff profile. Staff users should enter the
-  // dashboard for their existing institute, not create a new institute here.
-  if (profile?.institute_id) {
-    redirect("/dashboard");
+  // Staff and portal accounts are linked to existing institute records.
+  // They should not create a new institute through owner onboarding.
+  if (postAuthRedirect !== "/onboarding") {
+    redirect(postAuthRedirect);
   }
 
   return (

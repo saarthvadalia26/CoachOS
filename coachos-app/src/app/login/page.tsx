@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { login } from "@/lib/auth/actions";
+import { resolvePostAuthRedirect } from "@/lib/auth/permissions";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -30,7 +31,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const claims = data?.claims;
 
   if (claims) {
-    redirect(nextPath);
+    redirect(await resolvePostAuthRedirect(supabase, nextPath));
   }
 
   return (

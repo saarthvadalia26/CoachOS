@@ -113,6 +113,14 @@ export type StaffLinkStatus =
   | "failed"
   | "unauthenticated";
 
+type PortalClaimStatus =
+  | "already_claimed"
+  | "ambiguous"
+  | "failed"
+  | "linked"
+  | "no_match"
+  | "unauthenticated";
+
 export type Branch = {
   address: string | null;
   id: string;
@@ -465,7 +473,144 @@ async function getPortalRedirectForUser(
     });
   }
 
+  const studentClaimStatus = await claimPortalAccessForRedirect(
+    supabase,
+    "student",
+  );
+
+  if (shouldRedirectToPortal(studentClaimStatus)) {
+    return "/portal/student";
+  }
+
+  const parentClaimStatus = await claimPortalAccessForRedirect(
+    supabase,
+    "parent",
+  );
+
+  if (shouldRedirectToPortal(parentClaimStatus)) {
+    return "/portal/parent";
+  }
+
   return null;
+}
+
+function shouldRedirectToPortal(status: PortalClaimStatus) {
+  return (
+    status === "already_claimed" ||
+    status === "ambiguous" ||
+    status === "linked"
+  );
+}
+
+async function claimPortalAccessForRedirect(
+  supabase: SupabaseServerClient,
+  kind: "parent" | "student",
+): Promise<PortalClaimStatus> {
+  const rpcName =
+    kind === "student"
+      ? "claim_student_portal_link_result"
+      : "claim_parent_portal_links_result";
+  const { data, error } = await supabase.rpc(rpcName);
+
+  if (error) {
+    console.error("portal post-auth claim failed", {
+      code: error.code,
+      details: error.details,
+      hint: error.hint,
+      kind,
+      message: error.message,
+    });
+
+    return "failed";
+  }
+
+  if (
+    data === "already_claimed" ||
+    data === "ambiguous" ||
+    data === "failed" ||
+    data === "linked" ||
+    data === "no_match" ||
+    data === "unauthenticated"
+  ) {
+    return data;
+  }
+
+  return "failed";
+}
+
+function getAllowedNextPath(
+  requestedNext: string,
+  resolvedPath: "/dashboard" | "/onboarding" | "/portal/parent" | "/portal/student",
+) {
+  if (resolvedPath === "/dashboard" && requestedNext.startsWith("/dashboard")) {
+    return requestedNext;
+  }
+
+  if (
+    resolvedPath === "/portal/student" &&
+    requestedNext.startsWith("/portal/student")
+  ) {
+    return requestedNext;
+  }
+
+  if (
+    resolvedPath === "/portal/parent" &&
+    requestedNext.startsWith("/portal/parent")
+  ) {
+    return requestedNext;
+  }
+
+  return resolvedPath;
+}
+
+export async function resolvePostAuthRedirect(
+  supabase: SupabaseServerClient,
+  requestedNext = "/dashboard",
+) {
+  const safeNext =
+    requestedNext.startsWith("/") && !requestedNext.startsWith("//")
+      ? requestedNext
+      : "/dashboard";
+  const { data, error } = await supabase.auth.getClaims();
+  const claims = data?.claims as AuthClaims | undefined;
+
+  if (error || !claims) {
+    return "/login";
+  }
+
+  const profile = await getProfileForUser(supabase, claims.sub);
+  let memberships = await getMembershipsForUser(supabase, claims.sub);
+
+  if (!profile || !memberships.length) {
+    const linkedStaff = await linkMatchingStaffProfile(supabase, claims.sub);
+
+    if (linkedStaff.status === "linked") {
+      memberships = await getMembershipsForUser(supabase, claims.sub);
+    }
+  }
+
+  if (memberships.length) {
+    return getAllowedNextPath(safeNext, "/dashboard");
+  }
+
+  const portalRedirect = await getPortalRedirectForUser(supabase, claims.sub);
+
+  if (portalRedirect === "/portal/student") {
+    return getAllowedNextPath(safeNext, "/portal/student");
+  }
+
+  if (portalRedirect === "/portal/parent") {
+    return getAllowedNextPath(safeNext, "/portal/parent");
+  }
+
+  if (
+    safeNext.startsWith("/portal/student") ||
+    safeNext.startsWith("/portal/parent")
+  ) {
+    return safeNext;
+  }
+
+  return "/onboarding";
 }
 
 async function linkMatchingStaffProfile(

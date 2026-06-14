@@ -5,6 +5,7 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { passwordRecoveryCookieName } from "@/lib/auth/password-reset";
+import { resolvePostAuthRedirect } from "@/lib/auth/permissions";
 import { createClient } from "@/lib/supabase/server";
 
 function getAuthData(formData: FormData) {
@@ -95,8 +96,13 @@ export async function login(formData: FormData) {
   }
 
   revalidatePath("/", "layout");
+  const redirectPath = await resolvePostAuthRedirect(
+    supabase,
+    getNextPath(formData),
+  );
+
   redirect(
-    withToastParam(getNextPath(formData), "success", "Signed in successfully."),
+    withToastParam(redirectPath, "success", "Signed in successfully."),
   );
 }
 
@@ -129,7 +135,7 @@ export async function signup(formData: FormData) {
   revalidatePath("/", "layout");
 
   if (data.session) {
-    redirect(nextPath);
+    redirect(await resolvePostAuthRedirect(supabase, nextPath));
   }
 
   const loginParams = new URLSearchParams({

@@ -6,6 +6,7 @@ import {
   passwordRecoveryCookieName,
   passwordRecoveryCookieOptions,
 } from "@/lib/auth/password-reset";
+import { resolvePostAuthRedirect } from "@/lib/auth/permissions";
 import { createClient } from "@/lib/supabase/server";
 
 function getSafeNextPath(next: string | null) {
@@ -22,13 +23,15 @@ export async function GET(request: NextRequest) {
   const type = request.nextUrl.searchParams.get("type") as EmailOtpType | null;
   const next = getSafeNextPath(request.nextUrl.searchParams.get("next"));
   const isRecovery = type === "recovery" || isPasswordRecoveryNextPath(next);
-  const successPath = isRecovery ? "/reset-password" : next;
   const supabase = await createClient();
 
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
+      const successPath = isRecovery
+        ? "/reset-password"
+        : await resolvePostAuthRedirect(supabase, next);
       const response = NextResponse.redirect(new URL(successPath, request.url));
 
       if (isRecovery) {
@@ -56,6 +59,9 @@ export async function GET(request: NextRequest) {
     });
 
     if (!error) {
+      const successPath = isRecovery
+        ? "/reset-password"
+        : await resolvePostAuthRedirect(supabase, next);
       const response = NextResponse.redirect(new URL(successPath, request.url));
 
       if (isRecovery) {

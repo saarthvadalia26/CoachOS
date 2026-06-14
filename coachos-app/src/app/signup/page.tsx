@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { signup } from "@/lib/auth/actions";
+import { resolvePostAuthRedirect } from "@/lib/auth/permissions";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -31,7 +32,7 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
   const isPortalSignup = nextPath.startsWith("/portal/");
 
   if (claims) {
-    redirect(nextPath);
+    redirect(await resolvePostAuthRedirect(supabase, nextPath));
   }
 
   return (
