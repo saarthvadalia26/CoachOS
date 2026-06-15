@@ -143,3 +143,15 @@ CoachOS is optimized for zero-configuration deployments on Vercel:
 *   **Row Level Security (RLS):** Policies are configured at the Postgres level ensuring data for one branch is completely inaccessible by staff members from another branch.
 *   **Secure API Scope:** Mutations are guarded using backend authorization helpers that cross-examine the Supabase session token role claims prior to code execution.
 *   **Protected Portals:** Read-only structures prevent student/parent portal users from modifying grades, billing statuses, or attendance logs.
+
+---
+
+<div align="center">
+  <h3>Designed & Engineered with Precision</h3>
+  <p>Streamlining academy administration and elevating the educational experience.</p>
+  
+  <a href="https://github.com/saarthvadalia26">
+    <img src="https://img.shields.io/badge/Follow-GitHub-181717?style=for-the-badge&logo=github&labelColor=555555" alt="Follow saarthvadalia26 on GitHub" />
+  </a>
+</div>
+
