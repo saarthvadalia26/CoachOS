@@ -5,6 +5,7 @@ import {
   CalendarCheck,
   BookOpenCheck,
   ClipboardCheck,
+  FileUp,
   GraduationCap,
   LayoutDashboard,
   MessageSquare,
@@ -35,6 +36,7 @@ type DashboardPageKey =
   | "tests"
   | "communication"
   | "fees"
+  | "import"
   | "staff"
   | "settings";
 
@@ -156,6 +158,19 @@ const navItems: NavItem[] = [
       "accountant",
       "academic_coordinator",
       "teacher",
+    ],
+  },
+  {
+    label: "Import",
+    href: "/dashboard/import",
+    activeKey: "import",
+    enabled: true,
+    icon: FileUp,
+    roles: [
+      "owner",
+      "branch_manager",
+      "operations_staff",
+      "academic_coordinator",
     ],
   },
   {
