@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import {
+  BarChart3,
   Building2,
   CalendarCheck,
   BookOpenCheck,
@@ -37,6 +38,7 @@ type DashboardPageKey =
   | "communication"
   | "fees"
   | "import"
+  | "reports"
   | "staff"
   | "settings";
 
@@ -143,6 +145,21 @@ const navItems: NavItem[] = [
     icon: Receipt,
     permission: "fees.view",
     roles: ["owner", "branch_manager", "operations_staff", "accountant"],
+  },
+  {
+    label: "Reports",
+    href: "/dashboard/reports",
+    activeKey: "reports",
+    enabled: true,
+    icon: BarChart3,
+    roles: [
+      "owner",
+      "branch_manager",
+      "operations_staff",
+      "accountant",
+      "academic_coordinator",
+      "teacher",
+    ],
   },
   {
     label: "Communication",

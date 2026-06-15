@@ -403,6 +403,16 @@ async function StudentProfileContent({
   const canViewFeeDetails = canAccessPermission(context, "fees.view", {
     branchId: student.branch_id,
   });
+  const canViewProgressReport =
+    canViewBatchDetails ||
+    canViewAttendanceDetails ||
+    canViewFeeDetails ||
+    canAccessPermission(context, "homework.view", {
+      branchId: student.branch_id,
+    }) ||
+    canAccessPermission(context, "tests.view", {
+      branchId: student.branch_id,
+    });
   const canReactivateStudent =
     Boolean(student.archived_at) &&
     (role === "owner" ||
@@ -703,6 +713,15 @@ async function StudentProfileContent({
               Back to students
             </Link>
           </Button>
+          {canViewProgressReport ? (
+            <Button asChild variant="outline" size="sm" className="ml-2">
+              <Link
+                href={`/dashboard/reports?branchId=${student.branch_id}&studentId=${student.id}`}
+              >
+                View progress report
+              </Link>
+            </Button>
+          ) : null}
           <h1 className="mt-4 text-3xl font-semibold tracking-tight">
             {student.full_name}
           </h1>
