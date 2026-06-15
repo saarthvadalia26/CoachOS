@@ -1,135 +1,145 @@
-# CoachOS
+# 🎓 CoachOS
 
-CoachOS is an institute management platform for coaching centers to manage students, batches, attendance, fees, staff roles, communication, homework, tests, and parent/student access from one secure dashboard.
+[![Next.js](https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
+[![Tailwind CSS v4](https://img.shields.io/badge/Tailwind_CSS-v4-38bdf8?style=for-the-badge&logo=tailwind-css)](https://tailwindcss.com/)
+[![Supabase](https://img.shields.io/badge/Supabase-Database%20%26%20Auth-green?style=for-the-badge&logo=supabase)](https://supabase.com/)
+[![Vercel](https://img.shields.io/badge/Vercel-Deployment-black?style=for-the-badge&logo=vercel)](https://vercel.com/)
 
-## Feature Overview
+CoachOS is a professional, enterprise-ready institute management platform tailored for coaching centers, test prep institutes, and private academies. It provides a secure, single-dashboard command center to organize students, batches, attendance registries, fee tracking, academic assignments, staff operations, and parent/student portals.
 
-- Multi-branch institute management for organizing physical or operational centers.
-- Role-based dashboard access for owners, branch managers, staff, teachers, and accountants.
-- Student management with profile, batch, attendance, fee, homework, and test context.
-- Batch management with student and teacher assignment.
-- Attendance tracking with locked records, audit history, and controlled reopen workflow.
-- Fee management with payment status, summaries, reports, and CSV exports.
-- Staff and permissions management with branch-scoped operational roles.
-- Communication hub with announcements and an in-app notification bell.
-- Homework assignments with student-level submission tracking.
-- Test and exam management with student-level score tracking.
-- Student portal for read-only access to assigned academic information.
-- Parent portal for read-only access to linked child information.
-- Contact/demo request form powered by Formspree.
+---
 
-## Role System
+## 🚀 Key Value Propositions
 
-CoachOS uses role and permission based access so each user sees only the data and actions appropriate to their responsibility.
+*   **Multi-Branch Management:** Segment and isolate data cleanly across physical or operational branches under one central corporate ownership.
+*   **Granular RBAC System:** Ensure staff, teachers, accountants, and portal users have highly tailored view and action permissions.
+*   **Audit-Tracked Attendance:** Track daily presence with attendance locks, change logs, and a structured supervisor approval flow for modifications.
+*   **Billing & Fee Tracking:** Monitor fee structures, track payments, export financial reports, and identify outstanding dues.
+*   **Integrated Academics:** Assign homework, record test scores, and organize students into specific batches with assigned teachers.
+*   **Dedicated Portals:** Separate, secure, read-only portals for students and parents to check progress, schedules, homework, and fees.
 
-- **Owner**: Full institute access across all branches, including settings, branches, staff, students, batches, attendance, fees, homework, tests, and communication.
-- **Branch Manager**: Branch-scoped operational access for managing students, batches, attendance, fees, homework, tests, and communication where allowed.
-- **Operations Staff**: Branch-scoped operational access for day-to-day student, batch, attendance, and fee follow-up workflows.
-- **Academic Coordinator**: Branch-scoped academic access for students, batches, attendance visibility, homework, and tests.
-- **Teacher**: Assigned-batch academic access, including read-only student/batch context and allowed homework/test workflows.
-- **Accountant**: Fee-focused access for assigned branch financial workflows.
-- **Student Portal User**: Read-only portal access to their linked student information.
-- **Parent Portal User**: Read-only portal access to linked child information, including fees where enabled.
+---
 
-Portal users are separate from staff dashboard users and do not receive dashboard memberships.
+## 🛡️ Role-Based Access Control (RBAC) Matrix
 
-## Tech Stack
+CoachOS enforces strict Row Level Security (RLS) and view-level permissions. Here is how operational features map to user roles:
 
-- Next.js App Router
-- TypeScript
-- Tailwind CSS
-- shadcn/ui style components
-- Supabase Auth
-- Supabase Postgres
-- Supabase RLS
-- Sonner
-- Formspree
-- Vercel
+| Feature Area | Owner | Branch Manager | Operations Staff | Academic Coordinator | Teacher | Accountant | Student/Parent |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Global Settings & Branches** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Staff & Role Management** | ✅ | Scoped | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Student Profiles & Batches** | ✅ | ✅ | ✅ | ✅ | 📖 | ❌ | ❌ |
+| **Attendance Registries** | ✅ | ✅ | ✅ | ✅ | ✅ (Assigned) | ❌ | 📖 (Read-Only) |
+| **Fee & Payment Invoices** | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ | 📖 (Read-Only) |
+| **Homework Assignments** | ✅ | ✅ | ❌ | ✅ | ✅ (Assigned) | ❌ | 📖 / Submit |
+| **Test Scores & Exams** | ✅ | ✅ | ❌ | ✅ | ✅ (Assigned) | ❌ | 📖 (Read-Only) |
+| **Announcements Hub** | ✅ | ✅ | ✅ | ✅ | 📖 | ❌ | 📖 (Read-Only) |
 
-## Project Structure
+> 💡 *Note: **Student and Parent Portal Users** access a separate, read-only experience and do not have access to administrative dashboards.*
+
+---
+
+## 📁 Repository Structure
 
 ```text
-coachos-app/
-  src/app/        App Router routes, dashboard pages, auth pages, and portals
-  src/components/ Shared UI, dashboard, and marketing components
-  src/lib/        Server actions, permissions, Supabase clients, and utilities
-  supabase/       Schema and SQL migrations
-  public/         Static assets
+coachos/
+├── coachos-app/
+│   ├── src/
+│   │   ├── app/             # Next.js App Router (pages, API routes, portals, auth layouts)
+│   │   ├── components/      # Reusable UI components (shadcn/ui, dashboard cards, tables)
+│   │   ├── lib/             # Shared utilities (Supabase clients, RBAC hooks, formatting helper functions)
+│   │   └── proxy.ts         # Middleware & proxy routing helpers
+│   ├── supabase/
+│   │   ├── migrations/      # DB Schema, functions, triggers, and RLS policies
+│   │   └── schema.sql       # Complete database schema snapshot
+│   ├── public/              # Static assets, branding logos, icons, and sitemaps
+│   ├── package.json         # Node.js workspace metadata and direct dependencies
+│   └── tsconfig.json        # TypeScript configuration settings
+└── README.md                # Project introduction and root configuration
 ```
 
-## Environment Variables
+---
 
-Create a local `.env.local` file inside `coachos-app/` and provide values for the required services.
+## 🛠️ Tech Stack & Architecture
 
-```env
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
-NEXT_PUBLIC_FORMSPREE_ENDPOINT=
-NEXT_PUBLIC_SITE_URL=
-```
+*   **Front-End Framework:** Next.js 16 (using App Router features, React Server Components, and Actions)
+*   **Type Safety:** TypeScript for strict codebase contracts and interface mapping
+*   **Styling & Components:** Tailwind CSS v4 alongside modular Radix UI primitives configured through shadcn/ui
+*   **Backend & DB Integration:** Supabase (Auth management, Postgres Database, and Row Level Security)
+*   **Notifications:** Sonner for elegant toast notifications
+*   **Marketing & Demos:** Formspree for handling landing/contact form submissions
 
-Never commit `.env.local`, Supabase keys, Formspree endpoints, or private credentials.
+---
 
-## Local Development
+## 💻 Local Development Setup
 
-Run commands from the app directory:
+Follow these steps to run CoachOS locally on your environment:
 
+### Prerequisites
+*   Node.js (v18.x or newer recommended)
+*   npm (v10.x or newer) or yarn/pnpm
+
+### 1. Clone & Install Dependencies
+Navigate into the application folder and install package packages:
 ```bash
-cd coachos-app
+git clone https://github.com/saarthvadalia26/coachos.git
+cd coachos/coachos-app
 npm install
+```
+
+### 2. Configure Environment Variables
+Create a `.env.local` file in the root of the `coachos-app/` directory:
+```env
+NEXT_PUBLIC_SUPABASE_URL=your-supabase-project-url
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-supabase-anon-key
+NEXT_PUBLIC_FORMSPREE_ENDPOINT=your-formspree-endpoint-id
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+```
+> ⚠️ **Important:** Do not commit `.env.local` files or private Supabase credentials to production branches.
+
+### 3. Initialize Supabase Database
+1. Set up a new project on [Supabase Console](https://database.new).
+2. Go to the **SQL Editor** in your Supabase project dashboard.
+3. Copy and run the schema setup from `supabase/schema.sql` to initialize tables, relationships, and custom triggers.
+4. Execute any outstanding migrations located under `supabase/migrations/` sequentially.
+
+### 4. Start the Application
+Boot the Next.js development server:
+```bash
 npm run dev
 ```
+Open [http://localhost:3000](http://localhost:3000) in your browser to view the application.
 
-The app runs locally at:
+---
 
-```text
-http://localhost:3000
-```
+## 🔬 Code Quality & Build Checks
 
-Quality checks:
+Ensure code standards and production bundle readiness using these linting and compiler steps:
 
 ```bash
+# Run code analysis and linting checks
 npm run lint
+
+# Build production bundle to verify compilation and React Server components compilation
 npm run build
 ```
 
-On Windows PowerShell, use `npm.cmd` if your environment blocks `npm.ps1`.
+---
 
-## Supabase Setup
+## ☁️ Deployment Checklist (Vercel)
 
-CoachOS requires Supabase Auth, Supabase Postgres, and Row Level Security.
+CoachOS is optimized for zero-configuration deployments on Vercel:
 
-- Create a Supabase project.
-- Configure the required environment variables locally and in deployment.
-- Run SQL migrations from `coachos-app/supabase/migrations`.
-- Keep RLS enabled for institute, branch, dashboard, and portal data isolation.
-- Store Supabase keys only in environment variables.
+1. **Import Project:** Link your GitHub repository in your Vercel Dashboard.
+2. **Root Directory:** Configure the root directory settings on Vercel to point directly to `coachos-app`.
+3. **Environment variables:** Copy the keys from your `.env.local` file over to the project's deployment settings on Vercel.
+4. **Auth Redirects:** Register your deployed Vercel domain URLs within the Supabase Auth settings (**Authentication -> URL Configuration -> Redirect URLs**) to prevent login callback issues.
 
-Do not commit production database details or credentials.
+---
 
-## Deployment
+## 🔒 Security & Data Compliance
 
-CoachOS is designed for deployment on Vercel.
-
-1. Connect the GitHub repository to Vercel.
-2. Set the Vercel root directory to `coachos-app` if the repository root contains this nested app folder.
-3. Add the required environment variables in Vercel project settings.
-4. Configure Supabase Auth redirect URLs for local development and the deployed Vercel domain.
-5. Deploy through Vercel.
-
-## Security Notes
-
-- Supabase RLS protects institute, branch, staff, student, academic, fee, and portal data.
-- Dashboard access is based on memberships, roles, and scoped permissions.
-- Student and parent portal users are read-only and separate from dashboard staff users.
-- Parent/student portal data is derived server-side from linked portal access records.
-- Never commit secrets, `.env.local`, Supabase keys, Formspree endpoints, or private credentials.
-- Keep production credentials and database details outside the repository.
-
-## Current Status
-
-This project is under active development and prepared for demo/pilot usage.
-
-## License
-
-License not specified.
+*   **Row Level Security (RLS):** Policies are configured at the Postgres level ensuring data for one branch is completely inaccessible by staff members from another branch.
+*   **Secure API Scope:** Mutations are guarded using backend authorization helpers that cross-examine the Supabase session token role claims prior to code execution.
+*   **Protected Portals:** Read-only structures prevent student/parent portal users from modifying grades, billing statuses, or attendance logs.
