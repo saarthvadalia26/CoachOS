@@ -257,9 +257,9 @@ export async function DashboardShell({
   ].join("|");
 
   return (
-    <main className="min-h-screen w-full max-w-full overflow-x-hidden bg-background text-foreground">
-      <div className="flex min-h-screen w-full max-w-full flex-col lg:flex-row">
-        <aside className="w-full max-w-full overflow-hidden border-b border-sidebar-border bg-sidebar px-4 py-4 text-sidebar-foreground lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-64 lg:max-w-64 lg:shrink-0 lg:flex-col lg:overflow-y-auto lg:border-b-0 lg:border-r lg:px-5">
+    <main className="h-screen w-full max-w-full overflow-hidden bg-background text-foreground">
+      <div className="flex h-full w-full max-w-full flex-col lg:flex-row">
+        <aside className="w-full max-w-full overflow-hidden border-b border-sidebar-border bg-sidebar px-4 py-4 text-sidebar-foreground shrink-0 lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-64 lg:max-w-64 lg:overflow-y-auto lg:border-b-0 lg:border-r lg:px-5">
           <div className="mb-5">
             <Link
               href="/dashboard"
@@ -340,7 +340,7 @@ export async function DashboardShell({
           </div>
         </aside>
 
-        <section className="min-w-0 flex-1 overflow-x-hidden px-4 py-6 sm:px-6 lg:px-8 xl:px-10">
+        <section className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden px-4 py-6 sm:px-6 lg:px-8 xl:px-10">
           <div className="mx-auto flex w-full max-w-6xl min-w-0 flex-col gap-8">
             <header className="flex min-w-0 flex-col gap-4 border-b border-border pb-6 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
