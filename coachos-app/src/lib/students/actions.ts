@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { logActivity } from "@/lib/activity/log";
 import {
   canAccessPermission,
   getDefaultBranchId,
@@ -229,7 +230,7 @@ async function getStudentForRemoval(
   const { institute, supabase } = context;
   const { data: student, error } = await supabase
     .from("students")
-    .select("id, branch_id, archived_at")
+    .select("id, branch_id, archived_at, full_name")
     .eq("id", studentId)
     .eq("institute_id", institute.id)
     .maybeSingle();
@@ -255,7 +256,12 @@ async function getStudentForRemoval(
     redirectWithError("Select a student from this institute.");
   }
 
-  return student as { archived_at: string | null; branch_id: string | null; id: string };
+  return student as {
+    archived_at: string | null;
+    branch_id: string | null;
+    full_name: string;
+    id: string;
+  };
 }
 
 async function getStudentForPortalManagement(
@@ -265,7 +271,7 @@ async function getStudentForPortalManagement(
   const { institute, supabase } = context;
   const { data: student, error } = await supabase
     .from("students")
-    .select("id, institute_id, branch_id, student_email, parent_email")
+    .select("id, institute_id, branch_id, full_name, student_email, parent_email")
     .eq("id", studentId)
     .eq("institute_id", institute.id)
     .maybeSingle();
@@ -297,6 +303,7 @@ async function getStudentForPortalManagement(
 
   return student as {
     branch_id: string;
+    full_name: string;
     id: string;
     institute_id: string;
     parent_email: string | null;
@@ -366,18 +373,31 @@ export async function createStudent(formData: FormData) {
   const phone = getOptionalText(formData, "phone");
   const parentPhone = getOptionalText(formData, "parentPhone");
 
-  const { error } = await supabase.from("students").insert({
-    branch_id: branchId,
-    institute_id: institute.id,
-    full_name: fullName,
-    phone,
-    parent_phone: parentPhone,
-  });
+  const { data: student, error } = await supabase
+    .from("students")
+    .insert({
+      branch_id: branchId,
+      institute_id: institute.id,
+      full_name: fullName,
+      phone,
+      parent_phone: parentPhone,
+    })
+    .select("id")
+    .maybeSingle();
 
-  if (error) {
+  if (error || !student) {
     console.error("createStudent failed", error);
     redirectWithSaveError();
   }
+
+  await logActivity(context, {
+    action: "student.created",
+    branchId,
+    description: "Student record created.",
+    entityId: student.id,
+    entityLabel: fullName,
+    entityType: "student",
+  });
 
   revalidatePath(STUDENTS_PATH);
   revalidatePath("/dashboard");
@@ -436,6 +456,15 @@ export async function updateStudent(formData: FormData) {
   if (!updatedStudent) {
     redirectWithError("Select a student from this institute.");
   }
+
+  await logActivity(context, {
+    action: "student.updated",
+    branchId: existingStudent.branch_id,
+    description: "Student details updated.",
+    entityId: studentId,
+    entityLabel: fullName,
+    entityType: "student",
+  });
 
   revalidatePath(STUDENTS_PATH);
   revalidatePath("/dashboard");
@@ -525,6 +554,15 @@ export async function deleteStudent(formData: FormData) {
     studentId,
   });
 
+  await logActivity(context, {
+    action: "student.deleted",
+    branchId: existingStudent.branch_id,
+    description: "Student record permanently deleted.",
+    entityId: studentId,
+    entityLabel: existingStudent.full_name,
+    entityType: "student",
+  });
+
   revalidatePath(STUDENTS_PATH);
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/batches");
@@ -578,6 +616,16 @@ export async function archiveStudent(formData: FormData) {
     redirectWithError("Select a student from this institute.");
   }
 
+  await logActivity(context, {
+    action: "student.archived",
+    branchId: existingStudent.branch_id,
+    description:
+      "Student archived. Historical attendance and fee records remain intact.",
+    entityId: studentId,
+    entityLabel: existingStudent.full_name,
+    entityType: "student",
+  });
+
   revalidatePath(STUDENTS_PATH);
   revalidatePath(`/dashboard/students/${studentId}`);
   revalidatePath("/dashboard");
@@ -619,6 +667,15 @@ export async function reactivateStudent(formData: FormData) {
   if (!reactivatedStudent) {
     redirectWithError("Select a student from this institute.");
   }
+
+  await logActivity(context, {
+    action: "student.reactivated",
+    branchId: existingStudent.branch_id,
+    description: "Student reactivated and returned to active lists.",
+    entityId: studentId,
+    entityLabel: existingStudent.full_name,
+    entityType: "student",
+  });
 
   revalidatePath(STUDENTS_PATH);
   revalidatePath(`/dashboard/students/${studentId}`);
@@ -707,6 +764,19 @@ export async function saveStudentPortalAccess(formData: FormData) {
     );
   }
 
+  await logActivity(context, {
+    action: "portal_access.saved",
+    branchId: student.branch_id,
+    description: "Student portal access saved.",
+    entityId: student.id,
+    entityLabel: student.full_name,
+    entityType: "portal_access",
+    metadata: {
+      portalType: "student",
+      status: existingLink?.status === "linked" ? "linked" : "pending",
+    },
+  });
+
   revalidatePath(`/dashboard/students/${student.id}`);
   redirectToStudentProfile(student.id, "success", "Student portal access saved.");
 }
@@ -735,6 +805,18 @@ export async function disableStudentPortalAccess(formData: FormData) {
       "Portal access could not be disabled. Please try again.",
     );
   }
+
+  await logActivity(context, {
+    action: "portal_access.disabled",
+    branchId: student.branch_id,
+    description: "Student portal access disabled.",
+    entityId: student.id,
+    entityLabel: student.full_name,
+    entityType: "portal_access",
+    metadata: {
+      portalType: "student",
+    },
+  });
 
   revalidatePath(`/dashboard/students/${student.id}`);
   redirectToStudentProfile(
@@ -845,6 +927,19 @@ export async function saveParentPortalAccess(formData: FormData) {
     );
   }
 
+  await logActivity(context, {
+    action: "portal_access.saved",
+    branchId: student.branch_id,
+    description: "Parent portal access saved.",
+    entityId: student.id,
+    entityLabel: student.full_name,
+    entityType: "portal_access",
+    metadata: {
+      portalType: "parent",
+      status: existingLink?.status === "linked" ? "linked" : "pending",
+    },
+  });
+
   revalidatePath(`/dashboard/students/${student.id}`);
   redirectToStudentProfile(student.id, "success", "Parent portal access saved.");
 }
@@ -873,6 +968,18 @@ export async function disableParentPortalAccess(formData: FormData) {
       "Parent portal access could not be disabled. Please try again.",
     );
   }
+
+  await logActivity(context, {
+    action: "portal_access.disabled",
+    branchId: student.branch_id,
+    description: "Parent portal access disabled.",
+    entityId: student.id,
+    entityLabel: student.full_name,
+    entityType: "portal_access",
+    metadata: {
+      portalType: "parent",
+    },
+  });
 
   revalidatePath(`/dashboard/students/${student.id}`);
   redirectToStudentProfile(

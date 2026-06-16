@@ -13,9 +13,9 @@ export function Footer() {
 
   return (
     <footer className="border-t border-border bg-card/70">
-      <div className="mx-auto grid w-full max-w-6xl gap-8 px-6 py-10 md:grid-cols-[1.4fr_0.8fr_0.8fr_0.8fr]">
-        <div>
-          <Link href="/" className="flex items-center gap-2 text-lg font-semibold tracking-tight">
+      <div className="mx-auto grid w-full max-w-6xl min-w-0 gap-8 px-4 py-10 sm:px-6 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,0.8fr)_minmax(0,0.8fr)_minmax(0,0.8fr)]">
+        <div className="min-w-0">
+          <Link href="/" className="flex min-w-0 items-center gap-2 text-lg font-semibold tracking-tight">
             <span className="grid size-8 place-items-center rounded-lg bg-[#1e1b4b] text-white shadow-sm">
               <svg
                 className="size-4"
@@ -30,7 +30,7 @@ export function Footer() {
                 <path d="M15 4L23 12L15 20" />
               </svg>
             </span>
-            CoachOS
+            <span className="truncate">CoachOS</span>
           </Link>
           <p className="mt-3 max-w-sm text-sm leading-6 text-muted-foreground">
             A secure operating dashboard for coaching institutes managing

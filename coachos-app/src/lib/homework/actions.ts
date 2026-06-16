@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { logActivity } from "@/lib/activity/log";
 import {
   canAccessPermission,
   requireDashboardAccess,
@@ -40,6 +41,7 @@ type HomeworkForAction = {
   id: string;
   institute_id: string;
   status: HomeworkStatus;
+  title: string;
 };
 
 function getRequiredText(formData: FormData, key: string, label: string) {
@@ -214,7 +216,7 @@ async function getHomeworkAssignmentForAction(
 ) {
   const { data: homework, error } = await context.supabase
     .from("homework_assignments")
-    .select("id, institute_id, branch_id, batch_id, status")
+    .select("id, institute_id, branch_id, batch_id, status, title")
     .eq("id", homeworkId)
     .eq("institute_id", context.institute.id)
     .maybeSingle();
@@ -474,7 +476,7 @@ export async function createHomeworkAssignment(formData: FormData) {
       subject,
       title,
     })
-    .select("id, institute_id, branch_id, batch_id, status")
+    .select("id, institute_id, branch_id, batch_id, status, title")
     .single();
 
   if (error) {
@@ -508,6 +510,19 @@ export async function createHomeworkAssignment(formData: FormData) {
   console.log("[createHomeworkAssignment DEBUG] final returned action state", {
     success: true,
     submissionCount,
+  });
+
+  await logActivity(context, {
+    action: "homework.created",
+    branchId: batch.branch_id,
+    description: "Homework assigned to a batch.",
+    entityId: homework.id,
+    entityLabel: title,
+    entityType: "homework",
+    metadata: {
+      batchId: batch.id,
+      submissionCount,
+    },
   });
 
   revalidatePath(HOMEWORK_PATH);
@@ -619,6 +634,19 @@ export async function updateHomeworkAssignment(formData: FormData) {
     redirectWith(next, "error", "Select a homework assignment from this institute.");
   }
 
+  await logActivity(context, {
+    action: "homework.updated",
+    branchId: nextBatch.branch_id,
+    description: "Homework details updated.",
+    entityId: homeworkId,
+    entityLabel: title,
+    entityType: "homework",
+    metadata: {
+      batchId: nextBatch.id,
+      status,
+    },
+  });
+
   revalidatePath(HOMEWORK_PATH);
   revalidatePath("/dashboard");
   redirectWith(next, "success", "Homework updated.");
@@ -628,7 +656,7 @@ export async function archiveHomeworkAssignment(formData: FormData) {
   const context = await requireDashboardAccess();
   const next = getSafeNextPath(formData);
   const homeworkId = getRequiredText(formData, "homeworkId", "Homework");
-  const { batch } = await getHomeworkAssignmentForAction(
+  const { batch, homework } = await getHomeworkAssignmentForAction(
     context,
     homeworkId,
     "homework.archive",
@@ -661,6 +689,15 @@ export async function archiveHomeworkAssignment(formData: FormData) {
     redirectWith(next, "error", "Select a homework assignment from this institute.");
   }
 
+  await logActivity(context, {
+    action: "homework.archived",
+    branchId: batch.branch_id,
+    description: "Homework archived.",
+    entityId: homeworkId,
+    entityLabel: homework.title,
+    entityType: "homework",
+  });
+
   revalidatePath(HOMEWORK_PATH);
   revalidatePath("/dashboard");
   redirectWith(next, "success", "Homework archived.");
@@ -670,7 +707,7 @@ export async function deleteHomeworkAssignment(formData: FormData) {
   const context = await requireDashboardAccess();
   const next = getSafeNextPath(formData);
   const homeworkId = getRequiredText(formData, "homeworkId", "Homework");
-  const { batch } = await getHomeworkAssignmentForAction(
+  const { batch, homework } = await getHomeworkAssignmentForAction(
     context,
     homeworkId,
     "homework.delete",
@@ -732,6 +769,15 @@ export async function deleteHomeworkAssignment(formData: FormData) {
     redirectWith(next, "error", "Select a homework assignment from this institute.");
   }
 
+  await logActivity(context, {
+    action: "homework.deleted",
+    branchId: batch.branch_id,
+    description: "Homework deleted.",
+    entityId: homeworkId,
+    entityLabel: homework.title,
+    entityType: "homework",
+  });
+
   revalidatePath(HOMEWORK_PATH);
   revalidatePath("/dashboard");
   redirectWith(next, "success", "Homework deleted.");
@@ -747,7 +793,7 @@ export async function updateHomeworkSubmissionStatus(formData: FormData) {
   );
   const status = parseSubmissionStatus(getOptionalText(formData, "status"));
   const remarks = getOptionalText(formData, "remarks");
-  const { homework } = await getHomeworkSubmissionForAction(
+  const { homework, submission } = await getHomeworkSubmissionForAction(
     context,
     submissionId,
     "homework.update",
@@ -803,6 +849,19 @@ export async function updateHomeworkSubmissionStatus(formData: FormData) {
     redirectWith(next, "error", "Select a homework submission from this institute.");
   }
 
+  await logActivity(context, {
+    action: "homework.submission_updated",
+    branchId: homework.branch_id,
+    description: "Homework submission status updated.",
+    entityId: homework.id,
+    entityLabel: homework.title,
+    entityType: "homework",
+    metadata: {
+      status,
+      studentId: submission.student_id,
+    },
+  });
+
   revalidatePath(HOMEWORK_PATH);
   revalidatePath(`/dashboard/homework/${homework.id}`);
   redirectWith(next, "success", "Submission updated.");
@@ -817,7 +876,7 @@ export async function updateHomeworkSubmissionRemarks(formData: FormData) {
     "Submission",
   );
   const remarks = getOptionalText(formData, "remarks");
-  const { homework } = await getHomeworkSubmissionForAction(
+  const { homework, submission } = await getHomeworkSubmissionForAction(
     context,
     submissionId,
     "homework.update",
@@ -849,6 +908,18 @@ export async function updateHomeworkSubmissionRemarks(formData: FormData) {
   if (!updatedSubmission) {
     redirectWith(next, "error", "Select a homework submission from this institute.");
   }
+
+  await logActivity(context, {
+    action: "homework.submission_updated",
+    branchId: homework.branch_id,
+    description: "Homework submission remarks updated.",
+    entityId: homework.id,
+    entityLabel: homework.title,
+    entityType: "homework",
+    metadata: {
+      studentId: submission.student_id,
+    },
+  });
 
   revalidatePath(HOMEWORK_PATH);
   revalidatePath(`/dashboard/homework/${homework.id}`);
@@ -914,6 +985,19 @@ export async function bulkUpdateHomeworkSubmissions(formData: FormData) {
     });
     redirectWith(next, "error", "Could not update submission. Please try again.");
   }
+
+  await logActivity(context, {
+    action: "homework.submission_updated",
+    branchId: homework.branch_id,
+    description: "Homework submissions updated.",
+    entityId: homework.id,
+    entityLabel: homework.title,
+    entityType: "homework",
+    metadata: {
+      status,
+      submissionCount: submissionIds.length,
+    },
+  });
 
   revalidatePath(HOMEWORK_PATH);
   revalidatePath(`/dashboard/homework/${homework.id}`);

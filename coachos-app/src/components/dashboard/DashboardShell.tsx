@@ -4,6 +4,7 @@ import {
   BarChart3,
   Building2,
   CalendarCheck,
+  Activity,
   BookOpenCheck,
   ClipboardCheck,
   FileUp,
@@ -39,6 +40,7 @@ type DashboardPageKey =
   | "fees"
   | "import"
   | "reports"
+  | "activity"
   | "staff"
   | "settings";
 
@@ -162,6 +164,21 @@ const navItems: NavItem[] = [
     ],
   },
   {
+    label: "Activity",
+    href: "/dashboard/activity",
+    activeKey: "activity",
+    enabled: true,
+    icon: Activity,
+    permission: "activity.view",
+    roles: [
+      "owner",
+      "branch_manager",
+      "operations_staff",
+      "accountant",
+      "academic_coordinator",
+    ],
+  },
+  {
     label: "Communication",
     href: "/dashboard/communication",
     activeKey: "communication",
@@ -240,9 +257,9 @@ export async function DashboardShell({
   ].join("|");
 
   return (
-    <main className="min-h-screen bg-background text-foreground">
-      <div className="flex min-h-screen flex-col lg:flex-row">
-        <aside className="border-b border-sidebar-border bg-sidebar px-4 py-4 text-sidebar-foreground lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-64 lg:shrink-0 lg:flex-col lg:overflow-y-auto lg:border-b-0 lg:border-r lg:px-5">
+    <main className="min-h-screen w-full max-w-full overflow-x-hidden bg-background text-foreground">
+      <div className="flex min-h-screen w-full max-w-full flex-col lg:flex-row">
+        <aside className="w-full max-w-full overflow-hidden border-b border-sidebar-border bg-sidebar px-4 py-4 text-sidebar-foreground lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-64 lg:max-w-64 lg:shrink-0 lg:flex-col lg:overflow-y-auto lg:border-b-0 lg:border-r lg:px-5">
           <div className="mb-5">
             <Link
               href="/dashboard"
@@ -271,7 +288,7 @@ export async function DashboardShell({
               Institute operations
             </p>
           </div>
-          <nav className="flex gap-2 overflow-x-auto pb-1 lg:grid lg:flex-1 lg:content-start lg:overflow-visible lg:pb-0">
+          <nav className="flex max-w-full min-w-0 gap-2 overflow-x-auto pb-1 lg:grid lg:flex-1 lg:content-start lg:overflow-visible lg:pb-0">
             {navItems.map((item) => {
               const isActive = item.activeKey === activePage;
               const Icon = item.icon;
@@ -323,21 +340,21 @@ export async function DashboardShell({
           </div>
         </aside>
 
-        <section className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8 xl:px-10">
-          <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
-            <header className="flex flex-col gap-4 border-b border-border pb-6 sm:flex-row sm:items-center sm:justify-between">
-              <div>
+        <section className="min-w-0 flex-1 overflow-x-hidden px-4 py-6 sm:px-6 lg:px-8 xl:px-10">
+          <div className="mx-auto flex w-full max-w-6xl min-w-0 flex-col gap-8">
+            <header className="flex min-w-0 flex-col gap-4 border-b border-border pb-6 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
                 <p className="text-sm font-medium text-muted-foreground">
                   {instituteName}
                 </p>
-                <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
+                <h1 className="mt-2 break-words text-2xl font-semibold tracking-tight sm:text-3xl">
                   {title}
                 </h1>
-                <p className="mt-2 text-muted-foreground">
+                <p className="mt-2 break-words text-muted-foreground">
                   Signed in as {displayName}.
                 </p>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex min-w-0 flex-wrap items-center gap-2 sm:justify-end">
                 <NotificationBell
                   key={notificationKey}
                   notifications={notificationData.notifications}

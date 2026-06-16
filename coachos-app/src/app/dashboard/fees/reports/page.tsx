@@ -307,7 +307,7 @@ export default async function FeeReportsPage({
     >
       <section className="grid gap-6">
         <Card>
-          <CardHeader className="gap-3 sm:grid-cols-[1fr_auto] sm:items-start">
+          <CardHeader className="gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
             <div>
               <CardTitle className="text-xl">Financial summary</CardTitle>
               <CardDescription>
@@ -490,7 +490,7 @@ export default async function FeeReportsPage({
         </div>
 
         <Card>
-          <CardHeader className="gap-3 sm:grid-cols-[1fr_auto] sm:items-start">
+          <CardHeader className="gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
             <div>
               <CardTitle className="text-lg">Filtered fee records</CardTitle>
               <CardDescription>

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { logActivity } from "@/lib/activity/log";
 import {
   canAccessPermission,
   requireDashboardAccess,
@@ -194,7 +195,7 @@ async function getAnnouncementForManagement(
 ) {
   const { data: announcement, error } = await context.supabase
     .from("announcements")
-    .select("id, institute_id, branch_id")
+    .select("id, institute_id, branch_id, title")
     .eq("id", announcementId)
     .eq("institute_id", context.institute.id)
     .maybeSingle();
@@ -332,6 +333,19 @@ export async function createAnnouncement(formData: FormData) {
       throw notificationError;
     }
 
+    await logActivity(context, {
+      action: "announcement.published",
+      branchId,
+      description: "Announcement published.",
+      entityId: announcementId,
+      entityLabel: title,
+      entityType: "communication",
+      metadata: {
+        audience,
+        priority,
+      },
+    });
+
     revalidateCommunicationPaths();
     redirectWith(COMMUNICATION_PATH, "success", "Announcement published.");
   } catch (error) {
@@ -409,6 +423,19 @@ export async function updateAnnouncement(formData: FormData) {
       throw new Error("Could not update announcement.");
     }
 
+    await logActivity(context, {
+      action: "announcement.updated",
+      branchId,
+      description: "Announcement updated.",
+      entityId: announcementId,
+      entityLabel: title,
+      entityType: "communication",
+      metadata: {
+        audience,
+        priority,
+      },
+    });
+
     revalidateCommunicationPaths();
     redirectWith(COMMUNICATION_PATH, "success", "Announcement updated.");
   } catch (error) {
@@ -440,7 +467,7 @@ export async function deleteAnnouncement(formData: FormData) {
       "Announcement",
     );
 
-    await getAnnouncementForManagement(
+    const announcement = await getAnnouncementForManagement(
       context,
       announcementId,
       "communications.delete",
@@ -478,6 +505,15 @@ export async function deleteAnnouncement(formData: FormData) {
       });
       throw new Error("Could not delete announcement.");
     }
+
+    await logActivity(context, {
+      action: "announcement.deleted",
+      branchId: announcement.branch_id,
+      description: "Announcement deleted.",
+      entityId: announcementId,
+      entityLabel: announcement.title ?? "Announcement",
+      entityType: "communication",
+    });
 
     revalidateCommunicationPaths();
     redirectWith(COMMUNICATION_PATH, "success", "Announcement deleted.");

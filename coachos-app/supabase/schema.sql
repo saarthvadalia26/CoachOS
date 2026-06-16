@@ -294,6 +294,25 @@ comment on table public.staff_members is
 comment on column public.staff_members.role is
   'Legacy staff is accepted for MVP compatibility and maps to accountant membership.';
 
+create table if not exists public.activity_logs (
+  id uuid primary key default gen_random_uuid(),
+  institute_id uuid not null references public.institutes(id) on delete cascade,
+  branch_id uuid references public.branches(id) on delete set null,
+  actor_user_id uuid references auth.users(id) on delete set null,
+  actor_name text,
+  actor_role text,
+  action text not null,
+  entity_type text not null,
+  entity_id uuid,
+  entity_label text,
+  description text,
+  metadata jsonb,
+  created_at timestamptz not null default now()
+);
+
+comment on table public.activity_logs is
+  'Append-only dashboard activity feed for important institute actions. Portal users do not receive dashboard activity access.';
+
 -- Existing database compatibility: add Phase 1 columns if this is run over an
 -- MVP database.
 alter table public.students add column if not exists branch_id uuid;
@@ -1101,6 +1120,21 @@ create unique index if not exists staff_members_auth_user_id_institute_id_idx
 
 create unique index if not exists staff_members_institute_id_email_idx
   on public.staff_members (institute_id, lower(email));
+
+create index if not exists activity_logs_institute_id_idx
+  on public.activity_logs (institute_id);
+
+create index if not exists activity_logs_branch_id_idx
+  on public.activity_logs (branch_id);
+
+create index if not exists activity_logs_actor_user_id_idx
+  on public.activity_logs (actor_user_id);
+
+create index if not exists activity_logs_entity_type_idx
+  on public.activity_logs (entity_type);
+
+create index if not exists activity_logs_created_at_idx
+  on public.activity_logs (created_at desc);
 
 -- Role normalization helpers.
 create or replace function public.normalize_membership_role(input_role text)
@@ -2452,6 +2486,7 @@ as $$
       'communications.delete',
       'notifications.view',
       'notifications.update',
+      'activity.view',
       'tests.view',
       'tests.create',
       'tests.update',
@@ -2473,6 +2508,7 @@ as $$
       'communications.view',
       'notifications.view',
       'notifications.update',
+      'activity.view',
       'tests.view'
     )
     when member_role = 'accountant' then required_permission in (
@@ -2489,7 +2525,8 @@ as $$
       'fees.manage',
       'communications.view',
       'notifications.view',
-      'notifications.update'
+      'notifications.update',
+      'activity.view'
     )
     when member_role = 'academic_coordinator' then required_permission in (
       'dashboard.access',
@@ -2508,6 +2545,7 @@ as $$
       'communications.view',
       'notifications.view',
       'notifications.update',
+      'activity.view',
       'tests.view',
       'tests.create',
       'tests.update',
@@ -3532,6 +3570,7 @@ alter table public.announcements enable row level security;
 alter table public.notification_items enable row level security;
 alter table public.notification_reads enable row level security;
 alter table public.staff_members enable row level security;
+alter table public.activity_logs enable row level security;
 
 -- Drop old policies before recreating membership-aware policies.
 drop policy if exists profiles_select_own_profile on public.profiles;
@@ -3609,6 +3648,10 @@ drop policy if exists staff_members_select_owner_or_self on public.staff_members
 drop policy if exists staff_members_insert_owner on public.staff_members;
 drop policy if exists staff_members_update_owner on public.staff_members;
 drop policy if exists staff_members_delete_owner on public.staff_members;
+drop policy if exists activity_logs_select_dashboard_members on public.activity_logs;
+drop policy if exists activity_logs_insert_dashboard_members on public.activity_logs;
+drop policy if exists activity_logs_update_blocked on public.activity_logs;
+drop policy if exists activity_logs_delete_blocked on public.activity_logs;
 
 create policy profiles_select_own_profile
   on public.profiles
@@ -4647,6 +4690,91 @@ create policy staff_members_delete_owner
   for delete
   to authenticated
   using (public.has_institute_permission(staff_members.institute_id, 'staff.manage'::text));
+
+create policy activity_logs_select_dashboard_members
+  on public.activity_logs
+  for select
+  to authenticated
+  using (
+    exists (
+      select 1
+      from public.memberships
+      where memberships.user_id = auth.uid()
+        and memberships.institute_id = activity_logs.institute_id
+        and public.role_has_permission(memberships.role, 'activity.view'::text)
+        and (
+          memberships.role = 'owner'
+          or (
+            activity_logs.branch_id is not null
+            and memberships.branch_id = activity_logs.branch_id
+            and (
+              memberships.role = 'branch_manager'
+              or (
+                memberships.role = 'operations_staff'
+                and activity_logs.entity_type in (
+                  'student',
+                  'batch',
+                  'attendance',
+                  'homework',
+                  'test',
+                  'communication'
+                )
+              )
+              or (
+                memberships.role = 'academic_coordinator'
+                and activity_logs.entity_type in (
+                  'student',
+                  'batch',
+                  'attendance',
+                  'homework',
+                  'test',
+                  'communication'
+                )
+              )
+              or (
+                memberships.role = 'accountant'
+                and activity_logs.entity_type = 'fee'
+              )
+            )
+          )
+        )
+    )
+  );
+
+create policy activity_logs_insert_dashboard_members
+  on public.activity_logs
+  for insert
+  to authenticated
+  with check (
+    actor_user_id = auth.uid()
+    and exists (
+      select 1
+      from public.memberships
+      where memberships.user_id = auth.uid()
+        and memberships.institute_id = activity_logs.institute_id
+        and public.role_has_permission(memberships.role, 'dashboard.access'::text)
+        and (
+          memberships.role = 'owner'
+          or (
+            activity_logs.branch_id is not null
+            and memberships.branch_id = activity_logs.branch_id
+          )
+        )
+    )
+  );
+
+create policy activity_logs_update_blocked
+  on public.activity_logs
+  for update
+  to authenticated
+  using (false)
+  with check (false);
+
+create policy activity_logs_delete_blocked
+  on public.activity_logs
+  for delete
+  to authenticated
+  using (false);
 
 -- =========================================================================
 -- TEST & EXAM MANAGEMENT

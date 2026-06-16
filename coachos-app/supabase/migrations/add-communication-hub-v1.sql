@@ -155,7 +155,8 @@ as $$
       'communications.update',
       'communications.delete',
       'notifications.view',
-      'notifications.update'
+      'notifications.update',
+      'activity.view'
     )
     when member_role = 'operations_staff' then required_permission in (
       'dashboard.access',
@@ -170,7 +171,8 @@ as $$
       'fees.send_reminder',
       'communications.view',
       'notifications.view',
-      'notifications.update'
+      'notifications.update',
+      'activity.view'
     )
     when member_role = 'accountant' then required_permission in (
       'dashboard.access',
@@ -186,7 +188,8 @@ as $$
       'fees.manage',
       'communications.view',
       'notifications.view',
-      'notifications.update'
+      'notifications.update',
+      'activity.view'
     )
     when member_role = 'academic_coordinator' then required_permission in (
       'dashboard.access',
@@ -198,7 +201,8 @@ as $$
       'attendance.alert',
       'communications.view',
       'notifications.view',
-      'notifications.update'
+      'notifications.update',
+      'activity.view'
     )
     when member_role = 'teacher' then required_permission in (
       'dashboard.access',

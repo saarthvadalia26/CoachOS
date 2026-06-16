@@ -602,7 +602,7 @@ async function BatchDetailContent({
         </Card>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
+      <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="grid gap-6">
           <Card>
             <CardHeader>
@@ -623,7 +623,7 @@ async function BatchDetailContent({
                         <h3 className="break-words text-sm font-medium">
                           {student.full_name}
                         </h3>
-                        <p className="mt-1 break-all text-xs text-muted-foreground sm:break-normal">
+                        <p className="mt-1 break-words text-xs text-muted-foreground">
                           {student.phone ?? "Phone not added"}
                         </p>
                       </div>
@@ -859,7 +859,7 @@ async function BatchDetailContent({
                       {attendancePercentage}
                     </p>
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <Badge variant="secondary">
                       Present {attendanceCounts.present}
                     </Badge>

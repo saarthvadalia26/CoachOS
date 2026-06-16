@@ -34,7 +34,7 @@ export function HeroSection() {
   return (
     <section className="relative overflow-hidden border-b border-border">
       <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_left,oklch(0.76_0.16_67_/_0.24),transparent_30%),linear-gradient(135deg,oklch(0.98_0.018_274),oklch(0.99_0.006_270)_45%,oklch(0.94_0.035_276))]" />
-      <div className="mx-auto grid w-full max-w-6xl gap-12 px-6 pb-16 pt-20 md:pb-20 md:pt-24">
+      <div className="mx-auto grid w-full max-w-6xl min-w-0 gap-12 px-4 pb-16 pt-20 sm:px-6 md:pb-20 md:pt-24">
         <div className="mx-auto max-w-4xl text-center">
           <p className="mb-4 text-sm font-medium uppercase tracking-[0.18em] text-primary">
             Built for growing coaching institutes
@@ -61,16 +61,16 @@ export function HeroSection() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-border/80 bg-card/90 p-3 shadow-2xl shadow-primary/15 backdrop-blur">
-          <div className="overflow-hidden rounded-xl border border-border bg-background">
-            <div className="flex items-center justify-between border-b border-border bg-muted/40 px-4 py-3">
-              <div>
+        <div className="min-w-0 rounded-2xl border border-border/80 bg-card/90 p-3 shadow-2xl shadow-primary/15 backdrop-blur">
+          <div className="min-w-0 overflow-hidden rounded-xl border border-border bg-background">
+            <div className="flex min-w-0 flex-col gap-3 border-b border-border bg-muted/40 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
                 <p className="text-sm font-semibold">Institute Overview</p>
                 <p className="text-xs text-muted-foreground">
                   Multi-branch operations dashboard
                 </p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex shrink-0 items-center gap-2">
                 <span className="size-2 rounded-full bg-emerald-500" />
                 <span className="text-xs text-muted-foreground">
                   Example view
@@ -78,13 +78,13 @@ export function HeroSection() {
               </div>
             </div>
 
-            <div className="grid gap-4 p-4 lg:grid-cols-[0.68fr_0.32fr]">
-              <div className="grid gap-4">
+            <div className="grid min-w-0 gap-4 p-4 lg:grid-cols-[minmax(0,0.68fr)_minmax(0,0.32fr)]">
+              <div className="grid min-w-0 gap-4">
                 <div className="grid gap-3 sm:grid-cols-3">
                   {previewStats.map((stat) => (
                     <div
                       key={stat.label}
-                      className="rounded-lg border border-border bg-card p-4"
+                      className="min-w-0 rounded-lg border border-border bg-card p-4"
                     >
                       <p className="text-xs text-muted-foreground">
                         {stat.label}
@@ -97,8 +97,8 @@ export function HeroSection() {
                 </div>
 
                 <div className="rounded-lg border border-border bg-card p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
+                  <div className="flex min-w-0 items-center justify-between gap-3">
+                    <div className="min-w-0">
                       <p className="text-sm font-medium">Today&apos;s schedule</p>
                       <p className="mt-1 text-xs text-muted-foreground">
                         Attendance, batches, and branch activity
@@ -110,10 +110,10 @@ export function HeroSection() {
                     {scheduleItems.map((item) => (
                       <div
                         key={item.label}
-                        className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2 text-sm"
+                        className="flex min-w-0 items-center justify-between gap-3 rounded-md bg-muted/50 px-3 py-2 text-sm"
                       >
-                        <span>{item.label}</span>
-                        <span className="text-xs text-muted-foreground">
+                        <span className="min-w-0 break-words">{item.label}</span>
+                        <span className="shrink-0 text-xs text-muted-foreground">
                           {item.time}
                         </span>
                       </div>
@@ -122,9 +122,9 @@ export function HeroSection() {
                 </div>
               </div>
 
-              <div className="grid gap-4">
-                <div className="rounded-lg border border-border bg-card p-4">
-                  <div className="flex items-center gap-2">
+              <div className="grid min-w-0 gap-4">
+                <div className="min-w-0 rounded-lg border border-border bg-card p-4">
+                  <div className="flex min-w-0 items-center gap-2">
                     <IndianRupee aria-hidden="true" className="size-4 text-primary" />
                     <p className="text-sm font-medium">Fee follow-ups</p>
                   </div>
@@ -133,8 +133,8 @@ export function HeroSection() {
                     Pending records prioritized by due date.
                   </p>
                 </div>
-                <div className="rounded-lg border border-border bg-card p-4">
-                  <div className="flex items-center gap-2">
+                <div className="min-w-0 rounded-lg border border-border bg-card p-4">
+                  <div className="flex min-w-0 items-center gap-2">
                     <UsersRound aria-hidden="true" className="size-4 text-primary" />
                     <p className="text-sm font-medium">Team permissions</p>
                   </div>
@@ -143,8 +143,8 @@ export function HeroSection() {
                     teachers see only what their role allows.
                   </p>
                 </div>
-                <div className="rounded-lg border border-border bg-card p-4">
-                  <div className="flex items-center gap-2">
+                <div className="min-w-0 rounded-lg border border-border bg-card p-4">
+                  <div className="flex min-w-0 items-center gap-2">
                     <ShieldCheck aria-hidden="true" className="size-4 text-primary" />
                     <p className="text-sm font-medium">Secure access</p>
                   </div>

@@ -293,7 +293,7 @@ export default async function HomeworkDetailPage({
             {canUpdateSubmissions && submissions.length ? (
               <form
                 action={bulkUpdateHomeworkSubmissions}
-                className="mb-4 grid gap-3 rounded-md border border-border bg-muted/30 p-3 sm:grid-cols-[minmax(0,1fr)_auto]"
+                className="mb-4 grid min-w-0 gap-3 rounded-md border border-border bg-muted/30 p-3 sm:grid-cols-[minmax(0,1fr)_auto]"
                 id="bulk-homework-submissions"
               >
                 <input name="homeworkId" type="hidden" value={homework.id} />
@@ -389,7 +389,7 @@ export default async function HomeworkDetailPage({
                           <div className="grid gap-3">
                             <form
                               action={updateHomeworkSubmissionStatus}
-                              className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]"
+                              className="grid min-w-0 gap-2 sm:grid-cols-[minmax(0,1fr)_auto]"
                             >
                               <input
                                 name="submissionId"

@@ -20,11 +20,11 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-border/80 bg-background/90 backdrop-blur-xl">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-6 py-5">
-        <div className="flex items-center justify-between gap-4">
+      <div className="mx-auto flex w-full max-w-6xl min-w-0 flex-col gap-4 px-4 py-5 sm:px-6">
+        <div className="flex min-w-0 items-center justify-between gap-4">
           <Link
             href="/"
-            className="flex items-center gap-2 text-lg font-semibold tracking-tight"
+            className="flex min-w-0 items-center gap-2 text-lg font-semibold tracking-tight"
           >
             <span className="grid size-8 place-items-center rounded-lg bg-[#1e1b4b] text-white shadow-sm">
               <svg
@@ -40,7 +40,7 @@ export function Header() {
                 <path d="M15 4L23 12L15 20" />
               </svg>
             </span>
-            CoachOS
+            <span className="truncate">CoachOS</span>
           </Link>
           <nav className="hidden items-center gap-8 text-sm text-muted-foreground md:flex">
             {navLinks.map((link) => (
@@ -65,7 +65,7 @@ export function Header() {
             </Button>
           </div>
 
-          <div className="md:hidden">
+          <div className="relative shrink-0 md:hidden">
             <button
               type="button"
               aria-controls={mobileMenuId}
@@ -86,8 +86,8 @@ export function Header() {
               id={mobileMenuId}
               className={
                 isMenuOpen
-                  ? "absolute left-6 right-6 z-20 mt-3 max-h-96 translate-y-0 overflow-hidden rounded-lg border border-border bg-background p-3 opacity-100 shadow-lg shadow-primary/10 transition-all duration-200 ease-out"
-                  : "pointer-events-none absolute left-6 right-6 z-20 mt-3 max-h-0 -translate-y-2 overflow-hidden rounded-lg border border-transparent bg-background p-0 opacity-0 shadow-lg shadow-primary/10 transition-all duration-200 ease-out"
+                  ? "absolute right-0 z-20 mt-3 w-[min(calc(100vw-2rem),20rem)] max-w-[calc(100vw-2rem)] translate-y-0 overflow-hidden rounded-lg border border-border bg-background p-3 opacity-100 shadow-lg shadow-primary/10 transition-all duration-200 ease-out"
+                  : "pointer-events-none absolute right-0 z-20 mt-3 w-[min(calc(100vw-2rem),20rem)] max-w-[calc(100vw-2rem)] -translate-y-2 overflow-hidden rounded-lg border border-transparent bg-background p-0 opacity-0 shadow-lg shadow-primary/10 transition-all duration-200 ease-out"
               }
             >
               <nav className="grid gap-1 text-sm" aria-label="Mobile navigation">

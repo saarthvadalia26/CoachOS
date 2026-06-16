@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { logActivity } from "@/lib/activity/log";
 import {
   canAccessPermission,
   requireDashboardAccess,
@@ -143,7 +144,7 @@ async function getBatchForTest(context: DashboardContext, batchId: string, permi
 async function getTestForAction(context: DashboardContext, testId: string, permission: Permission) {
   const { data: test, error } = await context.supabase
     .from("tests")
-    .select("id, institute_id, branch_id, batch_id, status, max_marks")
+    .select("id, institute_id, branch_id, batch_id, status, max_marks, title")
     .eq("id", testId)
     .eq("institute_id", context.institute.id)
     .maybeSingle();
@@ -180,6 +181,7 @@ async function getTestForAction(context: DashboardContext, testId: string, permi
       batch_id: string;
       status: TestStatus;
       max_marks: number;
+      title: string;
     },
   };
 }
@@ -373,6 +375,20 @@ export async function createTest(formData: FormData) {
   revalidatePath(TESTS_PATH);
   revalidatePath("/dashboard");
 
+  await logActivity(context, {
+    action: "test.created",
+    branchId: batch.branch_id,
+    description: "Test created and score rows synced.",
+    entityId: newTest.id,
+    entityLabel: title,
+    entityType: "test",
+    metadata: {
+      batchId: batch.id,
+      maxMarks,
+      studentCount: syncResult.studentCount,
+    },
+  });
+
   if (syncResult.success && syncResult.studentCount === 0) {
     console.log("createTest: success redirect with 0 active students message");
     redirectWith(next, "success", "Test created. No active students are assigned to this batch yet.");
@@ -445,6 +461,19 @@ export async function updateTest(formData: FormData) {
     await syncTestScoresForBatch(context, testId);
   }
 
+  await logActivity(context, {
+    action: "test.updated",
+    branchId: nextBatch.branch_id,
+    description: "Test details updated.",
+    entityId: testId,
+    entityLabel: title,
+    entityType: "test",
+    metadata: {
+      batchId: nextBatch.id,
+      status,
+    },
+  });
+
   revalidatePath(TESTS_PATH);
   revalidatePath(`/dashboard/tests/${testId}`);
   revalidatePath("/dashboard");
@@ -456,7 +485,7 @@ export async function archiveTest(formData: FormData) {
   const next = getSafeNextPath(formData);
   const testId = getRequiredText(formData, "testId", "Test");
 
-  await getTestForAction(context, testId, "tests.archive");
+  const { batch, test } = await getTestForAction(context, testId, "tests.archive");
 
   const { error } = await context.supabase
     .from("tests")
@@ -469,6 +498,15 @@ export async function archiveTest(formData: FormData) {
     redirectWith(next, "error", "Could not archive test. Please try again.");
   }
 
+  await logActivity(context, {
+    action: "test.archived",
+    branchId: batch.branch_id,
+    description: "Test archived.",
+    entityId: testId,
+    entityLabel: test.title,
+    entityType: "test",
+  });
+
   revalidatePath(TESTS_PATH);
   revalidatePath(`/dashboard/tests/${testId}`);
   revalidatePath("/dashboard");
@@ -480,7 +518,7 @@ export async function deleteTest(formData: FormData) {
   const next = getSafeNextPath(formData);
   const testId = getRequiredText(formData, "testId", "Test");
 
-  await getTestForAction(context, testId, "tests.delete");
+  const { batch, test } = await getTestForAction(context, testId, "tests.delete");
 
   const { error } = await context.supabase
     .from("tests")
@@ -492,6 +530,15 @@ export async function deleteTest(formData: FormData) {
     console.error("deleteTest failed", error);
     redirectWith(next, "error", "Could not delete test. Please try again.");
   }
+
+  await logActivity(context, {
+    action: "test.deleted",
+    branchId: batch.branch_id,
+    description: "Test deleted.",
+    entityId: testId,
+    entityLabel: test.title,
+    entityType: "test",
+  });
 
   revalidatePath(TESTS_PATH);
   revalidatePath("/dashboard");
@@ -545,6 +592,19 @@ export async function updateTestScore(formData: FormData) {
     console.error("updateTestScore failed", error);
     redirectWith(next, "error", "Could not save test score. Please try again.");
   }
+
+  await logActivity(context, {
+    action: "test.score_updated",
+    branchId: test.branch_id,
+    description: "Test score updated.",
+    entityId: testId,
+    entityLabel: test.title,
+    entityType: "test",
+    metadata: {
+      status,
+      studentId,
+    },
+  });
 
   revalidatePath(`/dashboard/tests/${testId}`);
   redirectWith(next, "success", "Scores updated.");
@@ -613,6 +673,18 @@ export async function bulkUpdateTestScores(formData: FormData) {
     console.error("bulkUpdateTestScores failed", error);
     redirectWith(next, "error", "Could not save test scores. Please try again.");
   }
+
+  await logActivity(context, {
+    action: "test.score_updated",
+    branchId: test.branch_id,
+    description: "Test scores updated.",
+    entityId: testId,
+    entityLabel: test.title,
+    entityType: "test",
+    metadata: {
+      studentCount: studentIds.length,
+    },
+  });
 
   revalidatePath(`/dashboard/tests/${testId}`);
   redirectWith(next, "success", "Scores updated.");

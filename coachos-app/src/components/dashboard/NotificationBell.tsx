@@ -45,7 +45,7 @@ export function NotificationBell({
 
   return (
     <details
-      className="relative"
+      className="relative max-w-full"
       onToggle={(event) => setIsOpen(event.currentTarget.open)}
       open={isOpen}
     >
@@ -59,9 +59,9 @@ export function NotificationBell({
         ) : null}
       </summary>
 
-      <div className="absolute right-0 z-30 mt-2 w-[min(calc(100vw-2rem),24rem)] rounded-lg border border-border bg-card p-3 shadow-xl shadow-primary/10">
+      <div className="absolute right-0 z-30 mt-2 w-[min(calc(100vw-2rem),24rem)] max-w-[calc(100vw-2rem)] rounded-lg border border-border bg-card p-3 shadow-xl shadow-primary/10">
         <div className="flex items-start justify-between gap-3">
-          <div>
+          <div className="min-w-0">
             <p className="text-sm font-semibold">Notifications</p>
             <p className="mt-1 text-xs text-muted-foreground">
               Latest notices for your role and branch.
@@ -81,7 +81,7 @@ export function NotificationBell({
           ) : null}
         </div>
 
-        <div className="mt-3 max-h-80 overflow-y-auto rounded-md border border-border">
+        <div className="mt-3 max-h-80 max-w-full overflow-y-auto rounded-md border border-border">
           {notifications.length ? (
             <ul className="divide-y divide-border">
               {notifications.map((notification) => (

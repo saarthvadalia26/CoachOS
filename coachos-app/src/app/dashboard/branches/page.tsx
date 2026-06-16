@@ -80,7 +80,7 @@ export default async function BranchesPage({
       <section
         className={
           canManageBranches
-            ? "grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]"
+            ? "grid min-w-0 gap-6 xl:grid-cols-[minmax(0,360px)_minmax(0,1fr)]"
             : "grid gap-6"
         }
       >

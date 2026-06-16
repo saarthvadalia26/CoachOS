@@ -4,10 +4,10 @@ import { Button } from "@/components/ui/button";
 
 export function CTASection() {
   return (
-    <section id="contact" className="px-6 py-20">
-      <div className="mx-auto w-full max-w-6xl overflow-hidden rounded-2xl border border-border bg-primary text-primary-foreground shadow-2xl shadow-primary/20">
-        <div className="grid gap-8 p-8 md:grid-cols-[1fr_auto] md:items-center md:p-10">
-          <div>
+    <section id="contact" className="px-4 py-20 sm:px-6">
+      <div className="mx-auto w-full max-w-6xl min-w-0 overflow-hidden rounded-2xl border border-border bg-primary text-primary-foreground shadow-2xl shadow-primary/20">
+        <div className="grid min-w-0 gap-8 p-6 sm:p-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center lg:p-10">
+          <div className="min-w-0">
             <p className="text-sm font-medium uppercase tracking-[0.18em] opacity-80">
               Demo-ready operations
             </p>
@@ -20,7 +20,7 @@ export function CTASection() {
               roles.
             </p>
           </div>
-          <div className="flex flex-col gap-3 sm:flex-row md:flex-col">
+          <div className="flex min-w-0 flex-col gap-3 sm:flex-row lg:flex-col">
             <Button asChild size="lg" variant="accent">
               <Link href="/contact">Book a demo</Link>
             </Button>

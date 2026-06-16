@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { logActivity } from "@/lib/activity/log";
 import {
   canAccessPermission,
   getDefaultBranchId,
@@ -101,20 +102,34 @@ export async function createStaffMember(formData: FormData) {
 
   requireStaffPermission(context, "staff.create", branchId);
 
-  const { error } = await supabase.from("staff_members").insert({
-    branch_id: branchId,
-    email,
-    full_name: fullName,
-    institute_id: institute.id,
-    role,
-  });
+  const { data: staffMember, error } = await supabase
+    .from("staff_members")
+    .insert({
+      branch_id: branchId,
+      email,
+      full_name: fullName,
+      institute_id: institute.id,
+      role,
+    })
+    .select("id")
+    .maybeSingle();
 
-  if (error) {
+  if (error || !staffMember) {
     console.error("createStaffMember failed", error);
     redirectWithError(
       "This staff member record could not be saved. Please review the details and try again.",
     );
   }
+
+  await logActivity(context, {
+    action: "staff.created",
+    branchId,
+    description: "Staff member record created.",
+    entityId: staffMember.id,
+    entityLabel: fullName,
+    entityType: "staff",
+    metadata: { role },
+  });
 
   revalidatePath(STAFF_PATH);
   redirectWithSuccess("Staff member added.", branchId);
@@ -172,6 +187,16 @@ export async function updateStaffMember(formData: FormData) {
     redirectWithError("Select a staff member from this institute.");
   }
 
+  await logActivity(context, {
+    action: "staff.updated",
+    branchId,
+    description: "Staff member record updated.",
+    entityId: staffMemberId,
+    entityLabel: fullName,
+    entityType: "staff",
+    metadata: { role },
+  });
+
   revalidatePath(STAFF_PATH);
   redirectWithSuccess("Staff member updated.", branchId);
 }
@@ -185,7 +210,7 @@ export async function deleteStaffMember(formData: FormData) {
   const { data: existingStaffMember, error: existingStaffMemberError } =
     await supabase
       .from("staff_members")
-      .select("id, branch_id")
+      .select("id, branch_id, full_name")
       .eq("id", staffMemberId)
       .eq("institute_id", institute.id)
       .maybeSingle();
@@ -217,6 +242,15 @@ export async function deleteStaffMember(formData: FormData) {
   if (!deletedStaffMember) {
     redirectWithError("Select a staff member from this institute.");
   }
+
+  await logActivity(context, {
+    action: "staff.deleted",
+    branchId: existingStaffMember.branch_id,
+    description: "Staff member record deleted.",
+    entityId: staffMemberId,
+    entityLabel: existingStaffMember.full_name ?? "Staff member",
+    entityType: "staff",
+  });
 
   revalidatePath(STAFF_PATH);
   redirectWithSuccess("Staff member deleted.", existingStaffMember.branch_id);

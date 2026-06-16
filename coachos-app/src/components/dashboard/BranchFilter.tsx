@@ -16,16 +16,16 @@ export function BranchFilter({
   selectedBranchId,
 }: BranchFilterProps) {
   return (
-    <form className="grid gap-3 rounded-lg border border-border bg-card p-4 shadow-sm sm:grid-cols-[1fr_auto] sm:items-end">
+    <form className="grid min-w-0 gap-3 rounded-lg border border-border bg-card p-4 shadow-sm sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
       {Object.entries(hiddenFields ?? {}).map(([name, value]) =>
         value ? <input key={name} name={name} type="hidden" value={value} /> : null,
       )}
-      <Label>
+      <Label className="min-w-0">
         Branch
         <select
           name="branchId"
           defaultValue={selectedBranchId ?? ""}
-          className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
+          className="box-border h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
         >
           <option value="">{allLabel}</option>
           {branches.map((branch) => (
@@ -35,7 +35,7 @@ export function BranchFilter({
           ))}
         </select>
       </Label>
-      <SubmitButton pendingLabel="Filtering..." variant="outline">
+      <SubmitButton className="w-full sm:w-auto" pendingLabel="Filtering..." variant="outline">
         Apply
       </SubmitButton>
     </form>

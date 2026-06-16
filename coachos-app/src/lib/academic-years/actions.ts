@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { logActivity } from "@/lib/activity/log";
 import {
   canAccessPermission,
   requireOwner,
@@ -219,6 +220,21 @@ export async function createAcademicYear(formData: FormData) {
     }
   }
 
+  await logActivity(context, {
+    action: "academic_year.created",
+    description: shouldSetActive
+      ? "Academic Year created and marked active."
+      : "Academic Year created.",
+    entityId: academicYear.id,
+    entityLabel: name,
+    entityType: "academic_year",
+    metadata: {
+      endDate,
+      isActive: shouldSetActive,
+      startDate,
+    },
+  });
+
   revalidatePath(ACADEMIC_YEARS_PATH);
   revalidatePath("/dashboard");
   redirectWithSuccess("Academic year created.");
@@ -267,6 +283,18 @@ export async function updateAcademicYear(formData: FormData) {
     redirectWithError("Select an academic year from this institute.");
   }
 
+  await logActivity(context, {
+    action: "academic_year.updated",
+    description: "Academic Year details updated.",
+    entityId: academicYearId,
+    entityLabel: name,
+    entityType: "academic_year",
+    metadata: {
+      endDate,
+      startDate,
+    },
+  });
+
   revalidatePath(ACADEMIC_YEARS_PATH);
   revalidatePath("/dashboard");
   redirectWithSuccess("Academic year updated.");
@@ -291,6 +319,14 @@ export async function setActiveAcademicYear(formData: FormData) {
     logAcademicYearError("set active academic year", context, error);
     redirectWithError("The active academic year could not be updated.");
   }
+
+  await logActivity(context, {
+    action: "academic_year.activated",
+    description: "Active Academic Year updated.",
+    entityId: academicYearId,
+    entityLabel: "Active Academic Year",
+    entityType: "academic_year",
+  });
 
   revalidatePath(ACADEMIC_YEARS_PATH);
   revalidatePath("/dashboard");
@@ -349,6 +385,14 @@ export async function deleteAcademicYear(formData: FormData) {
   if (!academicYear) {
     redirectWithError("Select an academic year from this institute.");
   }
+
+  await logActivity(context, {
+    action: "academic_year.deleted",
+    description: "Academic Year deleted.",
+    entityId: academicYearId,
+    entityLabel: "Academic Year",
+    entityType: "academic_year",
+  });
 
   revalidatePath(ACADEMIC_YEARS_PATH);
   revalidatePath("/dashboard");

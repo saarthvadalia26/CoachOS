@@ -109,7 +109,7 @@ export default async function AcademicYearsPage() {
       <section
         className={
           canManageAcademicYears
-            ? "grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]"
+            ? "grid min-w-0 gap-6 xl:grid-cols-[minmax(0,360px)_minmax(0,1fr)]"
             : "grid gap-6"
         }
       >
@@ -193,7 +193,7 @@ export default async function AcademicYearsPage() {
             <div className="grid gap-4">
               {academicYears.map((academicYear) => (
                 <Card key={academicYear.id}>
-                  <CardHeader className="gap-3 sm:grid-cols-[1fr_auto] sm:items-start">
+                  <CardHeader className="gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
                     <div>
                       <CardTitle className="flex items-center gap-2 text-lg">
                         <CalendarDays

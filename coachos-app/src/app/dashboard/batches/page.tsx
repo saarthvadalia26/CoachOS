@@ -458,7 +458,7 @@ export default async function BatchesPage({ searchParams }: BatchesPageProps) {
         <div
           className={
             canManageBatches
-              ? "grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]"
+              ? "grid min-w-0 gap-6 xl:grid-cols-[minmax(0,360px)_minmax(0,1fr)]"
               : "grid gap-6"
           }
         >
@@ -766,20 +766,20 @@ export default async function BatchesPage({ searchParams }: BatchesPageProps) {
 
                           <form
                             action={assignTeacherToBatch}
-                            className="grid gap-3 sm:grid-cols-[1fr_auto]"
+                            className="grid min-w-0 gap-3 sm:grid-cols-[minmax(0,1fr)_auto]"
                           >
                             <input
                               type="hidden"
                               name="batchId"
                               value={batch.id}
                             />
-                            <Label>
+                            <Label className="min-w-0">
                               Add teacher
                               <select
                                 required
                                 name="membershipId"
                                 disabled={!availableTeachers.length}
-                                className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="box-border h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-50"
                               >
                                 <option value="">
                                   {availableTeachers.length
@@ -873,20 +873,20 @@ export default async function BatchesPage({ searchParams }: BatchesPageProps) {
 
                           <form
                             action={assignStudentToBatch}
-                            className="grid gap-3 sm:grid-cols-[1fr_auto]"
+                            className="grid min-w-0 gap-3 sm:grid-cols-[minmax(0,1fr)_auto]"
                           >
                             <input
                               type="hidden"
                               name="batchId"
                               value={batch.id}
                             />
-                            <label className="grid gap-2 text-sm font-medium">
+                            <label className="grid min-w-0 gap-2 text-sm font-medium">
                               Add student
                               <select
                                 required
                                 name="studentId"
                                 disabled={!availableStudents.length}
-                                className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="box-border h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-50"
                               >
                                 <option value="">
                                   {availableStudents.length

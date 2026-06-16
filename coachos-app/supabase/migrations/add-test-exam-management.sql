@@ -113,6 +113,7 @@ as $$
       'communications.delete',
       'notifications.view',
       'notifications.update',
+      'activity.view',
       'tests.view',
       'tests.create',
       'tests.update',
@@ -134,6 +135,7 @@ as $$
       'communications.view',
       'notifications.view',
       'notifications.update',
+      'activity.view',
       'tests.view'
     )
     when member_role = 'accountant' then required_permission in (
@@ -150,7 +152,8 @@ as $$
       'fees.manage',
       'communications.view',
       'notifications.view',
-      'notifications.update'
+      'notifications.update',
+      'activity.view'
     )
     when member_role = 'academic_coordinator' then required_permission in (
       'dashboard.access',
@@ -169,6 +172,7 @@ as $$
       'communications.view',
       'notifications.view',
       'notifications.update',
+      'activity.view',
       'tests.view',
       'tests.create',
       'tests.update',

@@ -7,7 +7,7 @@ function Card({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="card"
       className={cn(
-        "flex flex-col rounded-lg border border-border bg-card text-card-foreground shadow-sm transition-[border-color,box-shadow,transform] duration-200 hover:border-primary/25 hover:shadow-md hover:shadow-primary/5",
+        "flex min-w-0 max-w-full flex-col rounded-lg border border-border bg-card text-card-foreground shadow-sm transition-[border-color,box-shadow,transform] duration-200 hover:border-primary/25 hover:shadow-md hover:shadow-primary/5",
         className,
       )}
       {...props}
@@ -19,7 +19,7 @@ function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card-header"
-      className={cn("grid gap-1.5 p-5", className)}
+      className={cn("grid min-w-0 gap-1.5 p-5", className)}
       {...props}
     />
   );
@@ -52,7 +52,7 @@ function CardContent({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card-content"
-      className={cn("p-5 pt-0", className)}
+      className={cn("min-w-0 p-5 pt-0", className)}
       {...props}
     />
   );

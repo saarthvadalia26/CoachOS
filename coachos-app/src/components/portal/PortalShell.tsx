@@ -19,9 +19,9 @@ export function PortalShell({
   title,
 }: PortalShellProps) {
   return (
-    <main className="min-h-screen bg-muted/30 text-foreground">
+    <main className="min-h-screen w-full max-w-full overflow-x-hidden bg-muted/30 text-foreground">
       <header className="border-b border-border bg-background/95">
-        <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <div className="mx-auto flex w-full max-w-6xl min-w-0 flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div className="min-w-0">
             <Link
               href="/"
@@ -29,12 +29,12 @@ export function PortalShell({
             >
               CoachOS
             </Link>
-            <h1 className="mt-1 text-2xl font-semibold tracking-tight">
+            <h1 className="mt-1 break-words text-2xl font-semibold tracking-tight">
               {title}
             </h1>
-            <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+            <p className="mt-1 break-words text-sm text-muted-foreground">{description}</p>
           </div>
-          <div className="flex flex-col gap-2 sm:items-end">
+          <div className="flex min-w-0 flex-col gap-2 sm:items-end">
             {email ? (
               <p className="break-all text-xs text-muted-foreground">
                 Signed in as {email}
@@ -53,7 +53,7 @@ export function PortalShell({
           </div>
         </div>
       </header>
-      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">{children}</div>
+      <div className="mx-auto w-full max-w-6xl min-w-0 px-4 py-6 sm:px-6">{children}</div>
     </main>
   );
 }
@@ -66,7 +66,7 @@ export function PortalAccessLinks({
   const currentPath = `/portal/${kind}`;
 
   return (
-    <div className="mt-6 flex flex-col gap-2 sm:flex-row">
+    <div className="mt-6 flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap">
       <Button asChild>
         <Link href={`/login?next=${encodeURIComponent(currentPath)}`}>
           Log in

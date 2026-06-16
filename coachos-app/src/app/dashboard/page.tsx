@@ -5,12 +5,19 @@ import { Building2, CalendarDays, GraduationCap, UserPlus } from "lucide-react";
 import { ActionMessage } from "@/components/dashboard/ActionMessage";
 import { BranchFilter } from "@/components/dashboard/BranchFilter";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
+import { EmptyState } from "@/components/dashboard/EmptyState";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  getActivityActionLabel,
+  getActivityEntityLabel,
+  getRecentActivity,
+} from "@/lib/activity/data";
 import { hasPermission } from "@/lib/auth/permissions";
 import { getTodayDateValue } from "@/lib/attendance/date";
 import { getBranchScope } from "@/lib/dashboard/branch-scope";
 import { getDashboardContext } from "@/lib/dashboard/context";
-import { formatDate, formatDateRange } from "@/lib/formatters/date";
+import { formatDate, formatDateRange, formatDateTime } from "@/lib/formatters/date";
 
 function MetricCard({
   href,
@@ -70,6 +77,7 @@ export default async function DashboardPage({
   const todayDate = getTodayDateValue();
   const canViewAttendance = hasPermission(role, "attendance.view");
   const canViewFees = hasPermission(role, "fees.view");
+  const canViewActivity = hasPermission(role, "activity.view");
   const activeAcademicYearQuery = supabase
     .from("academic_years")
     .select("id, name, start_date, end_date")
@@ -126,6 +134,7 @@ export default async function DashboardPage({
     pendingFeesResponse,
     attendanceSessionsResponse,
     activeAcademicYearResponse,
+    recentActivityResponse,
   ] = await Promise.all([
     studentsQuery,
     batchesQuery,
@@ -134,6 +143,9 @@ export default async function DashboardPage({
       ? attendanceSessionsQuery
       : Promise.resolve({ count: null, error: null }),
     activeAcademicYearQuery,
+    canViewActivity
+      ? getRecentActivity(context, 8)
+      : Promise.resolve({ error: false, logs: [] }),
   ]);
 
   const activeAcademicYear = activeAcademicYearResponse.data as {
@@ -326,6 +338,70 @@ export default async function DashboardPage({
                 );
               })}
             </div>
+          </div>
+        ) : null}
+
+        {canViewActivity ? (
+          <div className="mt-6 rounded-lg border border-border bg-card p-5 shadow-sm">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h2 className="text-lg font-semibold tracking-tight">
+                  Recent Activity
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Latest important actions across your allowed institute scope.
+                </p>
+              </div>
+              <Button asChild variant="outline" className="w-full sm:w-auto">
+                <Link href="/dashboard/activity">View all activity</Link>
+              </Button>
+            </div>
+
+            {recentActivityResponse.error ? (
+              <ActionMessage
+                className="mt-4"
+                error="Recent activity is unavailable right now. Please try again."
+              />
+            ) : null}
+
+            {!recentActivityResponse.error &&
+            recentActivityResponse.logs.length ? (
+              <div className="mt-5 divide-y divide-border">
+                {recentActivityResponse.logs.map((activity) => (
+                  <article
+                    key={activity.id}
+                    className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-start sm:justify-between"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-medium leading-tight">
+                          {getActivityActionLabel(activity.action)}
+                        </p>
+                        <Badge variant="outline">
+                          {getActivityEntityLabel(activity.entity_type)}
+                        </Badge>
+                      </div>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {activity.entity_label ?? "Record"} by{" "}
+                        {activity.actor_name ?? "A staff member"}
+                        {activity.branch_name ? ` | ${activity.branch_name}` : ""}
+                      </p>
+                    </div>
+                    <p className="shrink-0 text-sm text-muted-foreground">
+                      {formatDateTime(activity.created_at)}
+                    </p>
+                  </article>
+                ))}
+              </div>
+            ) : null}
+
+            {!recentActivityResponse.error &&
+            !recentActivityResponse.logs.length ? (
+              <EmptyState
+                title="No recent activity yet"
+                description="Important actions will appear here after staff begin creating, updating, or archiving records."
+              />
+            ) : null}
           </div>
         ) : null}
       </section>

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { logActivity } from "@/lib/activity/log";
 import { requirePermission } from "@/lib/auth/permissions";
 
 const BRANCHES_PATH = "/dashboard/branches";
@@ -38,21 +39,35 @@ function getOptionalText(formData: FormData, key: string) {
 }
 
 export async function createBranch(formData: FormData) {
-  const { institute, supabase } = await requirePermission("branches.create");
+  const context = await requirePermission("branches.create");
+  const { institute, supabase } = context;
 
   const name = getRequiredText(formData, "name", "Branch name");
   const address = getOptionalText(formData, "address");
 
-  const { error } = await supabase.from("branches").insert({
-    address,
-    institute_id: institute.id,
-    name,
-  });
+  const { data: branch, error } = await supabase
+    .from("branches")
+    .insert({
+      address,
+      institute_id: institute.id,
+      name,
+    })
+    .select("id")
+    .maybeSingle();
 
-  if (error) {
+  if (error || !branch) {
     console.error("createBranch failed", error);
     redirectWithSaveError();
   }
+
+  await logActivity(context, {
+    action: "branch.created",
+    branchId: branch.id,
+    description: "Branch record created.",
+    entityId: branch.id,
+    entityLabel: name,
+    entityType: "branch",
+  });
 
   revalidatePath(BRANCHES_PATH);
   revalidatePath("/dashboard");
@@ -63,9 +78,10 @@ export async function updateBranch(formData: FormData) {
   const branchId = getRequiredText(formData, "branchId", "Branch");
   const name = getRequiredText(formData, "name", "Branch name");
   const address = getOptionalText(formData, "address");
-  const { institute, supabase } = await requirePermission("branches.update", {
+  const context = await requirePermission("branches.update", {
     branchId,
   });
+  const { institute, supabase } = context;
 
   const { data: updatedBranch, error } = await supabase
     .from("branches")
@@ -86,6 +102,15 @@ export async function updateBranch(formData: FormData) {
   if (!updatedBranch) {
     redirectWithError("Select a branch from this institute.");
   }
+
+  await logActivity(context, {
+    action: "branch.updated",
+    branchId,
+    description: "Branch details updated.",
+    entityId: branchId,
+    entityLabel: name,
+    entityType: "branch",
+  });
 
   revalidatePath(BRANCHES_PATH);
   revalidatePath("/dashboard");

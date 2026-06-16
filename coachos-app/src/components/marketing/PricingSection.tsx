@@ -58,8 +58,8 @@ const plans = [
 export function PricingSection() {
   return (
     <section id="pricing" className="border-y border-border bg-muted/35">
-      <div className="mx-auto w-full max-w-6xl px-6 py-20">
-        <div className="max-w-2xl">
+      <div className="mx-auto w-full max-w-6xl min-w-0 px-4 py-20 sm:px-6">
+        <div className="max-w-2xl min-w-0">
           <p className="text-sm font-medium uppercase tracking-[0.18em] text-primary">
             Pricing
           </p>
@@ -72,26 +72,26 @@ export function PricingSection() {
           </p>
         </div>
 
-        <div className="mt-10 grid gap-5 lg:grid-cols-3">
+        <div className="mt-10 grid min-w-0 gap-5 lg:grid-cols-3 items-stretch">
           {plans.map((plan) => (
             <article
               key={plan.name}
               className={cn(
-                "relative rounded-lg border bg-card p-6 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg",
+                "relative flex min-w-0 flex-col rounded-lg border bg-card p-6 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg",
                 plan.isPopular
                   ? "border-primary/50 shadow-primary/10 hover:shadow-primary/15"
                   : "border-border hover:border-primary/30 hover:shadow-primary/10",
               )}
             >
-              <div className="flex items-start justify-between gap-3">
-                <div>
+              <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
                   <h3 className="text-xl font-semibold">{plan.name}</h3>
                   <p className="mt-2 text-sm font-medium text-primary">
                     {plan.label}
                   </p>
                 </div>
                 {plan.isPopular ? (
-                  <Badge className="bg-accent text-accent-foreground">
+                  <Badge className="shrink-0 bg-accent text-accent-foreground">
                     Most popular
                   </Badge>
                 ) : null}
@@ -107,22 +107,24 @@ export function PricingSection() {
               </p>
               <ul className="mt-6 grid gap-3 text-sm text-muted-foreground">
                 {plan.features.map((feature) => (
-                  <li key={feature} className="flex gap-2">
+                  <li key={feature} className="flex min-w-0 gap-2">
                     <CheckCircle2
                       aria-hidden="true"
                       className="mt-0.5 size-4 shrink-0 text-primary"
                     />
-                    <span>{feature}</span>
+                    <span className="min-w-0 break-words">{feature}</span>
                   </li>
                 ))}
               </ul>
-              <Button
-                asChild
-                className="mt-6 w-full"
-                variant={plan.isPopular ? "accent" : "outline"}
-              >
-                <Link href="/contact">Discuss {plan.name}</Link>
-              </Button>
+              <div className="mt-auto pt-6">
+                <Button
+                  asChild
+                  className="w-full"
+                  variant={plan.isPopular ? "accent" : "outline"}
+                >
+                  <Link href="/contact">Discuss {plan.name}</Link>
+                </Button>
+              </div>
             </article>
           ))}
         </div>

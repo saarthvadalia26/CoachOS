@@ -823,7 +823,7 @@ async function StudentProfileContent({
         </Card>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
+      <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="grid gap-6">
           <Card>
             <CardHeader>
@@ -1337,7 +1337,7 @@ async function StudentProfileContent({
                       {attendancePercentage}
                     </p>
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <Badge variant="secondary">
                       Present {attendanceCounts.present}
                     </Badge>

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { logActivity } from "@/lib/activity/log";
 import {
   canAccessPermission,
   getDefaultBranchId,
@@ -90,18 +91,31 @@ export async function createBatch(formData: FormData) {
   const subject = getOptionalText(formData, "subject");
   const schedule = getOptionalText(formData, "schedule");
 
-  const { error } = await supabase.from("batches").insert({
-    branch_id: branchId,
-    institute_id: institute.id,
-    name,
-    subject,
-    schedule,
-  });
+  const { data: batch, error } = await supabase
+    .from("batches")
+    .insert({
+      branch_id: branchId,
+      institute_id: institute.id,
+      name,
+      subject,
+      schedule,
+    })
+    .select("id")
+    .maybeSingle();
 
-  if (error) {
+  if (error || !batch) {
     console.error("createBatch failed", error);
     redirectWithSaveError();
   }
+
+  await logActivity(context, {
+    action: "batch.created",
+    branchId,
+    description: "Batch record created.",
+    entityId: batch.id,
+    entityLabel: name,
+    entityType: "batch",
+  });
 
   revalidatePath(BATCHES_PATH);
   revalidatePath("/dashboard");
@@ -263,7 +277,7 @@ export async function removeTeacherFromBatch(formData: FormData) {
 
   const { data: batch, error: batchError } = await supabase
     .from("batches")
-    .select("id, branch_id")
+    .select("id, branch_id, name")
     .eq("id", batchTeacher.batch_id)
     .eq("institute_id", institute.id)
     .maybeSingle();
@@ -303,7 +317,7 @@ export async function updateBatch(formData: FormData) {
 
   const { data: existingBatch, error: existingBatchError } = await supabase
     .from("batches")
-    .select("id, branch_id")
+    .select("id, branch_id, name")
     .eq("id", batchId)
     .eq("institute_id", institute.id)
     .maybeSingle();
@@ -340,6 +354,15 @@ export async function updateBatch(formData: FormData) {
     redirectWithError("Select a batch from this institute.");
   }
 
+  await logActivity(context, {
+    action: "batch.updated",
+    branchId: existingBatch.branch_id,
+    description: "Batch details updated.",
+    entityId: batchId,
+    entityLabel: name,
+    entityType: "batch",
+  });
+
   revalidatePath(BATCHES_PATH);
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/attendance");
@@ -353,7 +376,7 @@ export async function deleteBatch(formData: FormData) {
 
   const { data: existingBatch, error: existingBatchError } = await supabase
     .from("batches")
-    .select("id, branch_id")
+    .select("id, branch_id, name")
     .eq("id", batchId)
     .eq("institute_id", institute.id)
     .maybeSingle();
@@ -385,6 +408,15 @@ export async function deleteBatch(formData: FormData) {
   if (!deletedBatch) {
     redirectWithError("Select a batch from this institute.");
   }
+
+  await logActivity(context, {
+    action: "batch.deleted",
+    branchId: existingBatch.branch_id,
+    description: "Batch record deleted.",
+    entityId: batchId,
+    entityLabel: existingBatch.name ?? "Batch",
+    entityType: "batch",
+  });
 
   revalidatePath(BATCHES_PATH);
   revalidatePath("/dashboard");

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { logActivity } from "@/lib/activity/log";
 import {
   canAccessPermission,
   requireDashboardAccess,
@@ -103,7 +104,7 @@ export async function createFeeRecord(formData: FormData) {
 
   const { data: student, error: studentError } = await supabase
     .from("students")
-    .select("id, branch_id")
+    .select("id, branch_id, full_name")
     .eq("id", studentId)
     .eq("institute_id", institute.id)
     .maybeSingle();
@@ -130,23 +131,41 @@ export async function createFeeRecord(formData: FormData) {
     todayDate: getTodayDateValue(),
   });
 
-  const { error } = await supabase.from("fee_records").insert({
-    amount_due: amountDue,
-    amount_paid: amountPaid,
-    branch_id: student.branch_id,
-    due_date: dueDate,
-    institute_id: institute.id,
-    notes,
-    status,
-    student_id: studentId,
-  });
+  const { data: feeRecord, error } = await supabase
+    .from("fee_records")
+    .insert({
+      amount_due: amountDue,
+      amount_paid: amountPaid,
+      branch_id: student.branch_id,
+      due_date: dueDate,
+      institute_id: institute.id,
+      notes,
+      status,
+      student_id: studentId,
+    })
+    .select("id")
+    .maybeSingle();
 
-  if (error) {
+  if (error || !feeRecord) {
     console.error("createFeeRecord failed", error);
     redirectWithError(
       "This fee record could not be saved. Please review the details and try again.",
     );
   }
+
+  await logActivity(context, {
+    action: "fee.created",
+    branchId: student.branch_id,
+    description: "Fee Record created.",
+    entityId: feeRecord.id,
+    entityLabel: student.full_name ?? "Student fee",
+    entityType: "fee",
+    metadata: {
+      amountDue,
+      amountPaid,
+      status,
+    },
+  });
 
   revalidatePath(FEES_PATH);
   redirectWithSuccess("Fee record created.", student.branch_id);
@@ -159,7 +178,7 @@ export async function markFeeRecordPaid(formData: FormData) {
 
   const { data: feeRecord, error: feeRecordError } = await supabase
     .from("fee_records")
-    .select("id, amount_due, branch_id")
+    .select("id, amount_due, branch_id, student_id")
     .eq("id", feeRecordId)
     .eq("institute_id", institute.id)
     .maybeSingle();
@@ -191,6 +210,29 @@ export async function markFeeRecordPaid(formData: FormData) {
       "This fee record could not be marked as paid. Please try again.",
     );
   }
+
+  const { data: paidStudent, error: paidStudentError } = await supabase
+    .from("students")
+    .select("full_name")
+    .eq("id", feeRecord.student_id)
+    .eq("institute_id", institute.id)
+    .maybeSingle();
+
+  if (paidStudentError) {
+    console.error("markFeeRecordPaid student lookup failed", paidStudentError);
+  }
+
+  await logActivity(context, {
+    action: "fee.marked_paid",
+    branchId: feeRecord.branch_id,
+    description: "Payment marked as paid.",
+    entityId: feeRecord.id,
+    entityLabel: paidStudent?.full_name ?? "Fee Record",
+    entityType: "fee",
+    metadata: {
+      amountPaid: feeRecord.amount_due,
+    },
+  });
 
   revalidatePath(FEES_PATH);
   redirectWithSuccess("Payment marked as paid.", feeRecord.branch_id);

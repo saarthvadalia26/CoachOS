@@ -7,8 +7,8 @@ const valuePoints = [
 export function ValuePropositionSection() {
   return (
     <section id="value" className="border-y border-border bg-muted/35">
-      <div className="mx-auto grid w-full max-w-6xl gap-8 px-6 py-16 md:grid-cols-[0.8fr_1.2fr] md:items-start">
-        <div>
+      <div className="mx-auto grid w-full max-w-6xl min-w-0 gap-8 px-4 py-16 sm:px-6 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:items-start">
+        <div className="min-w-0">
           <p className="text-sm font-medium uppercase tracking-[0.18em] text-primary">
             Built for growing coaching institutes
           </p>
@@ -16,7 +16,7 @@ export function ValuePropositionSection() {
             Less admin work. More time for teaching and growth.
           </h2>
         </div>
-        <div className="grid gap-5">
+        <div className="grid min-w-0 gap-5">
           <p className="text-lg leading-8 text-muted-foreground">
             Coaching teams need fast visibility into students, batches,
             attendance, branches, payments, and staff responsibility. CoachOS
@@ -27,7 +27,7 @@ export function ValuePropositionSection() {
             {valuePoints.map((item) => (
               <div
                 key={item}
-                className="rounded-lg border border-border bg-background px-4 py-3 text-sm font-medium"
+                className="min-w-0 rounded-lg border border-border bg-background px-4 py-3 text-sm font-medium"
               >
                 {item}
               </div>

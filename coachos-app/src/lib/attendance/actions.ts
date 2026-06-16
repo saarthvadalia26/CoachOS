@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { logActivity } from "@/lib/activity/log";
 import {
   canAccessPermission,
   requireDashboardAccess,
@@ -1098,6 +1099,20 @@ export async function saveTodayAttendance(formData: FormData) {
     }),
   );
 
+  await logActivity(context, {
+    action: "attendance.saved",
+    branchId,
+    description: "Attendance saved and locked.",
+    entityId: sessionId,
+    entityLabel: sessionDate,
+    entityType: "attendance",
+    metadata: {
+      batchId,
+      recordCount: attendanceRecords.length,
+      sessionDate,
+    },
+  });
+
   revalidatePath(ATTENDANCE_PATH);
   const params = new URLSearchParams({
     batchId,
@@ -1285,6 +1300,19 @@ export async function reopenAttendanceSession(formData: FormData) {
     ],
     sessionDate: session.session_date,
     sessionId,
+  });
+
+  await logActivity(context, {
+    action: "attendance.reopened",
+    branchId: session.branch_id,
+    description: "Attendance reopened for correction.",
+    entityId: sessionId,
+    entityLabel: session.session_date,
+    entityType: "attendance",
+    metadata: {
+      batchId: session.batch_id,
+      reopenCount: nextReopenCount,
+    },
   });
 
   revalidatePath(ATTENDANCE_PATH);

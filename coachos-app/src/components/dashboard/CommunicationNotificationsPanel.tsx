@@ -76,8 +76,8 @@ export function CommunicationNotificationsPanel({
 
   return (
     <Card>
-      <CardHeader className="gap-3 sm:grid-cols-[1fr_auto] sm:items-start">
-        <div>
+      <CardHeader className="gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
+        <div className="min-w-0">
           <CardTitle className="flex items-center gap-2 text-xl">
             <Bell aria-hidden="true" className="size-5 text-muted-foreground" />
             Notifications

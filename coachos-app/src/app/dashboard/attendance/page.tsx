@@ -823,7 +823,7 @@ export default async function AttendancePage({
         ) : null}
 
         <Card>
-          <CardHeader className="gap-3 sm:grid-cols-[1fr_auto] sm:items-start">
+          <CardHeader className="gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
             <div>
               <CardTitle className="text-xl">
                 {activeSessionDate === todayDate
@@ -853,7 +853,7 @@ export default async function AttendancePage({
               }
             />
 
-            <form className="grid gap-3 sm:grid-cols-[1fr_auto]">
+            <form className="grid min-w-0 gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
               {branchScope.selectedBranchId ? (
                 <input
                   name="branchId"
@@ -942,7 +942,7 @@ export default async function AttendancePage({
 
         {selectedBatch && students.length ? (
           <Card>
-            <CardHeader className="gap-3 sm:grid-cols-[1fr_auto] sm:items-start">
+            <CardHeader className="gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
               <div>
                 <CardTitle className="text-lg">{selectedBatch.name}</CardTitle>
                 <CardDescription>
@@ -987,7 +987,7 @@ export default async function AttendancePage({
                       return (
                         <article
                           key={student.id}
-                          className="grid gap-4 p-4 lg:grid-cols-[1fr_auto] lg:items-center"
+                          className="grid min-w-0 gap-4 p-4 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center"
                         >
                           <div>
                             <h3 className="text-sm font-medium">
@@ -1001,7 +1001,7 @@ export default async function AttendancePage({
                             <legend className="sr-only">
                               Attendance status for {student.full_name}
                             </legend>
-                            <div className="grid w-full grid-cols-3 gap-2 lg:w-[300px]">
+                            <div className="grid w-full grid-cols-3 gap-2 xl:w-[300px]">
                               {statusOptions.map((option) => {
                                 const inputId = `${student.id}-${option.value}`;
                                 const isSelected =
@@ -1059,7 +1059,7 @@ export default async function AttendancePage({
                       return (
                         <article
                           key={student.id}
-                          className="grid gap-4 p-4 lg:grid-cols-[1fr_auto] lg:items-center"
+                          className="grid min-w-0 gap-4 p-4 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center"
                         >
                           <div>
                             <h3 className="text-sm font-medium">
@@ -1069,7 +1069,7 @@ export default async function AttendancePage({
                               {student.phone ?? "Phone not added"}
                             </p>
                           </div>
-                          <div className="grid w-full grid-cols-3 gap-2 lg:w-[300px]">
+                          <div className="grid w-full grid-cols-3 gap-2 xl:w-[300px]">
                             {statusOptions.map((option) => {
                               const isSelected =
                                 currentStatus === option.value;
@@ -1092,7 +1092,7 @@ export default async function AttendancePage({
                   {canReopenAttendance && attendanceSession ? (
                     <form
                       action={reopenAttendanceSession}
-                      className="grid gap-3 rounded-md border border-border bg-muted/20 p-3 sm:grid-cols-[1fr_auto] sm:items-end"
+                      className="grid min-w-0 gap-3 rounded-md border border-border bg-muted/20 p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"
                     >
                       <input
                         type="hidden"
@@ -1262,7 +1262,7 @@ export default async function AttendancePage({
               </div>
             </form>
 
-            <div className="grid gap-4 xl:grid-cols-[1fr_320px]">
+            <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
               <Card>
                 <CardHeader className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
                   <div className="min-w-0 flex-1">
@@ -1401,7 +1401,7 @@ export default async function AttendancePage({
                           {selectedStudentTotalSessions}
                         </p>
                       </div>
-                      <div className="grid grid-cols-3 gap-2">
+                      <div className="flex flex-wrap gap-2">
                         <Badge variant="secondary">
                           Present {selectedStudentCounts.present}
                         </Badge>
@@ -1454,7 +1454,7 @@ export default async function AttendancePage({
                     return (
                       <article
                         key={record.id ?? record.student_id}
-                        className="grid gap-3 p-4 sm:grid-cols-[1fr_auto] sm:items-center"
+                        className="grid min-w-0 gap-3 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
                       >
                         <div>
                           <h3 className="text-sm font-medium">
@@ -1464,7 +1464,7 @@ export default async function AttendancePage({
                             {student?.phone ?? "Phone not added"}
                           </p>
                         </div>
-                        <div className="grid w-full grid-cols-3 gap-2 lg:w-[300px]">
+                        <div className="grid w-full grid-cols-3 gap-2 xl:w-[300px]">
                           {statusOptions.map((option) => (
                             <span
                               key={option.value}
@@ -1495,7 +1495,7 @@ export default async function AttendancePage({
 
         {selectedAuditSession && canViewAuditHistory ? (
           <Card>
-            <CardHeader className="gap-3 sm:grid-cols-[1fr_auto] sm:items-start">
+            <CardHeader className="gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
               <div>
                 <CardTitle className="text-lg">Audit history</CardTitle>
                 <CardDescription>
@@ -1521,7 +1521,7 @@ export default async function AttendancePage({
                       return (
                         <article
                           key={log.id}
-                          className="grid gap-3 p-4 lg:grid-cols-[1fr_auto] lg:items-center"
+                          className="grid min-w-0 gap-3 p-4 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center"
                         >
                           <div>
                             <h3 className="text-sm font-medium">
