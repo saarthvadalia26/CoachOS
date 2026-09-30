@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useId, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 const navLinks = [
   { href: "/#value", label: "Why CoachOS" },
@@ -26,7 +27,7 @@ export function Header() {
             href="/"
             className="flex min-w-0 items-center gap-2 text-lg font-semibold tracking-tight"
           >
-            <span className="grid size-8 place-items-center rounded-lg bg-[#1e1b4b] text-white shadow-sm">
+            <span className="grid size-8 place-items-center rounded-lg bg-primary text-primary-foreground shadow-sm">
               <svg
                 className="size-4"
                 viewBox="0 0 28 24"
@@ -54,6 +55,7 @@ export function Header() {
             ))}
           </nav>
           <div className="hidden items-center gap-2 md:flex">
+            <ThemeToggle />
             <Button asChild size="sm" variant="ghost">
               <Link href="/login">
                 <LogIn aria-hidden="true" data-icon="inline-start" />
@@ -101,7 +103,11 @@ export function Header() {
                     {link.label}
                   </Link>
                 ))}
-                <Button asChild variant="outline" className="mt-2">
+                <div className="mt-2 flex items-center justify-between border-t border-border pt-2">
+                  <span className="text-xs text-muted-foreground">Theme</span>
+                  <ThemeToggle />
+                </div>
+                <Button asChild variant="outline" className="mt-1">
                   <Link href="/login" onClick={() => setIsMenuOpen(false)}>
                     Log in
                   </Link>

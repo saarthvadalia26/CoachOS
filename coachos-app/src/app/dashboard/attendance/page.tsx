@@ -1021,7 +1021,7 @@ export default async function AttendancePage({
                                       value={option.value}
                                       defaultChecked={isSelected}
                                     />
-                                    <span className="flex h-9 items-center justify-center rounded-md border border-border px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground peer-checked:border-primary peer-checked:bg-primary peer-checked:text-primary-foreground">
+                                    <span className="flex min-h-[44px] h-11 items-center justify-center rounded-md border border-border px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground peer-checked:border-primary peer-checked:bg-primary peer-checked:text-primary-foreground">
                                       {option.label}
                                     </span>
                                   </label>

@@ -32,21 +32,34 @@ function noStoreJson(body: unknown, init?: ResponseInit) {
   });
 }
 
+function isRedirectError(error: unknown) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "digest" in error &&
+    String((error as { digest?: unknown }).digest).startsWith("NEXT_REDIRECT")
+  );
+}
+
 export async function GET(request: NextRequest) {
   try {
     const context = await requirePermission("notifications.view");
 
     if (!canAccessPermission(context, "notifications.view")) {
-      return noStoreJson({ notifications: [], unreadCount: 0 });
+      return noStoreJson({ error: "Unauthorized", notifications: [], unreadCount: 0 }, { status: 403 });
     }
 
     return noStoreJson(await getNotificationFeed(context, getLimit(request)));
   } catch (error) {
+    if (isRedirectError(error)) {
+      return noStoreJson({ error: "Unauthorized", notifications: [], unreadCount: 0 }, { status: 401 });
+    }
+
     console.error("notification feed refresh failed", {
       error: error instanceof Error ? error.message : "Unknown error",
     });
 
-    return noStoreJson({ notifications: [], unreadCount: 0 });
+    return noStoreJson({ notifications: [], unreadCount: 0 }, { status: 500 });
   }
 }
 

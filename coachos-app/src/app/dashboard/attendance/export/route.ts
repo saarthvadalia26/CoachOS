@@ -55,7 +55,11 @@ function getMonthStartDate(dateValue: string) {
 }
 
 function csvCell(value: string | number | null | undefined) {
-  return `"${String(value ?? "").replaceAll('"', '""')}"`;
+  let str = String(value ?? "").replaceAll('"', '""');
+  if (/^[=+\-@\t\r]/.test(str)) {
+    str = `'${str}`;
+  }
+  return `"${str}"`;
 }
 
 function csvResponse(rows: string[][], filename: string) {

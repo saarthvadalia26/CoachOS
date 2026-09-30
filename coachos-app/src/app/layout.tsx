@@ -4,6 +4,7 @@ import { Suspense } from "react";
 
 import { AppToaster } from "@/components/ui/app-toaster";
 import { RouteToastListener } from "@/components/ui/route-toast-listener";
+import { ThemeProvider, themeInitScript } from "@/components/ui/theme-provider";
 
 import "./globals.css";
 
@@ -70,14 +71,24 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: themeInitScript,
+          }}
+        />
+      </head>
       <body className="flex min-h-full min-w-0 max-w-full flex-col overflow-x-hidden">
-        {children}
-        <Suspense fallback={null}>
-          <RouteToastListener />
-        </Suspense>
-        <AppToaster />
+        <ThemeProvider>
+          {children}
+          <Suspense fallback={null}>
+            <RouteToastListener />
+          </Suspense>
+          <AppToaster />
+        </ThemeProvider>
       </body>
     </html>
   );

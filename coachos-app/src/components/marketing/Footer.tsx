@@ -16,7 +16,7 @@ export function Footer() {
       <div className="mx-auto grid w-full max-w-6xl min-w-0 gap-8 px-4 py-10 sm:px-6 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,0.8fr)_minmax(0,0.8fr)_minmax(0,0.8fr)]">
         <div className="min-w-0">
           <Link href="/" className="flex min-w-0 items-center gap-2 text-lg font-semibold tracking-tight">
-            <span className="grid size-8 place-items-center rounded-lg bg-[#1e1b4b] text-white shadow-sm">
+            <span className="grid size-8 place-items-center rounded-lg bg-primary text-primary-foreground shadow-sm">
               <svg
                 className="size-4"
                 viewBox="0 0 28 24"

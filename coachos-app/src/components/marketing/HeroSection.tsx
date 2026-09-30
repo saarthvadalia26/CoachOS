@@ -33,7 +33,7 @@ const scheduleItems = [
 export function HeroSection() {
   return (
     <section className="relative overflow-hidden border-b border-border">
-      <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_left,oklch(0.76_0.16_67_/_0.24),transparent_30%),linear-gradient(135deg,oklch(0.98_0.018_274),oklch(0.99_0.006_270)_45%,oklch(0.94_0.035_276))]" />
+      <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_left,oklch(0.76_0.16_67_/_0.2),transparent_30%),linear-gradient(135deg,var(--muted),var(--background)_45%,var(--secondary))] opacity-90 dark:opacity-60" />
       <div className="mx-auto grid w-full max-w-6xl min-w-0 gap-12 px-4 pb-16 pt-20 sm:px-6 md:pb-20 md:pt-24">
         <div className="mx-auto max-w-4xl text-center">
           <p className="mb-4 text-sm font-medium uppercase tracking-[0.18em] text-primary">

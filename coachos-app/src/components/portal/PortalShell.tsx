@@ -3,6 +3,8 @@ import type { ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import { SubmitButton } from "@/components/ui/submit-button";
+import { PageContainer } from "@/components/ui/responsive-layout";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { logout } from "@/lib/auth/actions";
 
 type PortalShellProps = {
@@ -21,7 +23,7 @@ export function PortalShell({
   return (
     <main className="min-h-screen w-full max-w-full overflow-x-hidden bg-muted/30 text-foreground">
       <header className="border-b border-border bg-background/95">
-        <div className="mx-auto flex w-full max-w-6xl min-w-0 flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <PageContainer className="flex flex-col gap-4 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <Link
               href="/"
@@ -35,11 +37,14 @@ export function PortalShell({
             <p className="mt-1 break-words text-sm text-muted-foreground">{description}</p>
           </div>
           <div className="flex min-w-0 flex-col gap-2 sm:items-end">
-            {email ? (
-              <p className="break-all text-xs text-muted-foreground">
-                Signed in as {email}
-              </p>
-            ) : null}
+            <div className="flex items-center gap-3">
+              {email ? (
+                <p className="break-all text-xs text-muted-foreground">
+                  Signed in as {email}
+                </p>
+              ) : null}
+              <ThemeToggle />
+            </div>
             <form action={logout}>
               <SubmitButton
                 className="w-full sm:w-auto"
@@ -51,9 +56,9 @@ export function PortalShell({
               </SubmitButton>
             </form>
           </div>
-        </div>
+        </PageContainer>
       </header>
-      <div className="mx-auto w-full max-w-6xl min-w-0 px-4 py-6 sm:px-6">{children}</div>
+      <PageContainer className="py-6">{children}</PageContainer>
     </main>
   );
 }

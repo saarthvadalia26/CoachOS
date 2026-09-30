@@ -189,7 +189,6 @@ async function getTestForAction(context: DashboardContext, testId: string, permi
 // Helper to sync test scores for a batch
 // Helper to sync test scores for a batch
 export async function syncTestScoresForBatch(context: DashboardContext, testId: string): Promise<{ success: boolean; studentCount: number }> {
-  console.log("syncTestScoresForBatch: starting sync for test ID:", testId);
 
   // 1. Fetch test details
   const { data: test, error: testError } = await context.supabase
@@ -203,7 +202,6 @@ export async function syncTestScoresForBatch(context: DashboardContext, testId: 
     console.error("syncTestScoresForBatch: test lookup failed:", { error: testError, testExists: !!test });
     return { success: false, studentCount: 0 };
   }
-  console.log("syncTestScoresForBatch: test lookup succeeded:", test);
 
   // 2. Fetch all student IDs assigned to that batch
   const { data: studentBatchRows, error: studentBatchesError } = await context.supabase
@@ -215,16 +213,13 @@ export async function syncTestScoresForBatch(context: DashboardContext, testId: 
     console.error("syncTestScoresForBatch: student_batches query failed:", studentBatchesError);
     return { success: false, studentCount: 0 };
   }
-  console.log("syncTestScoresForBatch: student_batches query returned count:", studentBatchRows?.length ?? 0);
 
   const studentIds = (studentBatchRows ?? []).map((sb) => sb.student_id);
   if (!studentIds.length) {
-    console.log("syncTestScoresForBatch: zero student IDs returned for batch");
     return { success: true, studentCount: 0 };
   }
 
   // 3. Filter for active, non-archived students
-  console.log("syncTestScoresForBatch: querying students table for active batch students");
   const { data: activeStudents, error: studentsError } = await context.supabase
     .from("students")
     .select("id")
@@ -236,11 +231,9 @@ export async function syncTestScoresForBatch(context: DashboardContext, testId: 
     console.error("syncTestScoresForBatch: students lookup query failed:", studentsError);
     return { success: false, studentCount: 0 };
   }
-  console.log("syncTestScoresForBatch: students lookup succeeded, active count:", activeStudents?.length ?? 0);
 
   const activeStudentIds = (activeStudents ?? []).map((s) => s.id);
   if (!activeStudentIds.length) {
-    console.log("syncTestScoresForBatch: zero active non-archived students in batch");
     return { success: true, studentCount: 0 };
   }
 
@@ -254,11 +247,9 @@ export async function syncTestScoresForBatch(context: DashboardContext, testId: 
     console.error("syncTestScoresForBatch: existing scores query failed:", scoresError);
     return { success: false, studentCount: activeStudentIds.length };
   }
-  console.log("syncTestScoresForBatch: existing scores query returned count:", existingScores?.length ?? 0);
 
   const existingStudentIds = new Set((existingScores ?? []).map((es) => es.student_id));
   const missingStudentIds = activeStudentIds.filter((id) => !existingStudentIds.has(id));
-  console.log("syncTestScoresForBatch: count of missing scores to insert:", missingStudentIds.length);
 
   // 5. Insert missing test score rows
   if (missingStudentIds.length > 0) {
@@ -278,7 +269,6 @@ export async function syncTestScoresForBatch(context: DashboardContext, testId: 
       console.error("syncTestScoresForBatch: test_scores insertion failed:", insertError);
       return { success: false, studentCount: activeStudentIds.length };
     }
-    console.log("syncTestScoresForBatch: test_scores insertion succeeded");
   }
 
   return { success: true, studentCount: activeStudentIds.length };
@@ -288,24 +278,10 @@ export async function createTest(formData: FormData) {
   const context = await requireDashboardAccess();
   const next = getSafeNextPath(formData);
   const currentUserId = context.claims.sub;
-  const resolvedRole = context.role;
-  const resolvedInstituteId = context.institute?.id;
-  const resolvedBranchId = context.branchId;
-
-  console.log("createTest: execution started:", {
-    currentUserId,
-    resolvedRole,
-    resolvedInstituteId,
-    resolvedBranchId,
-    formData: Object.fromEntries(formData.entries()),
-  });
 
   const batchId = getRequiredText(formData, "batchId", "Batch");
   const requestedBranchId = getOptionalText(formData, "branchId");
-
-  console.log("createTest: performing batch lookup and permission checks for batch ID:", batchId);
   const batch = await getBatchForTest(context, batchId, "tests.create");
-  console.log("createTest: batch lookup and permission checks succeeded:", batch);
 
   if (requestedBranchId && requestedBranchId !== batch.branch_id) {
     console.error("createTest: branch mismatch:", { requestedBranchId, batchBranchId: batch.branch_id });
@@ -319,14 +295,6 @@ export async function createTest(formData: FormData) {
   const description = getOptionalText(formData, "description");
   const status = parseTestStatus(getOptionalText(formData, "status"), "scheduled");
 
-  console.log("createTest: validated basic payload details:", {
-    title,
-    subject,
-    testDate,
-    maxMarksStr,
-    status,
-  });
-
   if (!isDateValue(testDate)) {
     console.error("createTest: invalid testDate format:", testDate);
     redirectWith(next, "error", "Select a valid test date.");
@@ -337,12 +305,6 @@ export async function createTest(formData: FormData) {
     console.error("createTest: invalid maxMarks value:", maxMarksStr);
     redirectWith(next, "error", "Maximum marks must be greater than 0.");
   }
-
-  console.log("createTest: inserting into tests table with derived values:", {
-    batch_id: batch.id,
-    branch_id: batch.branch_id,
-    institute_id: batch.institute_id,
-  });
 
   // Insert the test row
   const { data: newTest, error } = await context.supabase
@@ -366,11 +328,9 @@ export async function createTest(formData: FormData) {
     console.error("createTest: tests insertion failed:", error);
     redirectWithSaveError(next);
   }
-  console.log("createTest: tests insertion succeeded, test ID:", newTest.id);
 
   // Automatically create test scores for active batch students
   const syncResult = await syncTestScoresForBatch(context, newTest.id);
-  console.log("createTest: syncTestScoresForBatch result:", syncResult);
 
   revalidatePath(TESTS_PATH);
   revalidatePath("/dashboard");
@@ -390,10 +350,8 @@ export async function createTest(formData: FormData) {
   });
 
   if (syncResult.success && syncResult.studentCount === 0) {
-    console.log("createTest: success redirect with 0 active students message");
     redirectWith(next, "success", "Test created. No active students are assigned to this batch yet.");
   } else {
-    console.log("createTest: success redirect");
     redirectWith(next, "success", "Test created.");
   }
 }
@@ -402,8 +360,6 @@ export async function updateTest(formData: FormData) {
   const context = await requireDashboardAccess();
   const next = getSafeNextPath(formData);
   const testId = getRequiredText(formData, "testId", "Test");
-
-  console.log("updateTest: execution started for test ID:", testId);
   const { batch: currentBatch, test } = await getTestForAction(context, testId, "tests.update");
 
   const requestedBatchId = getOptionalText(formData, "batchId");
@@ -432,8 +388,6 @@ export async function updateTest(formData: FormData) {
   if (isNaN(maxMarks) || maxMarks <= 0) {
     redirectWith(next, "error", "Maximum marks must be greater than 0.");
   }
-
-  console.log("updateTest: updating tests table row");
   // Update the test
   const { error } = await context.supabase
     .from("tests")
@@ -457,7 +411,6 @@ export async function updateTest(formData: FormData) {
 
   // If batch was changed, sync scores for the new batch
   if (nextBatch.id !== currentBatch.id) {
-    console.log("updateTest: batch changed, syncing test scores for new batch");
     await syncTestScoresForBatch(context, testId);
   }
 

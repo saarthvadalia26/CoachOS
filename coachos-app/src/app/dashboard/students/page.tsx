@@ -19,6 +19,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SubmitButton } from "@/components/ui/submit-button";
+import { ResponsiveCardActions } from "@/components/ui/responsive-layout";
 import {
   canAccessPermission,
   hasAnyPermission,
@@ -460,7 +461,7 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
                                 </span>
                               </div>
                             </div>
-                            <div className="flex shrink-0 flex-wrap items-start justify-start gap-2 xl:justify-end">
+                            <ResponsiveCardActions className="shrink-0 items-start justify-start xl:justify-end">
                               <Badge
                                 variant={
                                   student.archived_at ||
@@ -558,7 +559,7 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
                                   </ConfirmSubmitButton>
                                 </form>
                               ) : null}
-                            </div>
+                            </ResponsiveCardActions>
                           </div>
 
                           {canUpdateStudents && !student.archived_at ? (

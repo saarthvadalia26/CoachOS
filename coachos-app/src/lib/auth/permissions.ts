@@ -1,85 +1,35 @@
 import { redirect } from "next/navigation";
-
 import { createClient } from "@/lib/supabase/server";
 
-export const appRoles = [
-  "owner",
-  "branch_manager",
-  "operations_staff",
-  "accountant",
-  "academic_coordinator",
-  "teacher",
-] as const;
+import {
+  rolePermissions,
+  type AppRole,
+  type Permission,
+  type Branch,
+  type Membership,
+  canAccessPermission,
+  scopeMatchesMembership,
+  normalizeRole,
+  type PermissionScope,
+} from "./permissions-base";
 
-export type AppRole = (typeof appRoles)[number];
-export type Role = AppRole;
-
-// Product rule: owner is created during institute onboarding only. The staff
-// page manages non-owner operational roles.
-export const staffRoles = [
-  "branch_manager",
-  "operations_staff",
-  "accountant",
-  "academic_coordinator",
-  "teacher",
-] as const;
-
-export type StaffRole = (typeof staffRoles)[number];
-
-export const permissions = [
-  "students.view",
-  "students.create",
-  "students.update",
-  "students.delete",
-  "batches.view",
-  "batches.create",
-  "batches.update",
-  "batches.delete",
-  "homework.view",
-  "homework.create",
-  "homework.update",
-  "homework.archive",
-  "homework.delete",
-  "attendance.view",
-  "attendance.create",
-  "attendance.update",
-  "attendance.alert",
-  "academic_years.view",
-  "academic_years.create",
-  "academic_years.update",
-  "academic_years.delete",
-  "fees.view",
-  "fees.create",
-  "fees.update",
-  "fees.record_payment",
-  "fees.mark_paid",
-  "fees.apply_discount",
-  "fees.export",
-  "fees.send_reminder",
-  "staff.view",
-  "staff.create",
-  "staff.update",
-  "staff.delete",
-  "communications.view",
-  "communications.create",
-  "communications.update",
-  "communications.delete",
-  "notifications.view",
-  "notifications.update",
-  "activity.view",
-  "branches.view",
-  "branches.create",
-  "branches.update",
-  "reports.view",
-  "settings.manage",
-  "tests.view",
-  "tests.create",
-  "tests.update",
-  "tests.archive",
-  "tests.delete",
-] as const;
-
-export type Permission = (typeof permissions)[number];
+export {
+  appRoles,
+  type AppRole,
+  type Role,
+  staffRoles,
+  type StaffRole,
+  permissions,
+  type Permission,
+  type Branch,
+  type Membership,
+  type PermissionScope,
+  normalizeRole,
+  getRolePermissions,
+  hasPermission,
+  hasAnyPermission,
+  canAccessPermission,
+} from "./permissions-base";
 
 type AuthClaims = {
   email?: string;
@@ -122,30 +72,9 @@ type PortalClaimStatus =
   | "no_match"
   | "unauthenticated";
 
-export type Branch = {
-  address: string | null;
-  id: string;
-  institute_id: string;
-  name: string;
-};
-
-export type Membership = {
-  branch_id: string | null;
-  created_at: string | null;
-  id: string;
-  institute_id: string;
-  role: AppRole;
-  user_id: string;
-};
-
-export type PermissionScope = {
-  attendanceSessionId?: string;
-  batchId?: string;
-  branchId?: string | null;
-  feeRecordId?: string;
-  instituteId?: string | null;
-  staffMemberId?: string;
-  studentId?: string;
+type StaffLinkResult = {
+  profile: Profile | null;
+  status: StaffLinkStatus;
 };
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
@@ -163,11 +92,6 @@ export type MembershipContext = {
   role: AppRole | null;
   staffLinkStatus: StaffLinkStatus;
   supabase: SupabaseServerClient;
-};
-
-type StaffLinkResult = {
-  profile: Profile | null;
-  status: StaffLinkStatus;
 };
 
 export type DashboardContext = Omit<
@@ -188,168 +112,6 @@ const rolePriority: Record<AppRole, number> = {
   academic_coordinator: 4,
   teacher: 5,
 };
-
-const rolePermissions = {
-  owner: permissions,
-  branch_manager: [
-    "students.view",
-    "students.create",
-    "students.update",
-    "students.delete",
-    "batches.view",
-    "batches.create",
-    "batches.update",
-    "batches.delete",
-    "homework.view",
-    "homework.create",
-    "homework.update",
-    "homework.archive",
-    "homework.delete",
-    "attendance.view",
-    "attendance.create",
-    "attendance.update",
-    "attendance.alert",
-    "academic_years.view",
-    "fees.view",
-    "fees.create",
-    "fees.update",
-    "fees.record_payment",
-    "fees.mark_paid",
-    "fees.apply_discount",
-    "fees.export",
-    "fees.send_reminder",
-    "staff.view",
-    "communications.view",
-    "communications.create",
-    "communications.update",
-    "communications.delete",
-    "notifications.view",
-    "notifications.update",
-    "activity.view",
-    "branches.view",
-    "reports.view",
-    "tests.view",
-    "tests.create",
-    "tests.update",
-    "tests.archive",
-    "tests.delete",
-  ],
-  operations_staff: [
-    "students.view",
-    "students.create",
-    "students.update",
-    "batches.view",
-    "homework.view",
-    "attendance.view",
-    "attendance.create",
-    "attendance.update",
-    "fees.view",
-    "fees.send_reminder",
-    "communications.view",
-    "notifications.view",
-    "notifications.update",
-    "activity.view",
-    "tests.view",
-  ],
-  accountant: [
-    "students.view",
-    "fees.view",
-    "fees.create",
-    "fees.update",
-    "fees.record_payment",
-    "fees.mark_paid",
-    "fees.apply_discount",
-    "fees.export",
-    "fees.send_reminder",
-    "communications.view",
-    "notifications.view",
-    "notifications.update",
-    "activity.view",
-  ],
-  academic_coordinator: [
-    "students.view",
-    "batches.view",
-    "batches.create",
-    "batches.update",
-    "homework.view",
-    "homework.create",
-    "homework.update",
-    "homework.archive",
-    "homework.delete",
-    "attendance.view",
-    "attendance.alert",
-    "communications.view",
-    "notifications.view",
-    "notifications.update",
-    "activity.view",
-    "tests.view",
-    "tests.create",
-    "tests.update",
-    "tests.archive",
-    "tests.delete",
-  ],
-  teacher: [
-    "students.view",
-    "batches.view",
-    "homework.view",
-    "homework.create",
-    "homework.update",
-    "attendance.view",
-    "communications.view",
-    "notifications.view",
-    "notifications.update",
-    "tests.view",
-    "tests.create",
-    "tests.update",
-    "tests.archive",
-    "tests.delete",
-  ],
-} as const satisfies Record<AppRole, readonly Permission[]>;
-
-const teacherScopedPermissions: readonly Permission[] = [
-  "students.view",
-  "batches.view",
-  "homework.view",
-  "homework.create",
-  "homework.update",
-  "attendance.view",
-  "tests.view",
-  "tests.create",
-  "tests.update",
-  "tests.archive",
-  "tests.delete",
-] as const;
-
-export function normalizeRole(role: string | null | undefined) {
-  if (appRoles.includes(role as AppRole)) {
-    return role as AppRole;
-  }
-
-  // Legacy profile/staff rows used "staff". In the membership model, that maps
-  // to accountant instead of remaining an authoritative app role.
-  if (role === "staff") {
-    return "accountant";
-  }
-
-  return null;
-}
-
-export function getRolePermissions(role: AppRole) {
-  return rolePermissions[role];
-}
-
-export function hasPermission(role: AppRole, permission: Permission) {
-  return (rolePermissions[role] as readonly Permission[]).includes(permission);
-}
-
-export function hasAnyPermission(
-  role: AppRole,
-  requestedPermissions: readonly Permission[],
-) {
-  return requestedPermissions.some((permission) =>
-    hasPermission(role, permission),
-  );
-}
 
 export function getStaffLinkStatusMessage(status: StaffLinkStatus) {
   if (status === "ambiguous") {
@@ -738,61 +500,6 @@ async function getAccessibleBranches(
   return sortBranches((branches ?? []) as Branch[]);
 }
 
-function scopeMatchesMembership(
-  membership: Membership,
-  accessibleBranches: readonly Branch[],
-  scope?: PermissionScope,
-) {
-  if (scope?.instituteId && scope.instituteId !== membership.institute_id) {
-    return false;
-  }
-
-  if (membership.role === "owner") {
-    if (!scope?.branchId) {
-      return true;
-    }
-
-    return accessibleBranches.some((branch) => branch.id === scope.branchId);
-  }
-
-  if (!membership.branch_id) {
-    return false;
-  }
-
-  if (scope?.branchId) {
-    return scope.branchId === membership.branch_id;
-  }
-
-  return true;
-}
-
-export function canAccessPermission(
-  context: Pick<
-    MembershipContext,
-    "accessibleBranches" | "memberships"
-  >,
-  permission: Permission,
-  scope?: PermissionScope,
-) {
-  return context.memberships.some((membership) => {
-    if (!hasPermission(membership.role, permission)) {
-      return false;
-    }
-
-    if (
-      membership.role === "teacher" &&
-      !teacherScopedPermissions.includes(permission)
-    ) {
-      return false;
-    }
-
-    return scopeMatchesMembership(
-      membership,
-      context.accessibleBranches,
-      scope,
-    );
-  });
-}
 
 export function getDefaultBranchId(context: Pick<DashboardContext, "accessibleBranches" | "branchId">) {
   return context.branchId ?? context.accessibleBranches[0]?.id ?? null;

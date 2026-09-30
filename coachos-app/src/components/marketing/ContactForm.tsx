@@ -179,6 +179,12 @@ export function ContactForm() {
     setHasAttemptedSubmit(true);
 
     const formData = new FormData(event.currentTarget);
+    const gotcha = String(formData.get("_gotcha") ?? "").trim();
+    if (gotcha) {
+      // Silently discard automated bot submission
+      setIsSubmitted(true);
+      return;
+    }
     const fullName = getRequiredValue(formData, "fullName");
     const email = getRequiredValue(formData, "email");
     const instituteName = getRequiredValue(formData, "instituteName");
@@ -263,6 +269,14 @@ export function ContactForm() {
 
   return (
     <form className="grid gap-4" onSubmit={handleSubmit} noValidate>
+      <input
+        type="text"
+        name="_gotcha"
+        tabIndex={-1}
+        autoComplete="off"
+        className="hidden"
+        aria-hidden="true"
+      />
       {errorMessage ? (
         <p
           aria-live="polite"

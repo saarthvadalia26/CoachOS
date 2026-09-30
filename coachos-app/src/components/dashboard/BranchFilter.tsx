@@ -1,6 +1,6 @@
 import { Label } from "@/components/ui/label";
 import { SubmitButton } from "@/components/ui/submit-button";
-import type { Branch } from "@/lib/auth/permissions";
+import type { Branch } from "@/lib/auth/permissions-base";
 
 type BranchFilterProps = {
   allLabel?: string;

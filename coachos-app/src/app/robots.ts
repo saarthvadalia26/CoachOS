@@ -19,7 +19,13 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         allow: "/",
-        disallow: ["/dashboard", "/dashboard/", "/onboarding"],
+        disallow: [
+          "/dashboard",
+          "/dashboard/",
+          "/onboarding",
+          "/portal",
+          "/portal/",
+        ],
         userAgent: "*",
       },
     ],

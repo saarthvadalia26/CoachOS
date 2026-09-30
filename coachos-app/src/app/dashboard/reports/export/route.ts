@@ -5,7 +5,11 @@ import { getReportsData, type ReportsSearchParams } from "@/lib/reports/data";
 export const dynamic = "force-dynamic";
 
 function csvCell(value: string | number | null | undefined) {
-  return `"${String(value ?? "").replaceAll('"', '""')}"`;
+  let str = String(value ?? "").replaceAll('"', '""');
+  if (/^[=+\-@\t\r]/.test(str)) {
+    str = `'${str}`;
+  }
+  return `"${str}"`;
 }
 
 function csvResponse(

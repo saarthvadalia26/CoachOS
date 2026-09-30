@@ -21,6 +21,8 @@ import type {
 } from "@/lib/import/types";
 
 const IMPORT_FAILED_MESSAGE = "Import failed. Please review the CSV.";
+const MAX_CSV_CHAR_LENGTH = 2 * 1024 * 1024; // 2MB max payload
+const MAX_IMPORT_ROWS = 1000; // 1,000 rows max per batch import
 
 type PreparedStudent = {
   archived_at: string | null;
@@ -317,7 +319,20 @@ export async function importStudentsFromCsv(
     );
   }
 
+  if (!csvText || typeof csvText !== "string" || csvText.length > MAX_CSV_CHAR_LENGTH) {
+    return errorResult(
+      "CSV file size exceeds the 2MB limit. Please upload a smaller file.",
+      emptySummary(),
+    );
+  }
+
   const parsed = parseCsv(csvText);
+  if (parsed.rows.length > MAX_IMPORT_ROWS) {
+    return errorResult(
+      `CSV contains ${parsed.rows.length} rows. Maximum allowed per import is ${MAX_IMPORT_ROWS} rows.`,
+      emptySummary(parsed.rows.length),
+    );
+  }
   const summary = emptySummary(parsed.rows.length);
   const errors: ImportRowIssue[] = [...parsed.errors];
   const missingColumns = getMissingColumns(
@@ -524,7 +539,20 @@ export async function importBatchesFromCsv(
     );
   }
 
+  if (!csvText || typeof csvText !== "string" || csvText.length > MAX_CSV_CHAR_LENGTH) {
+    return errorResult(
+      "CSV file size exceeds the 2MB limit. Please upload a smaller file.",
+      emptySummary(),
+    );
+  }
+
   const parsed = parseCsv(csvText);
+  if (parsed.rows.length > MAX_IMPORT_ROWS) {
+    return errorResult(
+      `CSV contains ${parsed.rows.length} rows. Maximum allowed per import is ${MAX_IMPORT_ROWS} rows.`,
+      emptySummary(parsed.rows.length),
+    );
+  }
   const summary = emptySummary(parsed.rows.length);
   const errors: ImportRowIssue[] = [...parsed.errors];
   const missingColumns = getMissingColumns(parsed.headers, ["name"], context);
@@ -686,7 +714,20 @@ export async function importStudentBatchAssignmentsFromCsv(
     );
   }
 
+  if (!csvText || typeof csvText !== "string" || csvText.length > MAX_CSV_CHAR_LENGTH) {
+    return errorResult(
+      "CSV file size exceeds the 2MB limit. Please upload a smaller file.",
+      emptySummary(),
+    );
+  }
+
   const parsed = parseCsv(csvText);
+  if (parsed.rows.length > MAX_IMPORT_ROWS) {
+    return errorResult(
+      `CSV contains ${parsed.rows.length} rows. Maximum allowed per import is ${MAX_IMPORT_ROWS} rows.`,
+      emptySummary(parsed.rows.length),
+    );
+  }
   const summary = emptySummary(parsed.rows.length);
   const errors: ImportRowIssue[] = [...parsed.errors];
   const missingColumns = getMissingColumns(

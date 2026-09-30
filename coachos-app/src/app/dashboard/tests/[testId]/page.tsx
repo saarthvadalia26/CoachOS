@@ -262,7 +262,7 @@ export default async function TestDetailPage({ params, searchParams }: TestDetai
               <form action={bulkUpdateTestScores} className="grid gap-6">
                 <input name="testId" type="hidden" value={test.id} />
                 <div className="overflow-x-auto rounded-md border border-border">
-                  <table className="w-full border-collapse text-left text-sm">
+                  <table className="min-w-[760px] w-full border-collapse text-left text-sm">
                     <thead>
                       <tr className="border-b border-border bg-muted/50 font-medium text-muted-foreground">
                         <th className="p-4">Student Name</th>

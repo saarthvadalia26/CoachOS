@@ -55,7 +55,11 @@ function toAmount(value: number | string) {
 }
 
 function csvCell(value: string | number | null | undefined) {
-  return `"${String(value ?? "").replaceAll('"', '""')}"`;
+  let str = String(value ?? "").replaceAll('"', '""');
+  if (/^[=+\-@\t\r]/.test(str)) {
+    str = `'${str}`;
+  }
+  return `"${str}"`;
 }
 
 function csvResponse(rows: Array<Array<string | number>>, filename: string) {
